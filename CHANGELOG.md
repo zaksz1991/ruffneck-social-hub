@@ -108,3 +108,13 @@
 - Rejects media-bearing LinkedIn jobs until image upload support is implemented.
 - Expired LinkedIn tokens and uncertain provider responses move to manual review; the worker does not blindly retry POST requests.
 - Instagram and Facebook publishing remain supported.
+
+
+## 2.2.0 — Cross-platform publishing operations analytics
+
+- Added a workspace-scoped Publishing Analytics page for 7-, 30- and 90-day reporting periods.
+- Reports queue volume, confirmed successful publications, pending work and failed/manual-review records.
+- Breaks down publishing outcomes by connected provider and displays daily queue creation versus confirmed delivery trends.
+- Added navigation from the workspace sidebar, dashboard quick links and operational modules.
+- Uses only existing publishing-job and connected-account records; no new migration or environment variable is required.
+- Explicitly excludes impressions, reach, clicks, audience growth and engagement until official provider analytics APIs are integrated.

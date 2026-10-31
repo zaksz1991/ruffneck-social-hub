@@ -63,3 +63,5 @@
 /* v1.9.0: native multi-destination selection in the publishing queue. */
 .publishing-form select[multiple]{min-height:118px;padding:8px;}
 .publishing-form select[multiple] option{padding:7px 8px;border-radius:5px;}
+
+.module-grid>.module-card-link{display:flex;align-items:center;gap:10px;padding:13px;border:1px solid #e9edf2;border-radius:9px;background:#fff;text-decoration:none}.module-card-link>div{min-width:0;display:grid;gap:4px}.module-card-link strong{color:#34445b;font-size:9px}.module-card-link small{color:#9aa5b4;font-size:7px;line-height:1.5}.module-card-link:hover{border-color:#9edce5;color:#078eaa}
