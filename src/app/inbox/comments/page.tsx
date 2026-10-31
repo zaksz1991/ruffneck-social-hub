@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import CommentReplyDraftStudio from './comment-reply-draft-studio';
+import { bulkUpdateInstagramCommentTriage } from '@/app/actions/inbox';
 import '../inbox.css';
 
 type Workspace = { id: string; name: string };
@@ -86,7 +87,7 @@ export default async function InstagramCommentsPage({
       <div className="inbox-notice"><strong>Human-controlled comment workflow</strong><p>Comments are ingested from signature-verified Meta webhooks. Triage labels are internal only. AI drafts are optional, require human review and are never posted, hidden or deleted by this release.</p></div>
 
       {params.draft_action && <div className={params.draft_action === 'failed' || params.draft_action === 'invalid' ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{params.draft_action === 'saved' ? 'Draft edits saved.' : params.draft_action === 'reviewed' ? 'Draft marked human-reviewed. No reply was posted.' : params.draft_action === 'discarded' ? 'Draft discarded.' : 'The draft action could not be completed.'}</div>}
-      {params.triage_action && <div className={params.triage_action === 'failed' || params.triage_action === 'invalid' ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{params.triage_action === 'new' ? 'Comment returned to New.' : params.triage_action === 'reviewed' ? 'Comment marked Reviewed internally.' : params.triage_action === 'ignored' ? 'Comment marked Ignored internally.' : 'Comment triage could not be updated.'}</div>}
+      {params.triage_action && <div className={params.triage_action === 'failed' || params.triage_action === 'invalid' ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{params.triage_action.startsWith('bulk_') ? `${params.triage_action.slice(5)} comments updated. Provider comments were not changed.` : params.triage_action === 'new' ? 'Comment returned to New.' : params.triage_action === 'reviewed' ? 'Comment marked Reviewed internally.' : params.triage_action === 'ignored' ? 'Comment marked Ignored internally.' : 'Comment triage could not be updated.'}</div>}
 
       {!workspace ? <div className="inbox-empty"><h2>No workspace found</h2><p>Create or join a workspace before viewing comments.</p></div> : readError ? <div className="inbox-empty"><h2>Comment queue unavailable</h2><p>Apply migration 0012 and confirm workspace membership before retrying.</p></div> : <>
         <div className="inbox-stats"><article><span>Matching comments</span><strong>{totalComments}</strong></article><article><span>Current page</span><strong>{currentPage} / {pageCount}</strong></article><article><span>Comments per page</span><strong>{pageSize}</strong></article><article><span>Connected accounts</span><strong>{accounts.filter((a) => a.id).length}</strong></article></div>
@@ -96,6 +97,12 @@ export default async function InstagramCommentsPage({
             <label>Triage status<select name="status" defaultValue={selectedStatus}><option value="all">All comments</option><option value="new">New</option><option value="reviewed">Reviewed</option><option value="ignored">Ignored</option></select></label>
             <button type="submit">Apply filter</button><Link href={`/inbox/comments?workspace=${workspace.id}`}>Clear</Link>
           </form>
+          {canManage && comments.length > 0 && <form action={bulkUpdateInstagramCommentTriage} className="inbox-filters" style={{ marginTop: '12px' }}>
+            <input type="hidden" name="workspace_id" value={workspace.id} />
+            <input type="hidden" name="from_status" value={selectedStatus} />
+            <label>Bulk update newest matching comments<select name="status" defaultValue="reviewed"><option value="reviewed">Mark as Reviewed</option><option value="ignored">Mark as Ignored</option><option value="new">Return to New</option></select></label>
+            <button type="submit">Update up to 25 comments</button>
+          </form>}
           <div className="inbox-section-title"><div><h2>Instagram comments</h2><p>{totalComments} matching records · newest first</p></div><span>WEBHOOK INGESTION · NO PROVIDER ACTIONS</span></div>
           {comments.length === 0 ? <div className="inbox-empty"><h3>{totalComments === 0 ? 'No matching comments yet' : 'No comments on this page'}</h3><p>{totalComments === 0 ? 'Enable the comments webhook field for the connected Instagram professional account in Meta. The app must also have the required comment-management access.' : 'Navigate to a previous page to view matching comments.'}</p></div> : <div className="comment-list">{comments.map((comment) => {
             const account = accountMap.get(comment.social_account_id);

@@ -221,3 +221,27 @@ export async function updateInstagramCommentTriageStatus(formData: FormData): Pr
   redirect(`/inbox/comments?triage_action=${status}`);
 }
 
+
+
+export async function bulkUpdateInstagramCommentTriage(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const status = formText(formData, 'status');
+  const fromStatus = formText(formData, 'from_status');
+  if (!isUuid(workspaceId) || !['new', 'reviewed', 'ignored'].includes(status) || !['all', 'new', 'reviewed', 'ignored'].includes(fromStatus)) {
+    redirect('/inbox/comments?triage_action=invalid');
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: membership } = await supabase.from('workspace_members').select('role')
+    .eq('workspace_id', workspaceId).eq('user_id', user.id).maybeSingle();
+  if (!membership || !['owner', 'admin', 'manager', 'publisher', 'client_approver'].includes(membership.role)) {
+    redirect('/inbox/comments?triage_action=failed');
+  }
+  const { data: changedCount, error } = await supabase.rpc('bulk_set_instagram_comment_triage_status', {
+    target_workspace_id: workspaceId, target_status: status, target_from_status: fromStatus, target_limit: 25,
+  });
+  if (error) redirect(`/inbox/comments?workspace=${workspaceId}&triage_action=failed`);
+  revalidatePath('/inbox/comments');
+  redirect(`/inbox/comments?workspace=${workspaceId}&status=${fromStatus}&triage_action=bulk_${Number(changedCount ?? 0)}`);
+}
