@@ -1,11 +1,13 @@
 # Changelog
 
-## 0.3.0 — Multi-workspace and brand management
-- Added owner-controlled creation of additional workspaces.
-- Added workspace switching in the dashboard.
-- Added owner/admin-only brand creation and renaming.
-- Added migration 0003 and workspace management documentation.
-- Kept team invitations, provider integrations, publishing, inbox and AI execution disabled pending their own security and integration milestones.
-
-## 0.2.0 — Authentication and initial workspace onboarding
-- Supabase email/password authentication and first-workspace provisioning.
+## 0.4.0 — Visual identity and dashboard refresh
+- Replaced the dark prototype dashboard with a responsive enterprise SaaS visual system.
+- Added primary, inverse and symbol logo variants.
+- Added SVG favicon, PNG app icons and PWA manifest.
+- Added a reusable SVG product icon set.
+- Added avatar, media and post-preview placeholders.
+- Added editable portrait and square marketing flyer templates, with PNG exports.
+- Updated login, signup and authentication gate branding.
+- Added design system and asset usage documentation.
+- Preserved existing Supabase actions, workspace queries and role-gated brand controls.
+- No database migrations or social provider integrations were added.

@@ -1,19 +1,22 @@
-# Engineering status
+# Current implementation status
 
-## Implemented in repository foundation
-- Next.js App Router application shell and responsive dashboard.
-- Supabase server/browser clients, signup, login, sign-out and auth callback.
-- Initial workspace provisioning and protected authenticated dashboard.
-- PostgreSQL core schema and row-level security foundation.
-- Multi-workspace creation, workspace switching, brand creation and brand renaming.
-- Owner/admin authorization for brand management enforced by database RLS.
+## Delivered in 0.4.0
+- Responsive light enterprise dashboard with navy navigation and cyan/teal accents.
+- Branded sign-in, signup and authentication gate.
+- Workspace switch links, workspace creation form, brand listing, brand creation and rename controls retained.
+- Logo variants, standalone symbol, favicon, PWA icons, icon library, placeholders and editable flyer templates.
+- Existing database-backed workspace data remains the source for workspace and brand lists.
 
-## Not implemented or not verified
-- Team invitations, client portal and granular team administration.
-- Social provider OAuth, publishing, inbox, analytics and live metrics.
-- AI provider connection and automated responses.
-- Production security review, RLS adversarial tests and live Supabase migration.
-- Successful hosted build and end-to-end production tests for this update.
+## Not yet implemented
+- Team invitation delivery and acceptance.
+- Full member role management UI.
+- Client-facing portal.
+- Social platform OAuth connections.
+- Publishing dispatch, unified inbox, analytics ingestion and AI execution.
 
-## Required database migration
-Apply migration 0003 after 0001 and 0002. Existing deployments do not receive new SQL migrations automatically merely because application code is deployed.
+## Verification status
+- ZIP structure and asset files: pending final packaging validation.
+- TypeScript syntax: to be checked with the locally available TypeScript parser.
+- Dependency installation: not completed; npm registry package cache is unavailable in the build environment.
+- Full typecheck, test suite and Next.js production build: not verified.
+- Supabase and Vercel live behaviour: not tested by this design update.
