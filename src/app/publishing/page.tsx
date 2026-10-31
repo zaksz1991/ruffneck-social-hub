@@ -119,6 +119,8 @@ export default async function PublishingQueuePage({
     const selectedState = allowedStates.includes(params.state ?? '') ? (params.state ?? 'all') : 'all';
     const selectedProvider = accounts.some((account) => account.provider === params.provider) ? (params.provider ?? 'all') : 'all';
     const selectedBrand = brands.some((brand) => brand.id === params.brand) ? (params.brand ?? 'all') : 'all';
+    const searchTerm = (params.q ?? '').trim().slice(0, 100);
+    const searchNeedle = searchTerm.replace(/[,%()_*]/g, ' ').replace(/\s+/g, ' ').trim();
     let historyQuery = supabase
       .from('publishing_jobs')
       .select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe', { count: 'exact' })
@@ -128,6 +130,29 @@ export default async function PublishingQueuePage({
     if (selectedProvider !== 'all') {
       const matchingAccountIds = accounts.filter((account) => account.provider === selectedProvider).map((account) => account.id);
       historyQuery = matchingAccountIds.length ? historyQuery.in('social_account_id', matchingAccountIds) : historyQuery.eq('social_account_id', '00000000-0000-0000-0000-000000000000');
+    }
+    if (searchNeedle.length >= 2) {
+      const pattern = `%${searchNeedle}%`;
+      const [contentMatches, accountMatches, brandMatches] = await Promise.all([
+        supabase.from('content_items').select('id').eq('workspace_id', activeWorkspace.id).ilike('title', pattern).limit(5000),
+        supabase.from('social_accounts').select('id').eq('workspace_id', activeWorkspace.id).or(`display_name.ilike.${pattern},provider.ilike.${pattern}`).limit(5000),
+        supabase.from('brands').select('id').eq('workspace_id', activeWorkspace.id).ilike('name', pattern).limit(5000),
+      ]);
+      if (contentMatches.error || accountMatches.error || brandMatches.error) {
+        queueReadFailed = true;
+      } else {
+        const branches: string[] = [];
+        const contentIds = (contentMatches.data ?? []).map((row) => row.id);
+        const accountIds = (accountMatches.data ?? []).map((row) => row.id);
+        const brandIds = (brandMatches.data ?? []).map((row) => row.id);
+        if (contentIds.length) branches.push(`content_id.in.(${contentIds.join(',')})`);
+        if (accountIds.length) branches.push(`social_account_id.in.(${accountIds.join(',')})`);
+        if (brandIds.length) branches.push(`brand_id.in.(${brandIds.join(',')})`);
+        branches.push(`last_error_safe.ilike.${pattern}`);
+        historyQuery = historyQuery.or(branches.join(','));
+      }
+    } else if (searchTerm.length > 0) {
+      historyQuery = historyQuery.eq('id', '00000000-0000-0000-0000-000000000000');
     }
     const historyResult = await historyQuery
       .order('scheduled_at', { ascending: false })
@@ -148,14 +173,7 @@ export default async function PublishingQueuePage({
   const selectedBrand = brands.some((brand) => brand.id === params.brand) ? (params.brand ?? 'all') : 'all';
   const searchTerm = (params.q ?? '').trim().slice(0, 100);
   const filteredJobs = historyJobs.filter((job) => {
-    const account = accounts.find((item) => item.id === job.social_account_id);
-    const brand = brands.find((item) => item.id === job.brand_id);
-    const content = approvedContent.find((item) => item.id === job.content_id);
-    const matchesState = selectedState === 'all' || job.state === selectedState;
-    const matchesProvider = selectedProvider === 'all' || account?.provider === selectedProvider;
-    const matchesBrand = selectedBrand === 'all' || job.brand_id === selectedBrand;
-    const haystack = [content?.title, account?.display_name, account?.provider, brand?.name, job.last_error_safe].filter(Boolean).join(' ').toLowerCase();
-    return matchesState && matchesProvider && matchesBrand && (!searchTerm || haystack.includes(searchTerm.toLowerCase()));
+    return true;
   });
   const activeJobs = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable', 'needs_review'].includes(job.state));
   const queueHealth = summarizeQueueHealth(jobs);
@@ -282,12 +300,12 @@ export default async function PublishingQueuePage({
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}
 
             <section className="publishing-queue-section">
-              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Complete workspace history, loaded 25 records per page. Status, platform and brand filters apply before pagination; text search applies to the current page.</p></div><span className="publishing-count">{historyCount.toLocaleString()} MATCHING RECORDS</span></div>
+              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Complete workspace history, loaded 25 records per page. Search, status, platform and brand filters apply across the workspace history before pagination.</p></div><span className="publishing-count">{historyCount.toLocaleString()} MATCHING RECORDS</span></div>
               <form method="get" action="/publishing" className="publishing-queue-filters" aria-label="Filter publishing queue">
                 <input type="hidden" name="workspace" value={activeWorkspace.id} />
                 <input type="hidden" name="month" value={monthMatch} />
                 <input type="hidden" name="page" value="1" />
-                <label>Search<input type="search" name="q" maxLength={100} defaultValue={searchTerm} placeholder="Post, brand, account or error" /></label>
+                <label>Search<input type="search" name="q" maxLength={100} minLength={2} defaultValue={searchTerm} placeholder="Search all history: post, brand, account or error" /></label>
                 <label>Status<select name="state" defaultValue={selectedState}>{allowedStates.map((state) => <option key={state} value={state}>{state === 'all' ? 'All statuses' : stateLabel[state] ?? state}</option>)}</select></label>
                 <label>Platform<select name="provider" defaultValue={selectedProvider}><option value="all">All platforms</option>{Array.from(new Set(accounts.map((account) => account.provider))).sort().map((provider) => <option key={provider} value={provider}>{provider}</option>)}</select></label>
                 <label>Brand<select name="brand" defaultValue={selectedBrand}><option value="all">All brands</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
