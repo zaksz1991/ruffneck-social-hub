@@ -1,5 +1,6 @@
 export const LINKEDIN_REQUESTED_SCOPES = [
   'r_organization_admin',
+  'w_organization_social',
 ] as const;
 
 export type LinkedInOrganization = {

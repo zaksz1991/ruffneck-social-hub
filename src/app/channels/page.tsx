@@ -24,7 +24,7 @@ const errorMessages: Record<string, string> = {
   linkedin_configuration: 'LinkedIn connection is not configured. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET in Vercel.',
   linkedin_migration: 'Apply Supabase migration 0016_linkedin_organization_connection.sql, then retry.',
   linkedin_no_pages: 'LinkedIn returned no approved organization Pages for which this member is an administrator.',
-  linkedin_organizations: 'LinkedIn organization access could not be verified. Confirm that the app has approved r_organization_admin access.',
+  linkedin_organizations: 'LinkedIn organization access could not be verified. Confirm that the app has approved r_organization_admin and w_organization_social access.',
   linkedin_http_403: 'LinkedIn denied organization access. The app needs approved Marketing API access with r_organization_admin, and the member must be an approved Page administrator.',
   linkedin_http_401: 'LinkedIn rejected the access token. Confirm the OAuth client and reconnect the account.',
   linkedin_invalid_token: 'LinkedIn rejected the access token. Reconnect the account and verify the app credentials.',

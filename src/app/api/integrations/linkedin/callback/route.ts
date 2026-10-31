@@ -137,6 +137,9 @@ export async function GET(request: NextRequest) {
     return finish(request, workspaceId, 'exchange');
   }
 
+  if (typeof tokenBody.scope === 'string' && !tokenBody.scope.split(/[ ,]+/).includes('w_organization_social')) {
+    return finish(request, workspaceId, 'linkedin_publish_scope');
+  }
   const accessToken = String(tokenBody.access_token);
   const expiresIn = typeof tokenBody.expires_in === 'number' ? tokenBody.expires_in : 0;
   if (!Number.isSafeInteger(expiresIn) || expiresIn < 60 || expiresIn > 366 * 24 * 60 * 60) {
@@ -172,7 +175,7 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.rpc('store_linkedin_organization_connections', {
     target_workspace_id: workspaceId,
     target_brand_id: brandId,
-    target_granted_scopes: ['r_organization_admin'],
+    target_granted_scopes: ['r_organization_admin', 'w_organization_social'],
     target_organizations: encryptedOrganizations,
     target_token_expires_at: tokenExpiresAt,
   });
@@ -183,6 +186,15 @@ export async function GET(request: NextRequest) {
     if (error.code === 'PGRST202' || error.code === '42883') return finish(request, workspaceId, 'linkedin_migration');
     if (error.code === '22023') return finish(request, workspaceId, 'linkedin_invalid_pages');
     return finish(request, workspaceId, 'storage');
+  }
+
+  const { error: capabilityError } = await supabase.rpc('enable_linkedin_organization_publishing', {
+    target_workspace_id: workspaceId,
+    target_brand_id: brandId,
+  });
+  if (capabilityError) {
+    console.error('[integrations.linkedin] Publishing capability gate rejected:', { code: capabilityError.code });
+    return finish(request, workspaceId, capabilityError.code === 'PGRST202' || capabilityError.code === '42883' ? 'linkedin_migration' : 'linkedin_capability');
   }
 
   return finish(request, workspaceId, 'connected');

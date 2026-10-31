@@ -154,8 +154,8 @@ export default async function PublishingQueuePage({
 
             <section className="publishing-safety-banner">
               <span className="publishing-safety-icon">✓</span>
-              <div><strong>Human-approved multi-network publishing</strong><p>Approved image posts can be dispatched to connected Instagram Business accounts and Facebook Pages when the required Meta permissions are granted. Other networks remain unavailable until their provider workers are implemented.</p></div>
-              <span className="publishing-gate">INSTAGRAM + FACEBOOK</span>
+              <div><strong>Human-approved multi-network publishing</strong><p>Approved image posts can be dispatched to Instagram Business accounts and Facebook Pages. Approved text-only posts can be dispatched to LinkedIn organization Pages when the required LinkedIn permission is granted. Other networks remain unavailable until their provider workers are implemented.</p></div>
+              <span className="publishing-gate">INSTAGRAM + FACEBOOK + LINKEDIN</span>
             </section>
 
             {canSchedule && approvedContent.length > 0 && connectedAccounts.length > 0 && (
@@ -182,7 +182,7 @@ export default async function PublishingQueuePage({
                     <input type="datetime-local" name="scheduled_local" required />
                     <small>Enter the wall-clock time in the selected content brand&apos;s saved timezone. The server validates the actual UTC schedule.</small>
                   </label>
-                  <div className="publishing-form-footer"><span>Supported Meta destinations are dispatched by the worker. Other selected providers may be rejected until their worker is implemented.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
+                  <div className="publishing-form-footer"><span>Instagram and Facebook support single-image posts; LinkedIn supports text-only organization posts. Match the content format to each selected destination.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
                 </form>
               </section>
             )}
@@ -191,7 +191,7 @@ export default async function PublishingQueuePage({
               <section className="publishing-prerequisite"><strong>No approved content is available.</strong><p>Create a draft in Content Studio, submit it for review and approve it before scheduling.</p><Link href="/content">Open Content Studio</Link></section>
             )}
             {canSchedule && approvedContent.length > 0 && connectedAccounts.length === 0 && (
-              <section className="publishing-prerequisite"><strong>No publishing-enabled social destinations.</strong><p>Connect a supported Instagram Business account or Facebook Page and grant the required publishing permissions. A connected account without a verified publishing capability cannot enter the queue.</p><Link href="/#channels">View connected-channel setup</Link></section>
+              <section className="publishing-prerequisite"><strong>No publishing-enabled social destinations.</strong><p>Connect a supported Instagram Business account, Facebook Page or LinkedIn organization Page and grant the required publishing permissions. A connected account without a verified publishing capability cannot enter the queue.</p><Link href="/#channels">View connected-channel setup</Link></section>
             )}
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}
 

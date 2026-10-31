@@ -18,7 +18,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 ## Important provider boundaries
 
 - Publishing worker support is limited to supported Instagram and Facebook Page single-image posts. Facebook publishing requires `pages_manage_posts` plus an eligible Page task. Other providers and other media types are not implied to work.
-- LinkedIn organization Pages can be connected and listed after the LinkedIn app has approved Marketing API access for `r_organization_admin`. This v2.0.0 LinkedIn connection is read-only; LinkedIn publishing is not enabled yet. LinkedIn OAuth access-token expiry is stored, but automatic token refresh is not implemented; reconnect after expiry.
+- LinkedIn organization Pages can be connected after the app has approved `r_organization_admin` and `w_organization_social` access. v2.1.0 adds text-only organization publishing through the existing scheduled worker. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
 - Instagram messaging is read-only. AI DM reply drafts are never sent.
 - Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
 - Marking a comment Reviewed or Ignored changes only its RuffNeck internal triage status.

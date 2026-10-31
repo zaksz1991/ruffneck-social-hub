@@ -98,3 +98,13 @@
 - Added LinkedIn to the implemented provider registry and Connected Channels interface.
 - Kept publishing, comments, messaging and analytics disabled for LinkedIn; only `r_organization_admin` is requested.
 - LinkedIn Marketing API product access and scope approval are required from LinkedIn; access-token refresh is not implemented in this release.
+
+
+## 2.1.0 — LinkedIn organization publishing
+
+- Added LinkedIn `w_organization_social` to the OAuth request alongside organization administration access.
+- Added a workspace/brand/administrator capability gate for LinkedIn publishing.
+- Extended the existing leased publishing worker to publish approved text-only posts to LinkedIn organization Pages through the official REST Posts API.
+- Rejects media-bearing LinkedIn jobs until image upload support is implemented.
+- Expired LinkedIn tokens and uncertain provider responses move to manual review; the worker does not blindly retry POST requests.
+- Instagram and Facebook publishing remain supported.

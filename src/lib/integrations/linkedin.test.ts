@@ -9,7 +9,7 @@ import {
 } from './linkedin';
 
 describe('LinkedIn organization integration helpers', () => {
-  it('builds an official authorization URL with the minimal organization-read scope', () => {
+  it('builds an official authorization URL with the organization administration and publishing scopes', () => {
     const url = buildLinkedInAuthorizationUrl({
       clientId: 'client-123',
       redirectUri: 'https://ruffneck-social-hub.vercel.app/api/integrations/linkedin/callback',
@@ -18,9 +18,9 @@ describe('LinkedIn organization integration helpers', () => {
     expect(url.origin).toBe('https://www.linkedin.com');
     expect(url.pathname).toBe('/oauth/v2/authorization');
     expect(url.searchParams.get('response_type')).toBe('code');
-    expect(url.searchParams.get('scope')).toBe('r_organization_admin');
+    expect(url.searchParams.get('scope')).toBe('r_organization_admin w_organization_social');
     expect(url.searchParams.get('state')).toBe('signed-state-value');
-    expect(LINKEDIN_REQUESTED_SCOPES).toEqual(['r_organization_admin']);
+    expect(LINKEDIN_REQUESTED_SCOPES).toEqual(['r_organization_admin', 'w_organization_social']);
   });
 
   it('validates callback URLs and the YYYYMM API version', () => {

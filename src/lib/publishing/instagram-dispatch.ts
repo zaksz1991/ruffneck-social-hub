@@ -130,3 +130,57 @@ export async function dispatchFacebookImage(job: InstagramJob, graphVersion: str
     return { kind: 'review', code: 'publish_response_ambiguous', safe: 'Facebook may have accepted this post, but confirmation was interrupted. Verify the Page before retrying.' };
   }
 }
+
+
+/** Publishes an approved text-only post to a LinkedIn organization Page. */
+export async function dispatchLinkedInText(job: InstagramJob, apiVersion: string): Promise<DispatchResult> {
+  if (job.provider !== 'linkedin') return { kind: 'review', code: 'provider_unsupported', safe: 'This connected provider is not supported by this worker.' };
+  if (!/^20\d{2}(0[1-9]|1[0-2])$/.test(apiVersion)) return { kind: 'review', code: 'configuration', safe: 'The configured LinkedIn API version is invalid.' };
+  if (Array.isArray(job.media_refs) && job.media_refs.length > 0) return { kind: 'review', code: 'linkedin_text_only', safe: 'LinkedIn publishing currently supports text-only posts. Remove attached media and schedule again.' };
+  let token: string;
+  try {
+    token = decryptProviderSecret({ ciphertext: job.ciphertext, iv: job.iv, authTag: job.auth_tag });
+    if (!token) throw new Error('empty_token');
+    // LinkedIn access tokens are not refreshed by this worker.
+    if (job.token_expires_at && new Date(job.token_expires_at).getTime() <= Date.now()) {
+      return { kind: 'review', code: 'token_expired', safe: 'Reconnect this LinkedIn organization before publishing.' };
+    }
+    if (job.token_expires_at && !Number.isFinite(new Date(job.token_expires_at).getTime())) {
+      return { kind: 'review', code: 'token_expiry_invalid', safe: 'Reconnect this LinkedIn organization before publishing.' };
+    }
+  } catch {
+    return { kind: 'review', code: 'token_decrypt', safe: 'The stored LinkedIn connection could not be used. Reconnect the organization.' };
+  }
+  const organizationUrn = `urn:li:organization:${job.provider_account_id}`;
+  if (!/^urn:li:organization:\d{1,20}$/.test(organizationUrn)) return { kind: 'review', code: 'organization_invalid', safe: 'The connected LinkedIn organization identifier is invalid.' };
+  try {
+    const response = await fetch('https://api.linkedin.com/rest/posts', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': apiVersion,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        author: organizationUrn,
+        commentary: job.caption.slice(0, 3000),
+        visibility: 'PUBLIC',
+        distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] },
+        lifecycleState: 'PUBLISHED',
+        isReshareDisabledByAuthor: false,
+      }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(30_000),
+    });
+    let body: Record<string, unknown> = {};
+    try { const value: unknown = await response.json(); if (value && typeof value === 'object' && !Array.isArray(value)) body = value as Record<string, unknown>; } catch { /* LinkedIn may return an empty body and x-restli-id. */ }
+    const postId = response.headers.get('x-restli-id') || (typeof body.id === 'string' ? body.id : '');
+    if (response.ok && postId) return { kind: 'published', providerPostId: postId };
+    // Any failed/uncertain POST is not retried automatically because the provider may have accepted it.
+    return { kind: 'review', code: `linkedin_http_${response.status}`, safe: 'LinkedIn did not confirm publication. Check the organization Page before retrying to avoid a duplicate post.' };
+  } catch {
+    return { kind: 'review', code: 'publish_response_ambiguous', safe: 'LinkedIn may have accepted this post, but confirmation was interrupted. Verify the organization Page before retrying.' };
+  }
+}
