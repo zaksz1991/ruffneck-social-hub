@@ -26,6 +26,10 @@ export async function signIn(formData: FormData) {
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) redirect('/login?error=invalid');
+  const nextPath = value(formData, 'next');
+  if (nextPath.startsWith('/invite/') && !nextPath.startsWith('//') && !nextPath.includes('\\')) {
+    redirect(nextPath);
+  }
   redirect('/');
 }
 

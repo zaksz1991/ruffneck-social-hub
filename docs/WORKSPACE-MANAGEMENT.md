@@ -13,9 +13,17 @@
 
 Apply `supabase/migrations/0003_multi_workspace_brand_management.sql` after migrations 0001 and 0002 in the Supabase SQL Editor. Do not rerun earlier migrations if they have already been applied. Verify that the function `public.create_additional_workspace(text)` exists before testing the create-workspace form.
 
+## Team collaboration (migration 0006)
+
+- Workspace owners, admins and managers can create one-time invitation links within their permitted role range.
+- The server generates a 256-bit random token and stores only its SHA-256 hash.
+- Invitation links expire after seven days and can be accepted once by the authenticated email address that was invited.
+- Owners/admins can change eligible member roles and remove eligible members; the database checks these permissions independently of the UI.
+- Invitations are copied and shared manually; no automatic email delivery is configured. See `docs/TEAM-ACCESS.md` for the exact role matrix.
+
 ## Current boundaries
 
-- Team invitations and invitation delivery are not implemented in this milestone.
+- Workspace ownership transfer is not implemented in this milestone.
 - Workspace membership creation remains server-controlled; no client can add itself to another workspace.
 - Client accounts are represented as separate workspaces or brands. A dedicated client-portal role and external client approval workflow are future work.
 - Provider OAuth, publishing, inbox synchronization, AI execution, and analytics are not active.

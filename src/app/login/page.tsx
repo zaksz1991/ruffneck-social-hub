@@ -12,7 +12,7 @@ const errors: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
   const params = await searchParams;
 
@@ -31,6 +31,7 @@ export default async function LoginPage({
           </p>
         )}
         <form action={signIn} className="auth-form">
+          {params.next?.startsWith('/invite/') && !params.next.startsWith('//') && <input type="hidden" name="next" value={params.next}/>}
           <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
           <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
           <button type="submit">Sign in securely</button>

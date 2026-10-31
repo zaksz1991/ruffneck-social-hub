@@ -30,3 +30,15 @@
 - Added server actions for scheduling approved content and cancelling queued jobs.
 - Added migration 0005 with role and tenant checks, brand-timezone conversion, date-window validation, duplicate protection and audit events.
 - Provider dispatch remains intentionally disabled until official provider integrations and a queue worker are verified.
+
+
+## 0.7.0 — Workspace team and access governance
+
+- Added a team directory for each accessible workspace.
+- Added invitation links using 256-bit random tokens; only SHA-256 hashes are stored.
+- Added seven-day expiry, one-time acceptance, invitation revocation and invited-email matching.
+- Added role-aware invitation creation, member role updates and member removal restrictions.
+- Added team activity audit visibility for owners and administrators.
+- Added an invitation acceptance route and safe sign-in return path.
+- Added regression tests for team input and role-policy helpers.
+- Invitation delivery remains manual in this release; the interface provides a secure copyable link and does not claim to send email.

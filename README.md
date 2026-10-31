@@ -1,6 +1,6 @@
 # RuffNeck Social Hub
 
-A multi-workspace social operations platform for agencies, brands and client teams. This release bundles the existing authentication, workspace and brand management, Content Studio, human approval workflow, and the new publishing calendar/queue.
+RuffNeck Social Hub 0.7.0 is a multi-workspace social operations platform for agencies, brands and client teams. This complete replacement release bundles authentication, workspaces, brands, Content Studio, approval workflow, the publishing calendar/queue, and workspace team governance.
 
 ## Included modules
 
@@ -9,6 +9,7 @@ A multi-workspace social operations platform for agencies, brands and client tea
 - Tenant-scoped Content Studio with draft, review, approval and change-request workflows.
 - Publishing calendar and PostgreSQL-backed queue for approved content.
 - Queue cancellation for queued, retryable and needs-review jobs.
+- Workspace team directory, one-time invitation links, role updates, member removal and audit visibility.
 - Workspace audit events for content and scheduling actions.
 - GitHub Actions CI using Node.js 22 and the cache-free npm setup.
 
@@ -35,6 +36,7 @@ In the `grehbumrnrgimwwyiqua` Supabase project used by RuffNeck Social Hub, open
 3. `supabase/migrations/0003_multi_workspace_brand_management.sql`
 4. `supabase/migrations/0004_content_approval_workflow.sql`
 5. `supabase/migrations/0005_publishing_calendar_queue.sql`
+6. `supabase/migrations/0006_workspace_team_invitations.sql`
 
 If a previous migration has already been successfully applied, do not re-run it just because this complete ZIP contains the file. Apply only the migrations not yet applied, in ascending order. `0004` and `0005` are written to tolerate repeated execution for their core objects, but migration history should still be tracked accurately.
 
@@ -56,7 +58,13 @@ This is a complete source-project ZIP, not a patch. It includes the full project
 
 ## Verification
 
-The source package contains unit tests for signup response classification, redirect selection, job-state transitions, content validation and schedule input validation. Run `npm install`, `npm run typecheck`, `npm test` and `npm run build` in the CI pipeline. The SQL migration and live deployment are separate manual steps; a successful ZIP check does not prove live Supabase or provider behaviour.
+The source package contains unit tests for signup response classification, redirect selection, job-state transitions, content validation and schedule input validation. Run `npm install`, `npm run typecheck`, `npm test` and `npm run build` in the CI pipeline. New team validation tests cover email normalization, valid roles, inviter role limits, member-role controls and invitation-token format. The SQL migration and live deployment are separate manual steps; a successful ZIP check does not prove live Supabase or provider behaviour.
+
+## Workspace team invitations
+
+Migration 0006 adds one-time invitation records, secure token-hash storage, expiry and revocation, email-match enforcement on acceptance, role-aware invitation permissions, member role changes/removal, and audit events. Invitation URLs are created server-side and the raw 256-bit token is never stored in PostgreSQL. The application intentionally displays a copyable invitation link instead of sending email; share it through your approved communication channel. The recipient must sign in with the invited email. A new user can create and verify an account, then reopen the original invitation link to accept it.
+
+Owners can invite all non-owner roles. Admins can invite managers and lower roles; managers can invite publishers, analysts and client approvers. Only owners/admins can change roles or remove members. The owner and the current user's own membership are protected from removal in this release.
 
 ## Next release gate
 

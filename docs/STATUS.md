@@ -1,5 +1,11 @@
 # Current implementation status
 
+## Delivered in 0.7.0
+- Workspace team directory, role-aware invitations and invitation-link preview/acceptance.
+- Seven-day invitation expiry, one-time acceptance, token-hash-only database storage and invited-email matching.
+- Owner/admin role updates and member removal with protected-owner/self-removal restrictions.
+- Audit visibility for team governance actions.
+
 ## Delivered in 0.6.0
 - Branded authentication, email-confirmation callback and protected application routes.
 - Workspace provisioning, multi-workspace access, brand creation and brand renaming.
@@ -15,7 +21,8 @@
 - Social provider OAuth and token vaulting.
 - Provider dispatch worker or actual publishing to social networks.
 - Unified inbox, analytics ingestion and AI model execution.
-- Team invitation delivery and full member role management UI.
+- Automated invitation email delivery; invitation links are manually copied and shared.
+- Workspace ownership transfer remains deliberately unsupported.
 
 A queue record means only that a schedule has been stored. It is not proof of dispatch or delivery. Do not mark an account `connected` unless a real provider authorisation and account verification flow has succeeded.
 
@@ -23,6 +30,7 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - All TypeScript/TSX source files passed TypeScript transpilation syntax checks.
 - A project-wide structural TypeScript check passed using temporary ambient stubs for dependencies that could not be installed. This is not a substitute for the actual dependency-backed `npm run typecheck`.
 - Four new schedule-validation scenarios passed in a standalone local check.
+- Ten standalone assertions for team validation and invitation-token hashing passed. Team tests are also included in Vitest; the full Vitest suite was not run because dependencies could not be installed in the build environment.
 - Full `npm install` timed out in the build environment. The full Vitest suite and production Next.js build were therefore not run.
-- SQL migration has not been applied to the live Supabase project or tested against live data.
+- Migration 0006 has not been applied to the live Supabase project or tested against live data.
 - Vercel deployment and provider dispatch have not been verified.
