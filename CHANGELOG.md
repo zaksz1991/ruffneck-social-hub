@@ -87,3 +87,14 @@
 - Added migration 0014 with role/brand/scope validation and a workspace audit event.
 - Added a unified Channels screen that distinguishes available providers from planned providers.
 - Facebook Page publishing permission is detected but actual Facebook dispatch remains disabled; the publishing worker remains Instagram-only.
+
+
+## 2.0.0 — LinkedIn organization Page connection foundation
+
+- Added LinkedIn 3-legged OAuth with signed state bound to the authenticated user, workspace and brand.
+- Added approved LinkedIn organization administrator discovery through the official `/rest/organizationAcls` API.
+- Added encrypted LinkedIn access-token persistence in the existing server-only token vault, including provider-reported expiry.
+- Added migration 0016 with atomic workspace/brand/role/scope validation and audit logging.
+- Added LinkedIn to the implemented provider registry and Connected Channels interface.
+- Kept publishing, comments, messaging and analytics disabled for LinkedIn; only `r_organization_admin` is requested.
+- LinkedIn Marketing API product access and scope approval are required from LinkedIn; access-token refresh is not implemented in this release.

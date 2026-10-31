@@ -7,11 +7,12 @@ describe('provider registry', () => {
       'facebook', 'instagram', 'tiktok', 'youtube', 'linkedin', 'x', 'whatsapp',
     ]);
     expect(PROVIDER_REGISTRY.filter((provider) => provider.availability === 'available').map((provider) => provider.id))
-      .toEqual(['facebook', 'instagram']);
+      .toEqual(['facebook', 'instagram', 'linkedin']);
   });
 
   it('returns known providers and rejects unknown identifiers', () => {
     expect(getProviderDefinition('facebook')?.name).toBe('Facebook Pages');
+    expect(getProviderDefinition('linkedin')?.availability).toBe('available');
     expect(isSupportedProvider('instagram')).toBe(true);
     expect(isSupportedProvider('threads')).toBe(false);
   });

@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   }
 
   const statePayload = verifyProviderOAuthState(state, cookieState, encryptionKey);
-  if (!statePayload) return finish(request, undefined, 'state');
+  if (!statePayload || statePayload.provider !== 'facebook') return finish(request, undefined, 'state');
   const { workspaceId, brandId, userId } = statePayload;
   if (request.nextUrl.searchParams.has('error')) return finish(request, workspaceId, 'cancelled');
   const code = request.nextUrl.searchParams.get('code');

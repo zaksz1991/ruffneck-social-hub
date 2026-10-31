@@ -1,15 +1,15 @@
-# RuffNeck Social Hub v1.7.1
+# RuffNeck Social Hub v2.0.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, publishing queue and Instagram single-image publishing worker, official Instagram Business Login connection, signed webhook ingestion, read-only messaging conversations, AI-assisted unsent DM reply drafts, the Instagram comment triage workflow, a shared multi-network provider registry, and official Facebook Pages OAuth connection.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
 ## Core modules
 
 - Supabase email/password authentication and callback handling.
 - Workspace membership, multiple brands, team invitations and role-aware access.
 - Content Studio with draft, approval and publishing schedule workflows.
-- Publishing queue with a server-side Instagram single-image feed dispatcher.
-- Encrypted provider token vault shared by official Instagram and Facebook Pages connection flows.
-- Central provider registry listing Facebook, Instagram, TikTok, YouTube, LinkedIn, X and WhatsApp Business with explicit availability status.
+- Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, plus multi-destination scheduling.
+- Encrypted provider token vault shared by official Instagram, Facebook Pages and LinkedIn organization connection flows.
+- Central provider registry for Facebook, Instagram, LinkedIn, TikTok, YouTube, X and WhatsApp Business, with implemented integrations clearly separated from planned ones.
 - Meta webhook signature verification and workspace-scoped event journal.
 - Read-only Instagram text message conversations with optional local AI reply drafts.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
@@ -17,7 +17,8 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Important provider boundaries
 
-- Publishing worker support is limited to supported Instagram single-image feed posts. Facebook Page tokens can be connected for identity/list access, but Facebook publishing is not enabled yet and the flow does not request `pages_manage_posts`. Their vault expiry is nullable because the Page-list response does not report a Page-token expiry; future provider actions must validate tokens with Meta. Other providers and other media types are not implied to work.
+- Publishing worker support is limited to supported Instagram and Facebook Page single-image posts. Facebook publishing requires `pages_manage_posts` plus an eligible Page task. Other providers and other media types are not implied to work.
+- LinkedIn organization Pages can be connected and listed after the LinkedIn app has approved Marketing API access for `r_organization_admin`. This v2.0.0 LinkedIn connection is read-only; LinkedIn publishing is not enabled yet. LinkedIn OAuth access-token expiry is stored, but automatic token refresh is not implemented; reconnect after expiry.
 - Instagram messaging is read-only. AI DM reply drafts are never sent.
 - Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
 - Marking a comment Reviewed or Ignored changes only its RuffNeck internal triage status.
@@ -36,11 +37,11 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0014. In the Supabase project used by RuffNeck Social Hub, apply only migrations that have not already been successfully applied, in ascending order. For an installation already at v1.6.0, apply **only**:
+The complete ZIP contains migrations 0001–0016. Apply only migrations that have not already been successfully applied, in ascending order. For an installation already at v1.9.0, apply **only**:
 
-`supabase/migrations/0014_facebook_pages_multi_provider.sql`
+`supabase/migrations/0016_linkedin_organization_connection.sql`
 
-Do not rerun migrations 0001–0013. In particular, do not rerun migration 0001 or the previously applied signup/workspace migrations.
+Do not rerun migrations 0001–0015. In particular, do not rerun migration 0001 or the previously applied signup/workspace migrations.
 
 ## Environment variables
 
@@ -61,6 +62,8 @@ Server-only variables used by existing modules:
 - `META_GRAPH_API_VERSION` (optional Instagram API override; default `v25.0`)
 - `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` (required for Facebook Pages OAuth)
 - `FACEBOOK_GRAPH_API_VERSION` (optional; default `v26.0`)
+- `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` (required for LinkedIn Organization OAuth)
+- `LINKEDIN_API_VERSION` (optional; default `202610`)
 - `LOCAL_AI_BASE_URL` and `LOCAL_AI_MODEL` (optional); `LOCAL_AI_API_KEY` is optional
 
 New optional variable:
@@ -79,7 +82,7 @@ The callback remains:
 
 Keep `META_WEBHOOK_VERIFY_TOKEN` and `INSTAGRAM_CLIENT_SECRET` configured. The route verifies `X-Hub-Signature-256` before processing events. Subscribe the connected Instagram professional account/app to the `comments` webhook field. Meta access requirements vary by integration path and whether the app is serving only app-owned/test accounts or other customers; verify current app-dashboard requirements and complete the required review before enabling broader client use.
 
-See `README-INSTAGRAM-COMMENT-TRIAGE-v1.5.0.md` and `README-FACEBOOK-PAGES-v1.7.1.md` for provider setup and capability boundaries.
+See `README-INSTAGRAM-COMMENT-TRIAGE-v1.5.0.md`, `README-FACEBOOK-PUBLISHING-v1.8.0.md` and `README-LINKEDIN-PAGES-v2.0.0.md` for provider setup and capability boundaries.
 
 ## Local AI privacy
 
@@ -91,4 +94,4 @@ This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social
 
 ## Verification boundaries
 
-Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0014 has been applied, the Meta app has the relevant permission, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, Vercel and complete CI acceptance must be completed in the target accounts.
+Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0016 has been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
