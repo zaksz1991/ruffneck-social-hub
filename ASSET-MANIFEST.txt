@@ -1,0 +1,16 @@
+RUFFNECK SOCIAL HUB — CONTENT STUDIO UPGRADE
+Incremental asset only. This is not a complete repository replacement.
+
+Files included:
+- README-CONTENT-STUDIO-UPGRADE.md
+- ASSET-MANIFEST.txt
+- supabase/migrations/0004_content_approval_workflow.sql
+- src/app/content/page.tsx                       [new route]
+- src/app/actions/content.ts                     [new server actions]
+- src/lib/content/validation.ts                  [new validation/role helpers]
+- src/lib/content/validation.test.ts             [new tests]
+- src/app/page.tsx                               [updated dashboard entry points]
+- src/app/globals.css                            [updated Content Studio styling]
+
+Preserve all other files in the existing RuffNeck Social Hub repository.
+Apply migration 0004 after migrations 0001, 0002 and 0003.
