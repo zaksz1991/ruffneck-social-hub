@@ -103,3 +103,8 @@ Open **Publishing Analytics** from the workspace navigation or dashboard. Choose
 
 ## v2.4.0 publishing calendar
 The Publishing Queue now includes a monthly calendar above the existing scheduling form and queue history. Use the month controls to move through the calendar; dates are grouped using each brand's saved timezone. The calendar is a read-only view and does not dispatch posts. It reflects the existing queue query limit of 100 records.
+
+
+## v2.5.0 calendar export
+
+The Publishing Calendar can export the selected month as an iCalendar `.ics` file. The export is authenticated and workspace-scoped, uses UTC event timestamps, and can be imported into compatible calendar applications. It is a point-in-time export; later queue changes are not synchronized automatically. No migration or new environment variable is required.

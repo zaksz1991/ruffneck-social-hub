@@ -1,3 +1,11 @@
+## [2.5.0] - Calendar interoperability
+
+- Added authenticated, workspace-scoped iCalendar (.ics) export for the selected publishing month.
+- Exports scheduled timestamps as UTC and includes post title, brand, platform, destination and queue state.
+- Preserves cancelled state in calendar clients; escapes iCalendar text and folds long lines.
+- Export is a snapshot, not a live calendar subscription or two-way sync.
+- No database migration or environment variable changes.
+
 ## 1.0.0
 
 - Added signed Instagram webhook verification and idempotent workspace-scoped event ingestion.
