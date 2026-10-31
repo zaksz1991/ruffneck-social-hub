@@ -153,3 +153,9 @@
 - Added paginated access to complete workspace publishing history, with 25 records per page and exact total count.
 - Kept the latest-100 operational snapshot for the calendar and queue-health panel distinct from the full history browser.
 - Added responsive previous/next navigation and preserved active filters between pages.
+
+## 2.10.0 - 2026-11-01
+- Moved publishing-history status, platform and brand filters into the workspace-scoped database query, before pagination.
+- Exact result counts and page navigation now reflect the selected structured filters across the full history, not just the current 25-record page.
+- Text search remains limited to the currently loaded page and is labelled accordingly.
+- No database migration or environment variable is required.

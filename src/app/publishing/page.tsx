@@ -115,10 +115,21 @@ export default async function PublishingQueuePage({
     accounts = (accountResult.data ?? []) as SocialAccount[];
     jobs = (jobResult.data ?? []) as PublishingJob[];
     queueReadFailed = Boolean(jobResult.error);
-    const historyResult = await supabase
+    const allowedStates = ['all', 'queued', 'claimed', 'dispatching', 'succeeded', 'retryable', 'failed', 'needs_review', 'cancelled'];
+    const selectedState = allowedStates.includes(params.state ?? '') ? (params.state ?? 'all') : 'all';
+    const selectedProvider = accounts.some((account) => account.provider === params.provider) ? (params.provider ?? 'all') : 'all';
+    const selectedBrand = brands.some((brand) => brand.id === params.brand) ? (params.brand ?? 'all') : 'all';
+    let historyQuery = supabase
       .from('publishing_jobs')
       .select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe', { count: 'exact' })
-      .eq('workspace_id', activeWorkspace.id)
+      .eq('workspace_id', activeWorkspace.id);
+    if (selectedState !== 'all') historyQuery = historyQuery.eq('state', selectedState);
+    if (selectedBrand !== 'all') historyQuery = historyQuery.eq('brand_id', selectedBrand);
+    if (selectedProvider !== 'all') {
+      const matchingAccountIds = accounts.filter((account) => account.provider === selectedProvider).map((account) => account.id);
+      historyQuery = matchingAccountIds.length ? historyQuery.in('social_account_id', matchingAccountIds) : historyQuery.eq('social_account_id', '00000000-0000-0000-0000-000000000000');
+    }
+    const historyResult = await historyQuery
       .order('scheduled_at', { ascending: false })
       .range((queuePage - 1) * queuePageSize, queuePage * queuePageSize - 1);
     historyJobs = (historyResult.data ?? []) as PublishingJob[];
@@ -271,7 +282,7 @@ export default async function PublishingQueuePage({
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}
 
             <section className="publishing-queue-section">
-              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Complete workspace history, loaded 25 records per page. Search and filters apply to the current page.</p></div><span className="publishing-count">{historyCount.toLocaleString()} TOTAL RECORDS</span></div>
+              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Complete workspace history, loaded 25 records per page. Status, platform and brand filters apply before pagination; text search applies to the current page.</p></div><span className="publishing-count">{historyCount.toLocaleString()} MATCHING RECORDS</span></div>
               <form method="get" action="/publishing" className="publishing-queue-filters" aria-label="Filter publishing queue">
                 <input type="hidden" name="workspace" value={activeWorkspace.id} />
                 <input type="hidden" name="month" value={monthMatch} />
