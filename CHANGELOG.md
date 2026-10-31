@@ -64,3 +64,8 @@
 ## 1.3.0
 - Added normalized, workspace-scoped, read-only Instagram text conversations and message threads.
 - Added migration 0010 and message normalization tests.
+
+## 1.4.0
+- Added optional local AI-assisted Instagram reply drafts with human review, edit and discard workflow.
+- Added migration 0011 for workspace-scoped draft storage, server-controlled writes and audit events.
+- Added private/HTTPS endpoint validation for OpenAI-compatible local model services.

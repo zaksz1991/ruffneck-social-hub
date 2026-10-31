@@ -44,3 +44,14 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Account profile verification: implemented in callback.
 - Real OAuth acceptance: not yet verified; requires a Meta professional-account tester.
 - Automatic token refresh and publishing dispatch: not implemented.
+
+
+## 1.4.0 local AI reply-draft status
+
+- Optional local/private OpenAI-compatible model endpoint support added for Instagram reply drafting.
+- Draft generation uses up to 20 recent text messages and supported brand voice fields.
+- Reply drafts are saved per workspace and can be edited, marked human-reviewed or discarded.
+- Database writes are available only through authenticated security-definer functions; RLS exposes workspace-scoped reads.
+- Draft generation is optional and remains disabled until `LOCAL_AI_BASE_URL` and `LOCAL_AI_MODEL` are configured.
+- No Instagram send API, automatic replies, attachments or comment moderation are enabled.
+- Live model endpoint behavior, Supabase migration, full TypeScript check, full test suite and production build have not been verified in this package workspace.

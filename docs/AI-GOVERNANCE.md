@@ -4,3 +4,11 @@ L2 may send only exact pre-approved templates for narrow intents after explicit 
 L3 model-generated auto-send is disabled until risk review, confidence calibration, sampling, rate limits, opt-out handling and emergency stop are proven.
 
 Brand profile includes tone, languages, approved facts, forbidden claims and escalation triggers. AI cannot select tenants/accounts, access secrets, change permissions, invent product facts or call platform APIs. Optional Ollama-compatible inference must be private/authenticated; app remains functional without AI.
+
+
+## v1.4.0 Instagram reply drafting
+- Optional local/private OpenAI-compatible inference prepares drafts only.
+- The server sends at most 20 recent text messages and the allowlisted brand voice fields to the configured endpoint after a member explicitly requests generation.
+- Customer message text is treated as untrusted input. Only brand-profile approved facts may be presented as facts.
+- A workspace member must edit/review or discard each draft. The reviewed state is an internal review marker, not a send approval.
+- No model output is sent to Instagram. No auto-send path is implemented.

@@ -83,3 +83,8 @@ See `README-PUBLISHING-WORKER-UPGRADE.md` for migration 0008, the two required s
 ## Instagram webhook ingestion (1.0.0)
 
 See `README-INSTAGRAM-WEBHOOK-UPGRADE.md` for migration and Meta webhook setup. This release adds verified, idempotent event ingestion only; it does not yet enable inbox replies, comment moderation, or messaging capabilities.
+
+
+## v1.4.0: AI-assisted Instagram reply drafts
+
+See `README-INSTAGRAM-AI-REPLY-DRAFTS-v1.4.0.md` for migration 0011, optional local model configuration, privacy notes and human-review limits.
