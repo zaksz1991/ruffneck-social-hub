@@ -253,7 +253,7 @@ export default async function PublishingQueuePage({
                 <label>Status<select name="state" defaultValue={selectedState}>{allowedStates.map((state) => <option key={state} value={state}>{state === 'all' ? 'All statuses' : stateLabel[state] ?? state}</option>)}</select></label>
                 <label>Platform<select name="provider" defaultValue={selectedProvider}><option value="all">All platforms</option>{Array.from(new Set(accounts.map((account) => account.provider))).sort().map((provider) => <option key={provider} value={provider}>{provider}</option>)}</select></label>
                 <label>Brand<select name="brand" defaultValue={selectedBrand}><option value="all">All brands</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
-                <div className="publishing-filter-actions"><button type="submit">Apply filters</button><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}`}>Clear</Link></div>
+                <div className="publishing-filter-actions"><button type="submit">Apply filters</button><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}`}>Clear</Link><a href={`/api/publishing/export?workspace=${encodeURIComponent(activeWorkspace.id)}&state=${encodeURIComponent(selectedState)}&provider=${encodeURIComponent(selectedProvider)}&brand=${encodeURIComponent(selectedBrand)}&q=${encodeURIComponent(searchTerm)}`}>Export filtered CSV</a></div>
               </form>
               {queueReadFailed ? (
                 <div className="publishing-empty"><h3>Publishing queue migration required</h3><p>Apply migration 0005_publishing_calendar_queue.sql after migration 0004, then refresh this page.</p></div>

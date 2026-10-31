@@ -143,3 +143,8 @@
 - Filters preserve the selected workspace and calendar month and can be cleared in one action.
 - Queue filtering is applied only to the already authorized, workspace-scoped records loaded by the page; it does not broaden database access or change publishing behavior.
 - No database migration or environment variable is required.
+
+## 2.7.0 — Filtered publishing queue export
+- Added authenticated CSV export for queue records, reusing the current status, platform, brand and search filters.
+- Includes post, brand, account, scheduling, delivery, attempt and safe error fields.
+- Export is workspace-scoped, private/no-store and capped at 5,000 records.
