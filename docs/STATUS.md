@@ -34,3 +34,13 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Full `npm install` timed out in the build environment. The full Vitest suite and production Next.js build were therefore not run.
 - Migration 0006 has not been applied to the live Supabase project or tested against live data.
 - Vercel deployment and provider dispatch have not been verified.
+
+
+## 0.8.0 provider connection status
+
+- Instagram Business Login OAuth implementation: added; requires Meta app credentials and redirect allow-list configuration.
+- Token encryption: AES-256-GCM implemented server-side; requires a persistent `SOCIAL_TOKEN_ENCRYPTION_KEY`.
+- Token vault: migration 0007 added; apply once to the active Supabase project.
+- Account profile verification: implemented in callback.
+- Real OAuth acceptance: not yet verified; requires a Meta professional-account tester.
+- Automatic token refresh and publishing dispatch: not implemented.

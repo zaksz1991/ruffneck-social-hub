@@ -69,3 +69,8 @@ Owners can invite all non-owner roles. Admins can invite managers and lower role
 ## Next release gate
 
 Before turning dispatch on, implement and test one official provider at a time. Use minimum OAuth scopes, encrypt provider tokens server-side, restrict token access to server workers, verify inbound webhooks, reconcile uncertain network outcomes, use idempotency where the provider supports it, and retain a human-controlled pause switch.
+
+
+## Latest release — 0.8.0
+
+The current release adds the first official provider connection: Instagram Business Login for professional Instagram accounts. Review `README-INSTAGRAM-CONNECTION-UPGRADE.md` before configuring the Meta app, server-only Vercel variables and Supabase migration 0007. Provider publishing dispatch remains disabled.

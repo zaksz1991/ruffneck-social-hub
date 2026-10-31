@@ -42,3 +42,14 @@
 - Added an invitation acceptance route and safe sign-in return path.
 - Added regression tests for team input and role-policy helpers.
 - Invitation delivery remains manual in this release; the interface provides a secure copyable link and does not claim to send email.
+
+## 0.8.0 — Instagram Business Login connection
+
+- Added the first official provider OAuth flow using Instagram Login for professional accounts.
+- Bound signed, ten-minute OAuth state to the authenticated user, workspace and brand.
+- Added server-side authorization-code and long-lived token exchange plus profile verification.
+- Added AES-256-GCM encryption before persisting provider access tokens.
+- Added a locked-down token vault with no browser-role access and a role-checked connection RPC.
+- Added the Connected Channels management page and dashboard navigation.
+- Limited requested permissions to professional profile basics and content publishing; comments, messaging, insights and automatic dispatch remain off.
+- Added migration 0007 and OAuth-state/token-encryption regression tests.

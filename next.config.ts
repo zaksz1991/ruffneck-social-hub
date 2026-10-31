@@ -4,13 +4,22 @@ const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {
-    return [{
-      source: '/invite/:path*',
-      headers: [
-        { key: 'Referrer-Policy', value: 'no-referrer' },
-        { key: 'Cache-Control', value: 'no-store' },
-      ],
-    }];
+    return [
+      {
+        source: '/invite/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
+        source: '/api/integrations/instagram/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+    ];
   },
 };
 
