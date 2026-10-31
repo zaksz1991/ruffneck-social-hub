@@ -54,3 +54,8 @@ Optional future integrations are documented in `.env.example`. Do not configure 
 ## Verification status
 
 Dependency installation could not complete in the current build environment, so `npm run typecheck`, `npm test`, and `npm run build` have not been executed. The migration has not been applied to a live Supabase project. This package is an implementation increment, not a verified production deployment.
+
+
+## Multi-workspace and brand management
+
+Apply `supabase/migrations/0003_multi_workspace_brand_management.sql` after migrations 0001 and 0002. The dashboard then supports creating and switching workspaces, adding brands, and renaming brands for workspace owners/admins. See `docs/WORKSPACE-MANAGEMENT.md` for boundaries and manual acceptance checks.

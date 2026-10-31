@@ -1,19 +1,19 @@
-# Delivery status — authentication and workspace onboarding
+# Engineering status
 
-## Implemented in this increment
-- Supabase SSR browser/server client factories.
-- Email/password sign-in and sign-up server actions.
-- Email verification callback and protected application routes.
-- Sign-out action and authenticated dashboard identity display.
-- Workspace provisioning RPC using `auth.uid()`, input validation and transaction-scoped per-user advisory lock.
-- RLS policy hardening for workspace membership and brand administration.
-- Browser-only setup and deployment instructions.
+## Implemented in repository foundation
+- Next.js App Router application shell and responsive dashboard.
+- Supabase server/browser clients, signup, login, sign-out and auth callback.
+- Initial workspace provisioning and protected authenticated dashboard.
+- PostgreSQL core schema and row-level security foundation.
+- Multi-workspace creation, workspace switching, brand creation and brand renaming.
+- Owner/admin authorization for brand management enforced by database RLS.
 
 ## Not implemented or not verified
-- No provider OAuth, publishing, inbox, analytics ingestion or AI execution.
-- No live Supabase migration or account-flow test has been performed.
-- Dependency installation timed out in this environment. TypeScript checking was attempted but cannot complete because Next.js, Supabase and Vitest packages are not installed; resulting missing-module/type errors are not a passing check.
-- No production build, automated test suite, RLS adversarial test or deployment has passed in this environment.
+- Team invitations, client portal and granular team administration.
+- Social provider OAuth, publishing, inbox, analytics and live metrics.
+- AI provider connection and automated responses.
+- Production security review, RLS adversarial tests and live Supabase migration.
+- Successful hosted build and end-to-end production tests for this update.
 
-## Release gate
-Do not invite real client users until the migrations are applied to a test Supabase project, email confirmation and callback are verified, workspace isolation tests pass, and a production build succeeds on the selected host.
+## Required database migration
+Apply migration 0003 after 0001 and 0002. Existing deployments do not receive new SQL migrations automatically merely because application code is deployed.
