@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cancelScheduledJob, scheduleApprovedContent } from '@/app/actions/publishing';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { summarizeQueueHealth } from '@/lib/publishing/queue-health';
 
 type Workspace = { id: string; name: string };
 type Brand = { id: string; name: string; timezone: string };
@@ -133,6 +134,7 @@ export default async function PublishingQueuePage({
     return matchesState && matchesProvider && matchesBrand && (!searchTerm || haystack.includes(searchTerm.toLowerCase()));
   });
   const activeJobs = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable', 'needs_review'].includes(job.state));
+  const queueHealth = summarizeQueueHealth(jobs);
   const errorMessages: Record<string, string> = {
     input: 'The submitted schedule details were invalid.',
     content: 'Choose an approved content item.',
@@ -180,6 +182,17 @@ export default async function PublishingQueuePage({
               <article><span>Approved content</span><strong>{approvedContent.length}</strong></article>
               <article><span>Connected destinations</span><strong>{connectedAccounts.length}</strong></article>
               <article><span>Brands in workspace</span><strong>{brands.length}</strong></article>
+            </section>
+
+            <section className="publishing-health-panel" aria-label="Publishing queue health">
+              <div className="publishing-health-heading"><div><span className="eyebrow">OPERATIONS HEALTH</span><h2>Queue health</h2><p>Live counts from the latest {queueHealth.totalLoaded} queue records loaded for this workspace.</p></div><span className="publishing-health-scope">LOADED RECORDS ONLY</span></div>
+              <div className="publishing-health-grid">
+                <article className={queueHealth.overdue ? 'health-card health-warning' : 'health-card'}><span>Overdue schedules</span><strong>{queueHealth.overdue}</strong><small>Queued or retryable with a past schedule time</small></article>
+                <article className={queueHealth.attention ? 'health-card health-warning' : 'health-card'}><span>Needs attention</span><strong>{queueHealth.attention}</strong><small>Retryable, failed or needs review</small></article>
+                <article className="health-card"><span>Next 24 hours</span><strong>{queueHealth.upcoming24h}</strong><small>Queued posts due in the next 24 hours</small></article>
+                <article className="health-card health-positive"><span>Published</span><strong>{queueHealth.published}</strong><small>Confirmed successful records in loaded queue</small></article>
+              </div>
+              <p className="publishing-health-note">These are operational queue counts, not social-network reach or engagement analytics. The page currently loads up to 100 records, so older history may not be included.</p>
             </section>
 
             <section className="publishing-calendar-panel" aria-label={`${monthLabel} publishing calendar`}>
