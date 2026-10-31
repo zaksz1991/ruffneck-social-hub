@@ -123,3 +123,9 @@
 - Added authenticated, workspace-scoped CSV export for publishing operations analytics.
 - Added summary and per-job reporting for 7-, 30- and 90-day periods.
 - Added CSV formula-injection protection and private download headers.
+
+## [2.4.0] - Monthly publishing calendar
+- Added a responsive monthly publishing calendar with workspace-preserving month navigation.
+- Groups schedule records by each brand's configured timezone and highlights published and attention states.
+- Preserved the existing queue, scheduler, cancellation flow and v2.3 CSV export.
+- No migration or environment variable changes.

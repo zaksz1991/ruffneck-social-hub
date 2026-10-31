@@ -100,3 +100,6 @@ Static package and syntax checks may be run against this source package. A succe
 ## Publishing operations analytics (v2.2.0)
 
 Open **Publishing Analytics** from the workspace navigation or dashboard. Choose a 7-, 30- or 90-day reporting period and workspace. The report reads workspace-visible publishing jobs and connected social accounts and shows queue volume, confirmed provider publication outcomes, pending/attention states, provider breakdowns and daily activity. It does not represent social reach, impressions, clicks, follower growth or engagement; those require separate approved provider analytics integrations. The report currently reads at most 1,000 queue records per workspace for the selected period. No database migration or new environment variable is required.
+
+## v2.4.0 publishing calendar
+The Publishing Queue now includes a monthly calendar above the existing scheduling form and queue history. Use the month controls to move through the calendar; dates are grouped using each brand's saved timezone. The calendar is a read-only view and does not dispatch posts. It reflects the existing queue query limit of 100 records.

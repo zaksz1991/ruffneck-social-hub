@@ -38,6 +38,14 @@ const stateLabel: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
+function localDateKey(value: string, timeZone: string) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(value));
+    const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '';
+    return `${part('year')}-${part('month')}-${part('day')}`;
+  } catch { return new Date(value).toISOString().slice(0, 10); }
+}
+
 function displayDate(value: string, timeZone: string) {
   try {
     return new Intl.DateTimeFormat('en', {
@@ -53,9 +61,16 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string }>;
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string }>;
 }) {
   const params = await searchParams;
+  const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
+  const [calendarYear, calendarMonth] = monthMatch.split('-').map(Number);
+  const monthStart = new Date(Date.UTC(calendarYear, calendarMonth - 1, 1));
+  const monthEnd = new Date(Date.UTC(calendarYear, calendarMonth, 0));
+  const monthLabel = new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(monthStart);
+  const prevMonth = new Date(Date.UTC(calendarYear, calendarMonth - 2, 1)).toISOString().slice(0, 7);
+  const nextMonth = new Date(Date.UTC(calendarYear, calendarMonth, 1)).toISOString().slice(0, 7);
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -150,6 +165,25 @@ export default async function PublishingQueuePage({
               <article><span>Approved content</span><strong>{approvedContent.length}</strong></article>
               <article><span>Connected destinations</span><strong>{connectedAccounts.length}</strong></article>
               <article><span>Brands in workspace</span><strong>{brands.length}</strong></article>
+            </section>
+
+            <section className="publishing-calendar-panel" aria-label={`${monthLabel} publishing calendar`}>
+              <div className="publishing-calendar-heading"><div><span className="eyebrow">CONTENT OPERATIONS</span><h2>{monthLabel}</h2><p>Scheduled destinations are shown on each brand’s local calendar date.</p></div><div className="publishing-calendar-nav"><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${prevMonth}`} aria-label="Previous month">‹</Link><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${new Date().toISOString().slice(0, 7)}`}>This month</Link><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${nextMonth}`} aria-label="Next month">›</Link></div></div>
+              <div className="publishing-calendar-grid">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <div className="publishing-calendar-weekday" key={day}>{day}</div>)}
+                {(() => {
+                  const offset = (monthStart.getUTCDay() + 6) % 7;
+                  const totalCells = Math.ceil((offset + monthEnd.getUTCDate()) / 7) * 7;
+                  return Array.from({ length: totalCells }, (_, index) => {
+                    const dayNumber = index - offset + 1;
+                    const inMonth = dayNumber >= 1 && dayNumber <= monthEnd.getUTCDate();
+                    const date = inMonth ? `${monthMatch}-${String(dayNumber).padStart(2, '0')}` : '';
+                    const dayJobs = inMonth ? jobs.filter((job) => localDateKey(job.scheduled_at, brandById.get(job.brand_id)?.timezone ?? 'UTC') === date) : [];
+                    return <div key={index} className={`publishing-calendar-day${inMonth ? '' : ' outside'}${date === new Date().toISOString().slice(0, 10) ? ' today' : ''}`}><span className="publishing-calendar-day-number">{inMonth ? dayNumber : ''}</span>{dayJobs.slice(0, 3).map((job) => <span key={job.id} className={`publishing-calendar-event event-${job.state}`} title={`${contentById.get(job.content_id)?.title ?? 'Scheduled post'} · ${job.state}`}>{contentById.get(job.content_id)?.title ?? 'Scheduled post'}</span>)}{dayJobs.length > 3 && <small>+{dayJobs.length - 3} more</small>}</div>;
+                  });
+                })()}
+              </div>
+              <div className="publishing-calendar-legend"><span><i className="legend-queued"/>Queued / processing</span><span><i className="legend-published"/>Published</span><span><i className="legend-attention"/>Needs attention</span><span>{jobs.filter((job) => { const key = localDateKey(job.scheduled_at, brandById.get(job.brand_id)?.timezone ?? 'UTC'); return key >= `${monthMatch}-01` && key <= `${monthMatch}-${String(monthEnd.getUTCDate()).padStart(2, '0')}`; }).length} visible schedule records in loaded queue</span></div>
             </section>
 
             <section className="publishing-safety-banner">
