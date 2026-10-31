@@ -137,3 +137,9 @@
 - Groups schedule records by each brand's configured timezone and highlights published and attention states.
 - Preserved the existing queue, scheduler, cancellation flow and v2.3 CSV export.
 - No migration or environment variable changes.
+
+## 2.6.0 — Publishing queue filters
+- Added workspace-scoped queue filtering by post/account text, delivery state, connected platform and brand.
+- Filters preserve the selected workspace and calendar month and can be cleared in one action.
+- Queue filtering is applied only to the already authorized, workspace-scoped records loaded by the page; it does not broaden database access or change publishing behavior.
+- No database migration or environment variable is required.

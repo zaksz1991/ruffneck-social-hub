@@ -61,7 +61,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string }>;
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string }>; 
 }) {
   const params = await searchParams;
   const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
@@ -117,6 +117,21 @@ export default async function PublishingQueuePage({
   const accountById = new Map(accounts.map((account) => [account.id, account]));
   const connectedAccounts = accounts.filter((account) => account.connection_state === 'connected' && account.capabilities?.content_publish === true);
   const canSchedule = roleCanSchedule(role);
+  const allowedStates = ['all', 'queued', 'claimed', 'dispatching', 'succeeded', 'retryable', 'failed', 'needs_review', 'cancelled'];
+  const selectedState = allowedStates.includes(params.state ?? '') ? (params.state ?? 'all') : 'all';
+  const selectedProvider = accounts.some((account) => account.provider === params.provider) ? (params.provider ?? 'all') : 'all';
+  const selectedBrand = brands.some((brand) => brand.id === params.brand) ? (params.brand ?? 'all') : 'all';
+  const searchTerm = (params.q ?? '').trim().slice(0, 100);
+  const filteredJobs = jobs.filter((job) => {
+    const account = accounts.find((item) => item.id === job.social_account_id);
+    const brand = brands.find((item) => item.id === job.brand_id);
+    const content = approvedContent.find((item) => item.id === job.content_id);
+    const matchesState = selectedState === 'all' || job.state === selectedState;
+    const matchesProvider = selectedProvider === 'all' || account?.provider === selectedProvider;
+    const matchesBrand = selectedBrand === 'all' || job.brand_id === selectedBrand;
+    const haystack = [content?.title, account?.display_name, account?.provider, brand?.name, job.last_error_safe].filter(Boolean).join(' ').toLowerCase();
+    return matchesState && matchesProvider && matchesBrand && (!searchTerm || haystack.includes(searchTerm.toLowerCase()));
+  });
   const activeJobs = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable', 'needs_review'].includes(job.state));
   const errorMessages: Record<string, string> = {
     input: 'The submitted schedule details were invalid.',
@@ -230,14 +245,25 @@ export default async function PublishingQueuePage({
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}
 
             <section className="publishing-queue-section">
-              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Records are stored in PostgreSQL and isolated by workspace membership.</p></div><span className="publishing-count">{jobs.length} RECORDS</span></div>
+              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Records are stored in PostgreSQL and isolated by workspace membership.</p></div><span className="publishing-count">{filteredJobs.length} OF {jobs.length} RECORDS</span></div>
+              <form method="get" action="/publishing" className="publishing-queue-filters" aria-label="Filter publishing queue">
+                <input type="hidden" name="workspace" value={activeWorkspace.id} />
+                <input type="hidden" name="month" value={monthMatch} />
+                <label>Search<input type="search" name="q" maxLength={100} defaultValue={searchTerm} placeholder="Post, brand, account or error" /></label>
+                <label>Status<select name="state" defaultValue={selectedState}>{allowedStates.map((state) => <option key={state} value={state}>{state === 'all' ? 'All statuses' : stateLabel[state] ?? state}</option>)}</select></label>
+                <label>Platform<select name="provider" defaultValue={selectedProvider}><option value="all">All platforms</option>{Array.from(new Set(accounts.map((account) => account.provider))).sort().map((provider) => <option key={provider} value={provider}>{provider}</option>)}</select></label>
+                <label>Brand<select name="brand" defaultValue={selectedBrand}><option value="all">All brands</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
+                <div className="publishing-filter-actions"><button type="submit">Apply filters</button><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}`}>Clear</Link></div>
+              </form>
               {queueReadFailed ? (
                 <div className="publishing-empty"><h3>Publishing queue migration required</h3><p>Apply migration 0005_publishing_calendar_queue.sql after migration 0004, then refresh this page.</p></div>
               ) : jobs.length === 0 ? (
                 <div className="publishing-empty"><div className="publishing-empty-mark">▦</div><h3>The queue is empty</h3><p>Once approved content and connected destinations are available, scheduled items will appear here.</p></div>
+              ) : filteredJobs.length === 0 ? (
+                <div className="publishing-empty"><h3>No matching queue records</h3><p>Change or clear the filters to see other scheduled operations.</p></div>
               ) : (
                 <div className="publishing-job-list">
-                  {jobs.map((job) => {
+                  {filteredJobs.map((job) => {
                     const content = contentById.get(job.content_id);
                     const brand = brandById.get(job.brand_id);
                     const account = accountById.get(job.social_account_id);

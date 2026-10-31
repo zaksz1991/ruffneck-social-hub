@@ -73,3 +73,14 @@
 @media(max-width:650px){.publishing-calendar-panel{padding:12px}.publishing-calendar-heading{align-items:flex-start;flex-direction:column}.publishing-calendar-day{min-height:72px;padding:4px}.publishing-calendar-event{font-size:6px;padding:3px}.publishing-calendar-weekday{padding:7px 2px;font-size:7px}.publishing-calendar-legend{gap:8px}.publishing-calendar-nav{align-self:flex-end}}
 
 .publishing-calendar-nav a[aria-label="Download this month as an iCalendar file"]{background:#effafb;border-color:#b9e6ec;color:#087f98;white-space:nowrap}
+
+/* v2.6.0: searchable, workspace-scoped publishing queue filters. */
+.publishing-queue-filters{display:grid;grid-template-columns:minmax(180px,1.6fr) repeat(3,minmax(125px,.8fr)) auto;align-items:end;gap:10px;padding:14px;margin:0 0 15px;border:1px solid #e8edf3;border-radius:10px;background:#f9fbfd}
+.publishing-queue-filters label{display:grid;gap:6px;color:#66778d;font-size:8px;font-weight:800}
+.publishing-queue-filters input,.publishing-queue-filters select{width:100%;min-width:0;height:36px;padding:0 9px;border:1px solid #dfe7ee;border-radius:7px;background:#fff;color:#34475f;font:inherit;font-size:9px;outline:none}
+.publishing-queue-filters input:focus,.publishing-queue-filters select:focus{border-color:#54bdca;box-shadow:0 0 0 3px #00b4d817}
+.publishing-filter-actions{display:flex;align-items:center;gap:10px}
+.publishing-filter-actions button{height:36px;padding:0 12px;border:0;border-radius:7px;background:#102f4a;color:#fff;font-size:8px;font-weight:900;cursor:pointer;white-space:nowrap}
+.publishing-filter-actions a{color:#74849a;font-size:8px;font-weight:800;white-space:nowrap}
+@media(max-width:900px){.publishing-queue-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.publishing-filter-actions{grid-column:1/-1}}
+@media(max-width:480px){.publishing-queue-filters{grid-template-columns:1fr}.publishing-filter-actions{grid-column:auto}.publishing-filter-actions button{flex:1}}
