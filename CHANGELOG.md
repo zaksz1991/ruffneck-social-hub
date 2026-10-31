@@ -23,3 +23,10 @@
 - Pin production email confirmation redirects to the RuffNeck Social Hub callback rather than inheriting the shared Supabase Site URL.
 - Retain configurable localhost redirects for development.
 - Add safe callback-destination diagnostics and redirect regression tests.
+
+## 0.6.0 — Publishing calendar and queue
+
+- Added the publishing calendar route and queue management page.
+- Added server actions for scheduling approved content and cancelling queued jobs.
+- Added migration 0005 with role and tenant checks, brand-timezone conversion, date-window validation, duplicate protection and audit events.
+- Provider dispatch remains intentionally disabled until official provider integrations and a queue worker are verified.

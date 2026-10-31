@@ -1,61 +1,63 @@
 # RuffNeck Social Hub
 
-Commercial multi-tenant social operations platform, built with a free-first operating model.
+A multi-workspace social operations platform for agencies, brands and client teams. This release bundles the existing authentication, workspace and brand management, Content Studio, human approval workflow, and the new publishing calendar/queue.
 
-## Current delivery
+## Included modules
 
-This release adds the first real application workflow: Supabase email/password authentication, email-verification callback handling, protected application routes, sign-out, and authenticated workspace provisioning. The workspace and its initial `Primary brand` are created through a narrowly scoped database function that derives the user identity from `auth.uid()`.
+- Supabase email/password authentication and verification callback.
+- Workspace provisioning, workspace membership and brand management.
+- Tenant-scoped Content Studio with draft, review, approval and change-request workflows.
+- Publishing calendar and PostgreSQL-backed queue for approved content.
+- Queue cancellation for queued, retryable and needs-review jobs.
+- Workspace audit events for content and scheduling actions.
+- GitHub Actions CI using Node.js 22 and the cache-free npm setup.
 
-Social publishing, inbox ingestion, provider OAuth and AI message sending remain disabled. Dashboard counts are placeholders and are explicitly not live platform metrics.
+## Important publishing boundary
+
+The publishing queue stores a durable schedule record for an approved content item and a connected social account belonging to the same workspace and brand. It validates the requested time against the brand's saved IANA timezone, rejects schedules in the past or more than 90 days ahead, prevents duplicate active jobs, and supports cancellation.
+
+**This release does not publish posts to Facebook, Instagram, TikTok, YouTube, LinkedIn, X or WhatsApp.** Provider OAuth, token vaulting, per-platform payload validation, a server-side dispatch worker, webhook reconciliation and delivery monitoring must be completed and tested before dispatch is enabled. A row in `publishing_jobs` means a schedule is queued, not that a post was sent.
 
 ## Stack
 
-- Next.js App Router and TypeScript
+- Next.js App Router, React 19 and TypeScript
 - Supabase Auth, PostgreSQL and Row Level Security
-- PostgreSQL-backed durable job model
-- Optional Upstash Redis for non-durable acceleration
-- Optional private Ollama-compatible model endpoint
+- PostgreSQL functions for role-checked content and queue mutations
+- GitHub Actions verification
+- Free-first deployment approach; Redis remains optional and is not the source of truth
 
-## Supabase setup (browser only)
+## Supabase database setup
 
-1. Create a new Supabase project dedicated to RuffNeck Social Hub.
-2. Open **SQL Editor** in the Supabase dashboard.
-3. Run `supabase/migrations/0001_core.sql` in full, then run `supabase/migrations/0002_secure_workspace_onboarding.sql` in full. Keep the migration order.
-4. In **Authentication → URL Configuration**, set the Site URL to the deployed app URL. Add the exact callback URL `<your-app-url>/auth/callback` to the Redirect URLs list. For local development, add `http://localhost:3000/auth/callback`.
-5. In **Authentication → Providers → Email**, enable email/password sign-in and email confirmation. Configure SMTP before inviting real users; Supabase's default email service has restrictive limits.
-6. Copy the Project URL and anon/public key from **Project Settings → API**. These are the only Supabase keys used by the browser-facing application.
+In the `grehbumrnrgimwwyiqua` Supabase project used by RuffNeck Social Hub, open **SQL Editor** and apply migrations in order:
+
+1. `supabase/migrations/0001_core.sql`
+2. `supabase/migrations/0002_secure_workspace_onboarding.sql`
+3. `supabase/migrations/0003_multi_workspace_brand_management.sql`
+4. `supabase/migrations/0004_content_approval_workflow.sql`
+5. `supabase/migrations/0005_publishing_calendar_queue.sql`
+
+If a previous migration has already been successfully applied, do not re-run it just because this complete ZIP contains the file. Apply only the migrations not yet applied, in ascending order. `0004` and `0005` are written to tolerate repeated execution for their core objects, but migration history should still be tracked accurately.
 
 ## Environment variables
 
-Set these in the hosting provider's environment-variable screen. Never put a service-role key in a `NEXT_PUBLIC_` variable.
+Keep the existing Vercel Production environment variables:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SITE_URL`
 
-Optional future integrations are documented in `.env.example`. Do not configure unused provider credentials yet.
+No service-role key is needed by the browser-facing application. Never expose a Supabase service-role key in a `NEXT_PUBLIC_` variable.
 
-## Deployment sequence
+For this shared Supabase project, keep the global Site URL unchanged. The allowlist may contain callback URLs for multiple apps. RuffNeck Social Hub uses `https://ruffneck-social-hub.vercel.app/auth/callback`.
 
-1. Upload this complete project directory to a new GitHub repository named `ruffneck-social-hub`. Do not upload it over Kano Run, RuffNeck LMS or RuffNeck Connect.
-2. Import that new repository into the chosen host and set the three required environment variables.
-3. Use the host's build command `npm run build` and start command `npm run start` (or its Next.js preset).
-4. Set the Supabase Site URL and callback allowlist to the final deployed domain.
-5. Create a test account, verify its email, sign in, and confirm that one workspace and one `Primary brand` exist.
+## Replace the repository contents
 
-## Security boundaries
+This is a complete source-project ZIP, not a patch. It includes the full project root and retains the previous signup redirect repair, CI repair, Content Studio and approval workflow. Extract the project folder and replace the files in the existing `ruffneck-social-hub` GitHub repository with its contents. Do not upload it to RuffNeck LMS, RuffNeck Connect or Kano Run.
 
-- The browser receives only the Supabase anon/public key. No service-role key is required for account creation.
-- Workspace provisioning uses `auth.uid()` and does not accept a caller-supplied user ID.
-- Browser users cannot directly insert or modify workspace membership, social-account credentials, publishing jobs or audit events.
-- Provider integrations must be implemented through official APIs, with least-privilege scopes and provider approval.
-- Never treat an AI response or inbound social message as trusted executable instructions.
+## Verification
 
-## Verification status
+The source package contains unit tests for signup response classification, redirect selection, job-state transitions, content validation and schedule input validation. Run `npm install`, `npm run typecheck`, `npm test` and `npm run build` in the CI pipeline. The SQL migration and live deployment are separate manual steps; a successful ZIP check does not prove live Supabase or provider behaviour.
 
-Dependency installation could not complete in the current build environment, so `npm run typecheck`, `npm test`, and `npm run build` have not been executed. The migration has not been applied to a live Supabase project. This package is an implementation increment, not a verified production deployment.
+## Next release gate
 
-
-## Multi-workspace and brand management
-
-Apply `supabase/migrations/0003_multi_workspace_brand_management.sql` after migrations 0001 and 0002. The dashboard then supports creating and switching workspaces, adding brands, and renaming brands for workspace owners/admins. See `docs/WORKSPACE-MANAGEMENT.md` for boundaries and manual acceptance checks.
+Before turning dispatch on, implement and test one official provider at a time. Use minimum OAuth scopes, encrypt provider tokens server-side, restrict token access to server workers, verify inbound webhooks, reconcile uncertain network outcomes, use idempotency where the provider supports it, and retain a human-controlled pause switch.

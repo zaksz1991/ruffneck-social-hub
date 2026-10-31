@@ -107,7 +107,7 @@ export default async function ContentStudioPage({
     <main className="content-studio-shell">
       <header className="content-studio-topbar">
         <Link href="/" className="content-studio-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" /></Link>
-        <nav aria-label="Primary"><Link href="/">Overview</Link><span>Content Studio</span></nav>
+        <nav aria-label="Primary"><Link href="/">Overview</Link><span>Content Studio</span><Link href="/publishing">Publishing Queue</Link></nav>
         <Link className="content-studio-back" href="/">Back to workspace</Link>
       </header>
 
