@@ -1,0 +1,1 @@
+import {it,expect} from 'vitest';import {canTransition,assertTransition} from './job-state';it('claims queued jobs',()=>expect(canTransition('queued','claimed')).toBe(true));it('prevents retrying success',()=>expect(canTransition('succeeded','retryable')).toBe(false));it('rejects illegal transitions',()=>expect(()=>assertTransition('failed','dispatching')).toThrow());
