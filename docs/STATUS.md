@@ -67,3 +67,15 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Real Meta webhook delivery requires the app's `comments` webhook subscription and the required permission/access level. Existing connections must be reauthorized to grant the extra scope.
 - No comment reply, hide, unhide, delete or DM send action is implemented.
 - Live Meta, Supabase migration, full TypeScript check, full test suite and production build have not been verified in this package workspace.
+
+## 1.7.0 multi-platform integration status
+
+- Added a central provider registry for Facebook, Instagram, TikTok, YouTube, LinkedIn, X and WhatsApp Business.
+- Facebook Pages OAuth connection and Page-list retrieval are implemented using official Meta endpoints.
+- Facebook authorization requests only `pages_show_list` and `pages_read_engagement`; publishing permission is not requested in this release.
+- Multiple verified Pages are assigned to the selected brand atomically; Page access tokens are encrypted before database writes.
+- Migration 0014 adds the role-checked storage RPC and makes token expiry nullable for Page tokens when the provider flow does not report a Page-token expiry.
+- The Facebook `content_publish` capability remains false. Facebook dispatch, inbox, comments, insights and moderation are not enabled.
+- Instagram publishing remains the only active publishing worker.
+- TikTok, YouTube, LinkedIn, X and WhatsApp appear in the registry as Planned, without connection buttons.
+- Live Meta OAuth, the migration against the target Supabase project, full Vitest suite, dependency-backed typecheck, full Next.js build and production deployment have not been verified in this package workspace.

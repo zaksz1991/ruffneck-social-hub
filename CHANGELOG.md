@@ -77,3 +77,13 @@
 - Extended optional local AI drafting to produce public comment reply drafts; drafts are editable, reviewable and unsent.
 - Added opt-in `instagram_business_manage_comments` OAuth scope request, controlled by `INSTAGRAM_ENABLE_COMMENT_MANAGEMENT` and reflected in stored account capabilities.
 - No comment reply, hide, delete or other provider action is executed.
+
+
+## 1.7.0 — Multi-platform provider layer and Facebook Pages connection
+
+- Added a central registry for Facebook, Instagram, TikTok, YouTube, LinkedIn, X and WhatsApp Business.
+- Added official Facebook Login OAuth start/callback, signed state, permission verification, Page-list pagination and long-lived user-token exchange.
+- Added atomic storage for multiple Facebook Pages in the existing encrypted provider-token vault.
+- Added migration 0014 with role/brand/scope validation and a workspace audit event.
+- Added a unified Channels screen that distinguishes available providers from planned providers.
+- Facebook Page publishing permission is detected but actual Facebook dispatch remains disabled; the publishing worker remains Instagram-only.

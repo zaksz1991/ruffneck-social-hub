@@ -24,3 +24,14 @@ A login success does not mean publishing or messaging capability is approved. Ex
 - Webhook comment records are normalized into `instagram_comments` and deduplicated by connected account plus provider comment ID.
 - The current UI supports internal triage and unsent AI-assisted reply drafts only. It does not call comment reply, hide, unhide or delete endpoints.
 - Wider use beyond app-owned/test accounts may require Advanced Access and Meta app review. A code path does not prove access approval or webhook delivery.
+
+## Shared provider registry and Facebook Pages adapter (1.7.0)
+
+- The UI and provider features use a central registry for `facebook`, `instagram`, `tiktok`, `youtube`, `linkedin`, `x` and `whatsapp`.
+- Only Facebook Pages and Instagram are marked available. The other provider IDs are roadmap entries, not live connectors.
+- Facebook uses Facebook Login OAuth and the Graph API `/{version}/me/permissions` plus `/{version}/me/accounts` to verify granted Page-list/read scopes and enumerate Pages.
+- The flow requests only `pages_show_list` and `pages_read_engagement`; `pages_manage_posts` is deliberately not requested until publishing is implemented.
+- Each Page token is AES-256-GCM encrypted by the callback before the role-checked RPC stores it in the existing token vault.
+- Page token `token_expires_at` is NULL because this Page-list response does not return an expiry. Future Facebook actions must validate the token and handle revocation; NULL is not a promise of indefinite validity.
+- Facebook Page identity/list connection is implemented. Facebook post publishing, comments, messaging, moderation and insights are not enabled.
+- The publishing queue worker remains provider-gated and Instagram-only. A Page connection never implies that a queued Facebook post can be dispatched.

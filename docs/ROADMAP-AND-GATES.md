@@ -11,3 +11,13 @@
 9. Commercial readiness: usage limits, privacy/deletion, backup restore, accessibility, observability and independent security review.
 
 Code presence alone never marks an operational gate complete.
+
+## Multi-platform expansion (1.7.0 onward)
+
+10. Shared provider registry and Facebook Pages identity connection implemented in 1.7.0. Operational gate: apply migration 0014, configure the Facebook Login callback, verify the intended Page permissions/app review and complete a real Page connection. Facebook publishing remains disabled.
+11. Facebook publishing adapter: implement Page-token validation, text/link and media handling, worker dispatch, idempotency, ambiguous-outcome reconciliation, provider-specific rate limits and live authorised test posts before enabling `content_publish`.
+12. Cross-platform content calendar and post variants: connect one approved content item to provider-specific publishing jobs without assuming every platform accepts the same text or media.
+13. Unified inbox abstraction: map supported provider messages/comments into shared conversation records while retaining provider IDs, event provenance, permission gates and per-network reply-window rules.
+14. Add TikTok, YouTube, LinkedIn, X and WhatsApp connectors individually after official OAuth, API access, app review and provider-action tests pass.
+
+A registry entry is not a working integration. A connected account is not proof that publish, inbox, analytics or moderation capabilities are enabled.
