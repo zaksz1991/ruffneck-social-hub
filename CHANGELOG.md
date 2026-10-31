@@ -1,3 +1,9 @@
+## 1.0.0
+
+- Added signed Instagram webhook verification and idempotent workspace-scoped event ingestion.
+- Added migration 0009, signature tests, and setup/capability documentation.
+- Messaging and comments remain disabled pending Meta permission approval and further implementation.
+
 # Changelog
 
 ## 0.4.0 — Visual identity and dashboard refresh
