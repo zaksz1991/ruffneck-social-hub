@@ -148,3 +148,8 @@
 - Added authenticated CSV export for queue records, reusing the current status, platform, brand and search filters.
 - Includes post, brand, account, scheduling, delivery, attempt and safe error fields.
 - Export is workspace-scoped, private/no-store and capped at 5,000 records.
+
+## 2.9.0 - 2026-11-01
+- Added paginated access to complete workspace publishing history, with 25 records per page and exact total count.
+- Kept the latest-100 operational snapshot for the calendar and queue-health panel distinct from the full history browser.
+- Added responsive previous/next navigation and preserved active filters between pages.

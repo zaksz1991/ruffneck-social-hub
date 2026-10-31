@@ -62,7 +62,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string }>; 
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>; 
 }) {
   const params = await searchParams;
   const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
@@ -89,6 +89,10 @@ export default async function PublishingQueuePage({
   let accounts: SocialAccount[] = [];
   let jobs: PublishingJob[] = [];
   let queueReadFailed = false;
+  const queuePage = Math.max(1, Math.min(10000, Number.parseInt(params.page ?? '1', 10) || 1));
+  const queuePageSize = 25;
+  let historyJobs: PublishingJob[] = [];
+  let historyCount = 0;
 
   if (activeWorkspace) {
     const { data: member } = await supabase
@@ -111,6 +115,15 @@ export default async function PublishingQueuePage({
     accounts = (accountResult.data ?? []) as SocialAccount[];
     jobs = (jobResult.data ?? []) as PublishingJob[];
     queueReadFailed = Boolean(jobResult.error);
+    const historyResult = await supabase
+      .from('publishing_jobs')
+      .select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe', { count: 'exact' })
+      .eq('workspace_id', activeWorkspace.id)
+      .order('scheduled_at', { ascending: false })
+      .range((queuePage - 1) * queuePageSize, queuePage * queuePageSize - 1);
+    historyJobs = (historyResult.data ?? []) as PublishingJob[];
+    historyCount = historyResult.count ?? 0;
+    if (historyResult.error) queueReadFailed = true;
   }
 
   const brandById = new Map(brands.map((brand) => [brand.id, brand]));
@@ -123,7 +136,7 @@ export default async function PublishingQueuePage({
   const selectedProvider = accounts.some((account) => account.provider === params.provider) ? (params.provider ?? 'all') : 'all';
   const selectedBrand = brands.some((brand) => brand.id === params.brand) ? (params.brand ?? 'all') : 'all';
   const searchTerm = (params.q ?? '').trim().slice(0, 100);
-  const filteredJobs = jobs.filter((job) => {
+  const filteredJobs = historyJobs.filter((job) => {
     const account = accounts.find((item) => item.id === job.social_account_id);
     const brand = brands.find((item) => item.id === job.brand_id);
     const content = approvedContent.find((item) => item.id === job.content_id);
@@ -258,10 +271,11 @@ export default async function PublishingQueuePage({
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}
 
             <section className="publishing-queue-section">
-              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Records are stored in PostgreSQL and isolated by workspace membership.</p></div><span className="publishing-count">{filteredJobs.length} OF {jobs.length} RECORDS</span></div>
+              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Complete workspace history, loaded 25 records per page. Search and filters apply to the current page.</p></div><span className="publishing-count">{historyCount.toLocaleString()} TOTAL RECORDS</span></div>
               <form method="get" action="/publishing" className="publishing-queue-filters" aria-label="Filter publishing queue">
                 <input type="hidden" name="workspace" value={activeWorkspace.id} />
                 <input type="hidden" name="month" value={monthMatch} />
+                <input type="hidden" name="page" value="1" />
                 <label>Search<input type="search" name="q" maxLength={100} defaultValue={searchTerm} placeholder="Post, brand, account or error" /></label>
                 <label>Status<select name="state" defaultValue={selectedState}>{allowedStates.map((state) => <option key={state} value={state}>{state === 'all' ? 'All statuses' : stateLabel[state] ?? state}</option>)}</select></label>
                 <label>Platform<select name="provider" defaultValue={selectedProvider}><option value="all">All platforms</option>{Array.from(new Set(accounts.map((account) => account.provider))).sort().map((provider) => <option key={provider} value={provider}>{provider}</option>)}</select></label>
@@ -270,7 +284,7 @@ export default async function PublishingQueuePage({
               </form>
               {queueReadFailed ? (
                 <div className="publishing-empty"><h3>Publishing queue migration required</h3><p>Apply migration 0005_publishing_calendar_queue.sql after migration 0004, then refresh this page.</p></div>
-              ) : jobs.length === 0 ? (
+              ) : historyCount === 0 ? (
                 <div className="publishing-empty"><div className="publishing-empty-mark">▦</div><h3>The queue is empty</h3><p>Once approved content and connected destinations are available, scheduled items will appear here.</p></div>
               ) : filteredJobs.length === 0 ? (
                 <div className="publishing-empty"><h3>No matching queue records</h3><p>Change or clear the filters to see other scheduled operations.</p></div>
@@ -291,6 +305,7 @@ export default async function PublishingQueuePage({
                   })}
                 </div>
               )}
+              {historyCount > queuePageSize && <nav className="publishing-history-pagination" aria-label="Publishing history pages"><span>Page {queuePage} of {Math.ceil(historyCount / queuePageSize).toLocaleString()}</span><div>{queuePage > 1 && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage - 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Previous</Link>}{queuePage * queuePageSize < historyCount && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage + 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Next</Link>}</div></nav>}
             </section>
             <p className="publishing-footnote">Supported dispatch: one public HTTPS image with caption to Instagram Business or Facebook Pages. Video, carousels, other networks and automatic retry after an uncertain provider response are not supported.</p>
           </>
