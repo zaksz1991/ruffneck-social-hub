@@ -10,6 +10,16 @@ function formText(formData: FormData, key: string): string {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function mediaRefs(formData: FormData): string[] {
+  const value = formText(formData, 'media_url');
+  if (!value) return [];
+  if (value.length > 2048) throw new Error('Image URL is too long.');
+  let parsed: URL;
+  try { parsed = new URL(value); } catch { throw new Error('Enter a valid image URL.'); }
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password) throw new Error('Image URL must use public HTTPS.');
+  return [parsed.toString()];
+}
+
 function contentRedirect(workspaceId: string, query: string): never {
   redirect(`/content?workspace=${encodeURIComponent(workspaceId)}&${query}`);
 }
@@ -25,15 +35,18 @@ export async function createContentDraft(formData: FormData) {
   const workspaceId = formText(formData, 'workspace_id');
   const brandId = formText(formData, 'brand_id');
   const parsed = validateContentInput(formText(formData, 'title'), formText(formData, 'body'));
+  let media: string[];
+  try { media = mediaRefs(formData); } catch { contentRedirect(workspaceId || 'invalid', 'error=media'); }
   if (!isUuid(workspaceId) || !isUuid(brandId)) redirect('/content?error=input');
   if (!parsed.ok) contentRedirect(workspaceId, `error=${parsed.reason}`);
 
   const { supabase } = await requireUser();
-  const { error } = await supabase.rpc('create_content_draft', {
+  const { error } = await supabase.rpc('create_content_draft_with_media', {
     target_workspace_id: workspaceId,
     target_brand_id: brandId,
     content_title: parsed.value.title,
     content_body: parsed.value.body,
+    target_media_refs: media,
   });
   if (error) contentRedirect(workspaceId, 'error=create');
   revalidatePath('/');
@@ -45,14 +58,17 @@ export async function updateContentDraft(formData: FormData) {
   const workspaceId = formText(formData, 'workspace_id');
   const contentId = formText(formData, 'content_id');
   const parsed = validateContentInput(formText(formData, 'title'), formText(formData, 'body'));
+  let media: string[];
+  try { media = mediaRefs(formData); } catch { contentRedirect(workspaceId || 'invalid', 'error=media'); }
   if (!isUuid(workspaceId) || !isUuid(contentId)) redirect('/content?error=input');
   if (!parsed.ok) contentRedirect(workspaceId, `error=${parsed.reason}`);
 
   const { supabase } = await requireUser();
-  const { error } = await supabase.rpc('update_content_draft', {
+  const { error } = await supabase.rpc('update_content_draft_with_media', {
     target_content_id: contentId,
     content_title: parsed.value.title,
     content_body: parsed.value.body,
+    target_media_refs: media,
   });
   if (error) contentRedirect(workspaceId, 'error=update');
   revalidatePath('/content');

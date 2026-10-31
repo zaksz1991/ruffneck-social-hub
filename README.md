@@ -74,3 +74,7 @@ Before turning dispatch on, implement and test one official provider at a time. 
 ## Latest release — 0.8.0
 
 The current release adds the first official provider connection: Instagram Business Login for professional Instagram accounts. Review `README-INSTAGRAM-CONNECTION-UPGRADE.md` before configuring the Meta app, server-only Vercel variables and Supabase migration 0007. Provider publishing dispatch remains disabled.
+
+## Version 0.9.0 — Instagram image publishing worker
+
+See `README-PUBLISHING-WORKER-UPGRADE.md` for migration 0008, the two required server-side Vercel variables, GitHub Actions secrets, supported media requirements, retry behavior, and operational limitations. This release supports confirmed Instagram single-image feed publishing only; other providers and media formats remain unsupported.

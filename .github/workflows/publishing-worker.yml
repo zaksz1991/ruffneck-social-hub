@@ -1,0 +1,29 @@
+name: Publishing worker
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: ruffneck-publishing-worker
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Trigger secure publishing worker
+        env:
+          WORKER_URL: ${{ secrets.RSH_WORKER_URL }}
+          WORKER_SECRET: ${{ secrets.SOCIAL_PUBLISH_CRON_SECRET }}
+        run: |
+          set -eu
+          test -n "$WORKER_URL"
+          test -n "$WORKER_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --max-time 75 \
+            --request POST \
+            --header "Authorization: Bearer $WORKER_SECRET" \
+            --header "Content-Type: application/json" \
+            "$WORKER_URL/api/cron/publishing"

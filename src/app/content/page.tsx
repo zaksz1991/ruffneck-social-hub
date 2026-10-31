@@ -18,6 +18,7 @@ type ContentItem = {
   created_by: string;
   title: string;
   body: string;
+  media_refs: unknown;
   status: 'draft' | 'in_review' | 'approved' | 'archived';
   created_at: string;
   updated_at: string;
@@ -40,6 +41,7 @@ const errors: Record<string, string> = {
   update: 'The draft could not be updated. Only draft content can be edited.',
   submit: 'The item could not be submitted. It may no longer be a draft or your role may not permit submission.',
   review: 'The review action could not be completed. Confirm the item is awaiting review and your role can approve it.',
+  media: 'Use one public HTTPS image URL, or leave the image field blank.',
 };
 
 const success: Record<string, string> = {
@@ -87,7 +89,7 @@ export default async function ContentStudioPage({
 
     const [{ data: brandRows }, { data: contentRows }, { data: reviewRows }] = await Promise.all([
       supabase.from('brands').select('id,name,timezone').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: true }),
-      supabase.from('content_items').select('id,workspace_id,brand_id,created_by,title,body,status,created_at,updated_at,last_reviewed_at').eq('workspace_id', activeWorkspace.id).order('updated_at', { ascending: false }).limit(100),
+      supabase.from('content_items').select('id,workspace_id,brand_id,created_by,title,body,media_refs,status,created_at,updated_at,last_reviewed_at').eq('workspace_id', activeWorkspace.id).order('updated_at', { ascending: false }).limit(100),
       supabase.from('content_reviews').select('id,content_id,decision,note,created_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }).limit(40),
     ]);
     brands = (brandRows ?? []) as Brand[];
@@ -142,7 +144,7 @@ export default async function ContentStudioPage({
                   <input type="hidden" name="workspace_id" value={activeWorkspace.id} />
                   <label>Brand<select name="brand_id" required defaultValue={brands[0]?.id}>{brands.map((brand) => <option value={brand.id} key={brand.id}>{brand.name}</option>)}</select></label>
                   <label>Post title<input name="title" minLength={2} maxLength={160} required placeholder="Give this post a working title" /></label>
-                  <label>Post copy<textarea name="body" minLength={1} maxLength={5000} required rows={5} placeholder="Write the content for this brand. Platform-specific formatting and media will be added when official channels are connected." /></label>
+                  <label>Post copy<textarea name="body" minLength={1} maxLength={5000} required rows={5} placeholder="Write the content for this brand." /></label><label>Image URL (optional)<input name="media_url" type="url" inputMode="url" placeholder="https://your-public-image-url.jpg" /></label><p className="muted-note">Instagram auto-publishing currently supports one publicly accessible HTTPS image per post.</p>
                   <div className="content-form-footer"><small>Maximum 5,000 characters. Saving does not publish anything.</small><button type="submit" className="content-primary-button">Save draft</button></div>
                 </form>
               </section>
@@ -166,7 +168,7 @@ export default async function ContentStudioPage({
                         {latestReview && <div className={`content-review-note ${latestReview.decision === 'approved' ? 'review-approved' : 'review-changes'}`}><strong>{latestReview.decision === 'approved' ? 'Latest review: approved' : 'Latest review: changes requested'}</strong>{latestReview.note && <span>{latestReview.note}</span>}<time dateTime={latestReview.created_at}>{formatDate(latestReview.created_at)}</time></div>}
 
                         {canEdit && (
-                          <details className="content-edit-details"><summary>Edit draft</summary><form action={updateContentDraft} className="content-edit-form"><input type="hidden" name="workspace_id" value={activeWorkspace.id} /><input type="hidden" name="content_id" value={item.id} /><label>Title<input name="title" minLength={2} maxLength={160} required defaultValue={item.title} /></label><label>Post copy<textarea name="body" minLength={1} maxLength={5000} rows={4} required defaultValue={item.body} /></label><button type="submit" className="content-secondary-button">Save changes</button></form></details>
+                          <details className="content-edit-details"><summary>Edit draft</summary><form action={updateContentDraft} className="content-edit-form"><input type="hidden" name="workspace_id" value={activeWorkspace.id} /><input type="hidden" name="content_id" value={item.id} /><label>Title<input name="title" minLength={2} maxLength={160} required defaultValue={item.title} /></label><label>Post copy<textarea name="body" minLength={1} maxLength={5000} rows={4} required defaultValue={item.body} /></label><label>Image URL (optional)<input name="media_url" type="url" inputMode="url" defaultValue={Array.isArray(item.media_refs) && typeof item.media_refs[0] === 'string' ? item.media_refs[0] : ''} placeholder="https://your-public-image-url.jpg" /></label><button type="submit" className="content-secondary-button">Save changes</button></form></details>
                         )}
 
                         <div className="content-item-actions">
