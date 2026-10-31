@@ -59,3 +59,8 @@
 - Added the Connected Channels management page and dashboard navigation.
 - Limited requested permissions to professional profile basics and content publishing; comments, messaging, insights and automatic dispatch remain off.
 - Added migration 0007 and OAuth-state/token-encryption regression tests.
+
+
+## 1.3.0
+- Added normalized, workspace-scoped, read-only Instagram text conversations and message threads.
+- Added migration 0010 and message normalization tests.

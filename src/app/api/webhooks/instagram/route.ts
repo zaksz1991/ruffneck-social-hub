@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyMetaSignature } from '@/lib/webhooks/meta-signature';
+import { normalizeInstagramMessage } from '@/lib/webhooks/instagram-message';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,6 +68,32 @@ export async function POST(request: NextRequest) {
         ...messaging.map((item, index) => ({ kind: 'messaging', index, value: item })),
       ];
       for (const record of records) {
+        if (record.kind === 'messaging') {
+          const normalized = normalizeInstagramMessage(record.value, providerAccountId);
+          if (normalized) {
+            const { data: conversation, error: conversationError } = await admin
+              .from('instagram_conversations')
+              .upsert({
+                workspace_id: account.workspace_id,
+                social_account_id: account.id,
+                participant_provider_id: normalized.participantProviderId,
+                last_message_at: normalized.sentAt,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'social_account_id,participant_provider_id' })
+              .select('id').single();
+            if (conversationError || !conversation) throw conversationError ?? new Error('Conversation upsert failed.');
+            const { error: messageError } = await admin.from('instagram_messages').upsert({
+              workspace_id: account.workspace_id,
+              conversation_id: conversation.id,
+              social_account_id: account.id,
+              provider_message_id: normalized.providerMessageId,
+              direction: normalized.direction,
+              message_text: normalized.text,
+              provider_sent_at: normalized.sentAt,
+            }, { onConflict: 'social_account_id,provider_message_id', ignoreDuplicates: true });
+            if (messageError) throw messageError;
+          }
+        }
         const serialized = JSON.stringify({ entry: providerAccountId, record });
         const idempotencyKey = createHash('sha256').update(serialized).digest('hex');
         const { error } = await admin.from('provider_webhook_events').upsert({
