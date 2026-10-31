@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { classifySignupResponse } from '@/lib/auth-signup-result';
+import { getSignupEmailRedirectTo } from '@/lib/auth-redirect';
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -52,7 +53,16 @@ export async function signUp(formData: FormData) {
     redirect('/signup?error=config');
   }
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  let emailRedirectTo: string;
+  try {
+    emailRedirectTo = getSignupEmailRedirectTo();
+  } catch (error) {
+    console.error('[auth.signUp] Invalid email confirmation callback configuration:', error);
+    redirect('/signup?error=config');
+  }
+  // Safe diagnostic: this logs only the public callback destination, never an
+  // email address, password, confirmation token, or Supabase credential.
+  console.info('[auth.signUp] Email confirmation callback:', emailRedirectTo);
   let result: Awaited<ReturnType<SupabaseServerClient['auth']['signUp']>>;
   try {
     result = await supabase.auth.signUp({
@@ -60,7 +70,7 @@ export async function signUp(formData: FormData) {
       password,
       options: {
         data: { full_name: name, workspace_name: workspaceName },
-        emailRedirectTo: `${siteUrl}/auth/callback`,
+        emailRedirectTo,
       },
     });
   } catch (error) {

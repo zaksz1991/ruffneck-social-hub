@@ -18,3 +18,8 @@
 - Detect Supabase's empty-identities response for an already-registered email.
 - Keep pending-verification confirmation on the signup page, and show explicit errors for missing or incomplete responses.
 - Add regression tests for the signup-response classifier.
+
+## Confirmation redirect repair
+- Pin production email confirmation redirects to the RuffNeck Social Hub callback rather than inheriting the shared Supabase Site URL.
+- Retain configurable localhost redirects for development.
+- Add safe callback-destination diagnostics and redirect regression tests.
