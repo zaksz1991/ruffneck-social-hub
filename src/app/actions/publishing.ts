@@ -23,32 +23,46 @@ async function authenticatedClient() {
 
 export async function scheduleApprovedContent(formData: FormData) {
   const workspaceId = field(formData, 'workspace_id');
-  const parsed = validateScheduleInput(
-    field(formData, 'content_id'),
-    field(formData, 'social_account_id'),
-    field(formData, 'scheduled_local'),
-  );
+  const contentId = field(formData, 'content_id');
+  const scheduledLocal = field(formData, 'scheduled_local');
+  const rawAccountIds = formData.getAll('social_account_ids');
+  const accountIds = [...new Set(rawAccountIds.filter((value): value is string => typeof value === 'string').map((value) => value.trim()))];
+
   if (!isScheduleUuid(workspaceId)) redirect('/publishing?error=input');
+  if (!isScheduleUuid(contentId)) returnToQueue(workspaceId, 'error=content');
+  if (accountIds.length === 0 || accountIds.length > 10 || accountIds.some((id) => !isScheduleUuid(id))) {
+    returnToQueue(workspaceId, 'error=accounts');
+  }
+  const parsed = validateScheduleInput(contentId, accountIds[0], scheduledLocal);
   if (!parsed.ok) returnToQueue(workspaceId, `error=${parsed.reason}`);
 
   const supabase = await authenticatedClient();
-  const { error } = await supabase.rpc('schedule_approved_content', {
-    target_content_id: parsed.value.contentId,
-    target_social_account_id: parsed.value.socialAccountId,
-    target_scheduled_local: parsed.value.scheduledLocal,
-  });
+  let created = 0;
+  let failed = 0;
+  let duplicate = 0;
+  let denied = false;
 
-  if (error) {
-    console.error('[publishing.schedule] Queue operation rejected:', { code: error.code });
-    if (error.code === '23505') returnToQueue(workspaceId, 'error=duplicate');
-    if (error.code === '42501') returnToQueue(workspaceId, 'error=permission');
-    if (error.code === 'PGRST202' || error.code === '42883') returnToQueue(workspaceId, 'error=migration');
-    returnToQueue(workspaceId, 'error=schedule');
+  // Each destination is an independent, database-validated queue operation.
+  // A failure for one network/account does not discard successful schedules.
+  for (const accountId of accountIds) {
+    const { error } = await supabase.rpc('schedule_approved_content', {
+      target_content_id: parsed.value.contentId,
+      target_social_account_id: accountId,
+      target_scheduled_local: parsed.value.scheduledLocal,
+    });
+    if (!error) {
+      created += 1;
+      continue;
+    }
+    failed += 1;
+    if (error.code === '23505') duplicate += 1;
+    if (error.code === '42501') denied = true;
+    console.error('[publishing.schedule-batch] Destination rejected:', { code: error.code });
   }
 
   revalidatePath('/publishing');
   revalidatePath('/');
-  returnToQueue(workspaceId, 'saved=scheduled');
+  returnToQueue(workspaceId, `saved=bulk&created=${created}&failed=${failed}&duplicates=${duplicate}${denied ? '&denied=1' : ''}`);
 }
 
 export async function cancelScheduledJob(formData: FormData) {

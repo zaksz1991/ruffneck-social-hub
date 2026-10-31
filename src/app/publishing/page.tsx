@@ -53,7 +53,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; error?: string; saved?: string }>;
+  searchParams: Promise<{ workspace?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createSupabaseServerClient();
@@ -107,6 +107,7 @@ export default async function PublishingQueuePage({
     input: 'The submitted schedule details were invalid.',
     content: 'Choose an approved content item.',
     account: 'Choose a valid destination account.',
+    accounts: 'Select between one and ten connected publishing destinations.',
     datetime: 'Enter a valid date and time using the selected brand timezone.',
     duplicate: 'This content is already scheduled for that account at that time.',
     permission: 'Your workspace role does not allow this scheduling action.',
@@ -138,7 +139,7 @@ export default async function PublishingQueuePage({
         </div>
 
         {params.error && <p className="notice error">{errorMessages[params.error] ?? 'The requested publishing action failed.'}</p>}
-        {params.saved && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
+        {params.saved === 'bulk' ? <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Created {Number(params.created ?? 0)} schedule(s); {Number(params.failed ?? 0)} destination(s) failed. {Number(params.duplicates ?? 0) > 0 ? `${Number(params.duplicates)} duplicate schedule(s) were skipped. ` : ''}{params.denied === '1' ? 'At least one destination was rejected by workspace permissions. ' : ''}Each successful destination is queued separately; nothing is published immediately.</p> : params.saved && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
 
         {!activeWorkspace ? (
           <section className="publishing-empty"><h2>No workspace available</h2><p>Create or join a workspace before scheduling content.</p><Link href="/" className="publishing-primary">Return to workspace setup</Link></section>
@@ -159,7 +160,7 @@ export default async function PublishingQueuePage({
 
             {canSchedule && approvedContent.length > 0 && connectedAccounts.length > 0 && (
               <section className="publishing-compose-card">
-                <div className="publishing-section-heading"><div><span className="eyebrow">NEW SCHEDULE</span><h2>Add approved content to the queue</h2><p>One queue item is created for one connected destination.</p></div><span className="publishing-tag">APPROVED CONTENT ONLY</span></div>
+                <div className="publishing-section-heading"><div><span className="eyebrow">NEW SCHEDULE</span><h2>Add approved content to the queue</h2><p>Create matching schedule entries for up to ten connected destinations in one operation.</p></div><span className="publishing-tag">APPROVED CONTENT ONLY</span></div>
                 <form action={scheduleApprovedContent} className="publishing-form">
                   <input type="hidden" name="workspace_id" value={activeWorkspace.id} />
                   <label>Approved content
@@ -171,17 +172,17 @@ export default async function PublishingQueuePage({
                       })}
                     </select>
                   </label>
-                  <label>Connected destination
-                    <select name="social_account_id" required defaultValue="">
-                      <option value="" disabled>Select a connected account</option>
+                  <label>Connected destinations (select up to 10)
+                    <select name="social_account_ids" required multiple size={Math.min(Math.max(connectedAccounts.length, 3), 7)} aria-describedby="publishing-destinations-help">
                       {connectedAccounts.map((account) => <option value={account.id} key={account.id}>{account.display_name || account.provider} · {account.provider} · {brandById.get(account.brand_id)?.name ?? 'Brand'}</option>)}
                     </select>
+                    <small id="publishing-destinations-help">Use Ctrl (Windows) or Command (Mac) to select multiple destinations. The database checks that every destination belongs to the selected content brand.</small>
                   </label>
                   <label>Publish date and time
                     <input type="datetime-local" name="scheduled_local" required />
                     <small>Enter the wall-clock time in the selected content brand&apos;s saved timezone. The server validates the actual UTC schedule.</small>
                   </label>
-                  <div className="publishing-form-footer"><span>Only supported Meta destinations are dispatched by the worker.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
+                  <div className="publishing-form-footer"><span>Supported Meta destinations are dispatched by the worker. Other selected providers may be rejected until their worker is implemented.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
                 </form>
               </section>
             )}
