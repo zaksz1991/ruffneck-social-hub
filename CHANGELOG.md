@@ -118,3 +118,8 @@
 - Added navigation from the workspace sidebar, dashboard quick links and operational modules.
 - Uses only existing publishing-job and connected-account records; no new migration or environment variable is required.
 - Explicitly excludes impressions, reach, clicks, audience growth and engagement until official provider analytics APIs are integrated.
+
+## 2.3.0 — 2026-10-31
+- Added authenticated, workspace-scoped CSV export for publishing operations analytics.
+- Added summary and per-job reporting for 7-, 30- and 90-day periods.
+- Added CSV formula-injection protection and private download headers.
