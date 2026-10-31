@@ -41,13 +41,13 @@ export default async function ConversationDetail({ params, searchParams }: { par
   return <main className="inbox-shell">
     <header className="inbox-topbar">
       <Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" /></Link>
-      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link></nav>
+      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/comments">Comments</Link></nav>
       <Link href="/inbox/conversations" className="inbox-back">All conversations</Link>
     </header>
     <section className="inbox-main">
       <div className="inbox-heading"><div><span className="eyebrow">INSTAGRAM · MESSAGE THREAD</span><h1>Conversation</h1><p>Participant reference: {c.participant_provider_id}</p></div></div>
       {query.draft_action && <div className={query.draft_action === 'failed' || query.draft_action === 'invalid' ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{query.draft_action === 'saved' ? 'Draft changes saved.' : query.draft_action === 'reviewed' ? 'Draft marked as human-reviewed. No message was sent.' : query.draft_action === 'discarded' ? 'Draft discarded.' : query.draft_action === 'invalid' ? 'The draft update was invalid.' : 'The draft could not be updated. Confirm migration 0011 and workspace access.'}</div>}
-      <div className="inbox-notice"><strong>Inbound messages are read-only</strong><p>RuffNeck Social Hub can prepare and save a proposed reply for human review. It does not send replies, access attachments, or perform comment moderation.</p></div>
+      <div className="inbox-notice"><strong>Inbound messages are read-only</strong><p>RuffNeck Social Hub can prepare and save a proposed direct-message reply for human review. It does not send replies or access attachments. Comment triage is available separately in Comments.</p></div>
       <section className="inbox-events">
         <div className="inbox-section-title"><div><h2>Message history</h2><p>{messages.length} messages · oldest first</p></div></div>
         {!messages.length ? <div className="inbox-empty"><p>No text messages stored.</p></div> : <div className="inbox-event-list">{messages.map(m => <article className="inbox-event" key={m.id}><div className="event-symbol">{m.direction === 'inbound' ? 'IN' : 'OUT'}</div><div className="event-copy"><div className="event-title"><strong>{m.direction === 'inbound' ? 'Incoming message' : 'Outgoing message'}</strong></div><p style={{ whiteSpace:'pre-wrap' }}>{m.message_text}</p><small>{new Date(m.provider_sent_at).toLocaleString()}</small></div></article>)}</div>}

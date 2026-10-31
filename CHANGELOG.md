@@ -69,3 +69,11 @@
 - Added optional local AI-assisted Instagram reply drafts with human review, edit and discard workflow.
 - Added migration 0011 for workspace-scoped draft storage, server-controlled writes and audit events.
 - Added private/HTTPS endpoint validation for OpenAI-compatible local model services.
+
+## 1.5.0
+- Added signature-verified Instagram comment normalization and workspace-scoped comment ingestion from the existing webhook route.
+- Added migration 0012 for comment triage, reviewed/ignored internal statuses, comment reply draft storage, role-checked RPCs and audit events.
+- Added an Instagram Comments queue with workspace/status filtering, pagination and internal triage controls.
+- Extended optional local AI drafting to produce public comment reply drafts; drafts are editable, reviewable and unsent.
+- Added opt-in `instagram_business_manage_comments` OAuth scope request, controlled by `INSTAGRAM_ENABLE_COMMENT_MANAGEMENT` and reflected in stored account capabilities.
+- No comment reply, hide, delete or other provider action is executed.

@@ -14,3 +14,13 @@ A login success does not mean publishing or messaging capability is approved. Ex
 - Database browser roles receive no privileges on `social_account_token_vault`.
 - Requested scopes are limited to `instagram_business_basic` and `instagram_business_content_publish`.
 - The adapter currently establishes connection/profile access only. It is not a publishing worker, inbox adapter, comments adapter, insights adapter, webhook receiver or token refresh scheduler.
+
+
+## Instagram comment triage (1.5.0)
+
+- Webhook field: `comments`, delivered through the existing signature-verified callback.
+- Instagram Login permission gate: `instagram_business_manage_comments`; this is not requested unless `INSTAGRAM_ENABLE_COMMENT_MANAGEMENT=true`.
+- Stored account capability `comments` is true only when the comment-management scope is recorded.
+- Webhook comment records are normalized into `instagram_comments` and deduplicated by connected account plus provider comment ID.
+- The current UI supports internal triage and unsent AI-assisted reply drafts only. It does not call comment reply, hide, unhide or delete endpoints.
+- Wider use beyond app-owned/test accounts may require Advanced Access and Meta app review. A code path does not prove access approval or webhook delivery.

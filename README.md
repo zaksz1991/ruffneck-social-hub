@@ -1,90 +1,91 @@
-# RuffNeck Social Hub
+# RuffNeck Social Hub v1.5.0
 
-RuffNeck Social Hub 0.7.0 is a multi-workspace social operations platform for agencies, brands and client teams. This complete replacement release bundles authentication, workspaces, brands, Content Studio, approval workflow, the publishing calendar/queue, and workspace team governance.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, publishing queue and Instagram single-image publishing worker, official Instagram Business Login connection, signed webhook ingestion, read-only messaging conversations, AI-assisted unsent DM reply drafts, and the first Instagram comment triage workflow.
 
-## Included modules
+## Core modules
 
-- Supabase email/password authentication and verification callback.
-- Workspace provisioning, workspace membership and brand management.
-- Tenant-scoped Content Studio with draft, review, approval and change-request workflows.
-- Publishing calendar and PostgreSQL-backed queue for approved content.
-- Queue cancellation for queued, retryable and needs-review jobs.
-- Workspace team directory, one-time invitation links, role updates, member removal and audit visibility.
-- Workspace audit events for content and scheduling actions.
-- GitHub Actions CI using Node.js 22 and the cache-free npm setup.
+- Supabase email/password authentication and callback handling.
+- Workspace membership, multiple brands, team invitations and role-aware access.
+- Content Studio with draft, approval and publishing schedule workflows.
+- Publishing queue with a server-side Instagram single-image feed dispatcher.
+- Encrypted Instagram OAuth token vault and official Business Login connection.
+- Meta webhook signature verification and workspace-scoped event journal.
+- Read-only Instagram text message conversations with optional local AI reply drafts.
+- Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
+- GitHub Actions CI and scheduled publishing worker workflow.
 
-## Important publishing boundary
+## Important provider boundaries
 
-The publishing queue stores a durable schedule record for an approved content item and a connected social account belonging to the same workspace and brand. It validates the requested time against the brand's saved IANA timezone, rejects schedules in the past or more than 90 days ahead, prevents duplicate active jobs, and supports cancellation.
-
-**This release does not publish posts to Facebook, Instagram, TikTok, YouTube, LinkedIn, X or WhatsApp.** Provider OAuth, token vaulting, per-platform payload validation, a server-side dispatch worker, webhook reconciliation and delivery monitoring must be completed and tested before dispatch is enabled. A row in `publishing_jobs` means a schedule is queued, not that a post was sent.
+- Publishing worker support is limited to supported Instagram single-image feed posts. Other providers and other media types are not implied to work.
+- Instagram messaging is read-only. AI DM reply drafts are never sent.
+- Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
+- Marking a comment Reviewed or Ignored changes only its RuffNeck internal triage status.
+- Marking an AI draft human-reviewed does not publish it.
+- This release does not send Instagram comment replies, hide/unhide comments, delete comments, send DMs, or automate moderation.
+- Meta app permissions, account eligibility, webhook subscriptions, app review and access-level approval are independent operational requirements. A code path does not prove provider access.
 
 ## Stack
 
-- Next.js App Router, React 19 and TypeScript
+- Next.js 15 App Router, React 19 and TypeScript
 - Supabase Auth, PostgreSQL and Row Level Security
-- PostgreSQL functions for role-checked content and queue mutations
-- GitHub Actions verification
-- Free-first deployment approach; Redis remains optional and is not the source of truth
+- Role-checked PostgreSQL functions for sensitive workspace mutations
+- AES-256-GCM encrypted provider token storage
+- GitHub Actions for CI and scheduled worker invocation
+- Free-first architecture; Redis is optional and is not the source of truth
 
-## Supabase database setup
+## Database migrations
 
-In the `grehbumrnrgimwwyiqua` Supabase project used by RuffNeck Social Hub, open **SQL Editor** and apply migrations in order:
+The complete ZIP contains migrations 0001–0012. In the Supabase project used by RuffNeck Social Hub, apply only migrations that have not already been successfully applied, in ascending order. For an installation already at v1.4.0, apply **only**:
 
-1. `supabase/migrations/0001_core.sql`
-2. `supabase/migrations/0002_secure_workspace_onboarding.sql`
-3. `supabase/migrations/0003_multi_workspace_brand_management.sql`
-4. `supabase/migrations/0004_content_approval_workflow.sql`
-5. `supabase/migrations/0005_publishing_calendar_queue.sql`
-6. `supabase/migrations/0006_workspace_team_invitations.sql`
+`supabase/migrations/0012_instagram_comment_triage.sql`
 
-If a previous migration has already been successfully applied, do not re-run it just because this complete ZIP contains the file. Apply only the migrations not yet applied, in ascending order. `0004` and `0005` are written to tolerate repeated execution for their core objects, but migration history should still be tracked accurately.
+Do not rerun migrations 0001–0011. In particular, do not rerun migration 0001 or the previously applied signup/workspace migrations.
 
 ## Environment variables
 
-Keep the existing Vercel Production environment variables:
+Keep the existing Vercel Production variables:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_SITE_URL=https://ruffneck-social-hub.vercel.app`
 
-No service-role key is needed by the browser-facing application. Never expose a Supabase service-role key in a `NEXT_PUBLIC_` variable.
+Server-only variables used by existing modules:
 
-For this shared Supabase project, keep the global Site URL unchanged. The allowlist may contain callback URLs for multiple apps. RuffNeck Social Hub uses `https://ruffneck-social-hub.vercel.app/auth/callback`.
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SOCIAL_PUBLISH_CRON_SECRET`
+- `INSTAGRAM_CLIENT_ID`
+- `INSTAGRAM_CLIENT_SECRET`
+- `SOCIAL_TOKEN_ENCRYPTION_KEY`
+- `META_WEBHOOK_VERIFY_TOKEN`
+- `META_GRAPH_API_VERSION` (optional; package default is `v25.0`)
+- `LOCAL_AI_BASE_URL` and `LOCAL_AI_MODEL` (optional); `LOCAL_AI_API_KEY` is optional
+
+New optional variable:
+
+- `INSTAGRAM_ENABLE_COMMENT_MANAGEMENT=false`
+
+Set the new variable to `true` only after the Meta app has the Instagram Login `instagram_business_manage_comments` permission configured and approved for the intended access level. Then reconnect each Instagram professional account to grant the extra scope and refresh its stored `comments` capability. Leave it false otherwise. Existing account connections and the existing base scopes are unchanged by default.
+
+Never expose server-only keys in a `NEXT_PUBLIC_` variable. Because this Supabase project is shared with other RuffNeck apps, do not change the global Supabase Site URL or global confirmation templates for this project.
+
+## Meta comment webhook configuration
+
+The callback remains:
+
+`https://ruffneck-social-hub.vercel.app/api/webhooks/instagram`
+
+Keep `META_WEBHOOK_VERIFY_TOKEN` and `INSTAGRAM_CLIENT_SECRET` configured. The route verifies `X-Hub-Signature-256` before processing events. Subscribe the connected Instagram professional account/app to the `comments` webhook field. Meta access requirements vary by integration path and whether the app is serving only app-owned/test accounts or other customers; verify current app-dashboard requirements and complete the required review before enabling broader client use.
+
+See `README-INSTAGRAM-COMMENT-TRIAGE-v1.5.0.md` for step-by-step migration and feature details.
+
+## Local AI privacy
+
+AI drafting is optional. A sanitized brand voice profile plus the relevant message or comment text is sent from the server to the configured inference endpoint. Use a private, authenticated inference service. The user-supplied text is treated as untrusted data. No AI tool can call Instagram provider actions in this release.
 
 ## Replace the repository contents
 
-This is a complete source-project ZIP, not a patch. It includes the full project root and retains the previous signup redirect repair, CI repair, Content Studio and approval workflow. Extract the project folder and replace the files in the existing `ruffneck-social-hub` GitHub repository with its contents. Do not upload it to RuffNeck LMS, RuffNeck Connect or Kano Run.
+This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social-hub` folder and replace the contents of the existing `github.com/zaksz1991/ruffneck-social-hub` repository with it. Keep the project on its existing `main` branch and configure production variables separately. Do not upload it to RuffNeck LMS, RuffNeck Connect or Kano Run.
 
-## Verification
+## Verification boundaries
 
-The source package contains unit tests for signup response classification, redirect selection, job-state transitions, content validation and schedule input validation. Run `npm install`, `npm run typecheck`, `npm test` and `npm run build` in the CI pipeline. New team validation tests cover email normalization, valid roles, inviter role limits, member-role controls and invitation-token format. The SQL migration and live deployment are separate manual steps; a successful ZIP check does not prove live Supabase or provider behaviour.
-
-## Workspace team invitations
-
-Migration 0006 adds one-time invitation records, secure token-hash storage, expiry and revocation, email-match enforcement on acceptance, role-aware invitation permissions, member role changes/removal, and audit events. Invitation URLs are created server-side and the raw 256-bit token is never stored in PostgreSQL. The application intentionally displays a copyable invitation link instead of sending email; share it through your approved communication channel. The recipient must sign in with the invited email. A new user can create and verify an account, then reopen the original invitation link to accept it.
-
-Owners can invite all non-owner roles. Admins can invite managers and lower roles; managers can invite publishers, analysts and client approvers. Only owners/admins can change roles or remove members. The owner and the current user's own membership are protected from removal in this release.
-
-## Next release gate
-
-Before turning dispatch on, implement and test one official provider at a time. Use minimum OAuth scopes, encrypt provider tokens server-side, restrict token access to server workers, verify inbound webhooks, reconcile uncertain network outcomes, use idempotency where the provider supports it, and retain a human-controlled pause switch.
-
-
-## Latest release — 0.8.0
-
-The current release adds the first official provider connection: Instagram Business Login for professional Instagram accounts. Review `README-INSTAGRAM-CONNECTION-UPGRADE.md` before configuring the Meta app, server-only Vercel variables and Supabase migration 0007. Provider publishing dispatch remains disabled.
-
-## Version 1.0.0 — Instagram image publishing worker
-
-See `README-PUBLISHING-WORKER-UPGRADE.md` for migration 0008, the two required server-side Vercel variables, GitHub Actions secrets, supported media requirements, retry behavior, and operational limitations. This release supports confirmed Instagram single-image feed publishing only; other providers and media formats remain unsupported.
-
-
-## Instagram webhook ingestion (1.0.0)
-
-See `README-INSTAGRAM-WEBHOOK-UPGRADE.md` for migration and Meta webhook setup. This release adds verified, idempotent event ingestion only; it does not yet enable inbox replies, comment moderation, or messaging capabilities.
-
-
-## v1.4.0: AI-assisted Instagram reply drafts
-
-See `README-INSTAGRAM-AI-REPLY-DRAFTS-v1.4.0.md` for migration 0011, optional local model configuration, privacy notes and human-review limits.
+Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0012 has been applied, the Meta app has the relevant permission, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, Vercel and complete CI acceptance must be completed in the target accounts.

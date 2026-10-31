@@ -55,3 +55,15 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Draft generation is optional and remains disabled until `LOCAL_AI_BASE_URL` and `LOCAL_AI_MODEL` are configured.
 - No Instagram send API, automatic replies, attachments or comment moderation are enabled.
 - Live model endpoint behavior, Supabase migration, full TypeScript check, full test suite and production build have not been verified in this package workspace.
+
+## 1.5.0 Instagram comment triage status
+
+- Added normalization for signature-verified Instagram `comments` change events.
+- Added workspace-scoped comment storage with unique provider comment IDs per connected account.
+- Added internal New/Reviewed/Ignored triage labels using a role-checked RPC and audit events.
+- Added optional local AI public-comment reply drafts; saved drafts remain unsent and human-reviewed.
+- Added opt-in OAuth scope request for `instagram_business_manage_comments`; disabled by default.
+- Migration 0012 must be applied after 0001–0011.
+- Real Meta webhook delivery requires the app's `comments` webhook subscription and the required permission/access level. Existing connections must be reauthorized to grant the extra scope.
+- No comment reply, hide, unhide, delete or DM send action is implemented.
+- Live Meta, Supabase migration, full TypeScript check, full test suite and production build have not been verified in this package workspace.

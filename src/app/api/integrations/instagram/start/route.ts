@@ -75,7 +75,10 @@ export async function GET(request: NextRequest) {
     return channelError(request, 'configuration', workspaceId);
   }
 
-  const authorizationUrl = buildInstagramAuthorizationUrl({ clientId, redirectUri, state });
+  const authorizationUrl = buildInstagramAuthorizationUrl({
+    clientId, redirectUri, state,
+    includeCommentManagement: process.env.INSTAGRAM_ENABLE_COMMENT_MANAGEMENT === 'true',
+  });
   const response = NextResponse.redirect(authorizationUrl);
   response.cookies.set(STATE_COOKIE, state, {
     httpOnly: true,

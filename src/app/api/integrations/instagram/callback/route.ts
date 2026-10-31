@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { verifyInstagramOAuthState } from '@/lib/integrations/oauth-state';
-import { INSTAGRAM_REQUESTED_SCOPES, safeProviderErrorCode, type InstagramProfile, type InstagramTokenResponse } from '@/lib/integrations/instagram';
+import { getInstagramRequestedScopes, safeProviderErrorCode, type InstagramProfile, type InstagramTokenResponse } from '@/lib/integrations/instagram';
 import { encryptProviderSecret, readTokenEncryptionKey } from '@/lib/integrations/token-crypto';
 
 export const runtime = 'nodejs';
@@ -131,9 +131,12 @@ export async function GET(request: NextRequest) {
   const username = typeof profile.username === 'string' && profile.username.trim()
     ? profile.username.trim().slice(0, 120)
     : `Instagram account ${providerAccountId.slice(-6)}`;
+  const requestedScopes = getInstagramRequestedScopes(process.env.INSTAGRAM_ENABLE_COMMENT_MANAGEMENT === 'true');
   const scopes = Array.isArray(shortToken.permissions)
-    ? shortToken.permissions.filter((scope): scope is string => typeof scope === 'string' && (INSTAGRAM_REQUESTED_SCOPES as readonly string[]).includes(scope))
-    : [...INSTAGRAM_REQUESTED_SCOPES];
+    ? shortToken.permissions.filter((scope): scope is string => typeof scope === 'string' && requestedScopes.includes(scope))
+    // Preserve the legacy base-scope fallback, but never infer comment-management access
+    // when the provider response does not explicitly report that permission.
+    : requestedScopes.filter((scope) => scope !== 'instagram_business_manage_comments');
   const expiresIn = typeof longToken.expires_in === 'number' && Number.isFinite(longToken.expires_in) && longToken.expires_in > 0
     ? longToken.expires_in
     : 60 * 24 * 60 * 60;

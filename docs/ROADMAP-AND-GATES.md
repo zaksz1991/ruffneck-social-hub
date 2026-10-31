@@ -6,7 +6,8 @@
 4. Workspace collaboration. Implemented in 0.7.0; acceptance requires applying migration 0006 and testing invited-email matching, one-time token use, expiry, revocation, role escalation denial and cross-tenant isolation.
 5. Instagram Business Login connection foundation implemented in 0.8.0. Live acceptance still requires Meta app setup, migration 0007, token vault verification, revocation/expiry handling and provider review. Publishing dispatch remains off until a real test publish, retry/reconciliation, webhook verification and rate-limit handling pass.
 6. Local AI adapter with structured output, prompt-injection tests and approval queue. Gate: AI cannot execute actions or cross tenant boundaries.
-7. Supported inbox and L1 reply drafts; controlled auto-replies only after platform policy, consent, windows, rate limits and escalation are verified.
-8. Commercial readiness: usage limits, privacy/deletion, backup restore, accessibility, observability and independent security review.
+7. Instagram read-only message conversations and human-reviewed DM drafts implemented in 1.3.0–1.4.0. Comment webhook ingestion, internal triage and unsent public reply drafts implemented in 1.5.0. Gate: Meta comment permission, webhook subscription, Advanced Access/app review and live tenant-isolation tests must pass. Provider-side comment replies/moderation remain off.
+8. Controlled provider replies only after platform policy, consent, windows, rate limits, permission review, idempotency and failure reconciliation are verified.
+9. Commercial readiness: usage limits, privacy/deletion, backup restore, accessibility, observability and independent security review.
 
 Code presence alone never marks an operational gate complete.

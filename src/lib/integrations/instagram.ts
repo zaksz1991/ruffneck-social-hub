@@ -1,7 +1,13 @@
-export const INSTAGRAM_REQUESTED_SCOPES = [
+export const INSTAGRAM_BASE_SCOPES = [
   'instagram_business_basic',
   'instagram_business_content_publish',
 ] as const;
+
+export function getInstagramRequestedScopes(enableCommentManagement = false): string[] {
+  return enableCommentManagement
+    ? [...INSTAGRAM_BASE_SCOPES, 'instagram_business_manage_comments']
+    : [...INSTAGRAM_BASE_SCOPES];
+}
 
 export type InstagramTokenResponse = {
   access_token?: string;
@@ -29,12 +35,13 @@ export function buildInstagramAuthorizationUrl(input: {
   clientId: string;
   redirectUri: string;
   state: string;
+  includeCommentManagement?: boolean;
 }): string {
   const url = new URL('https://www.instagram.com/oauth/authorize');
   url.searchParams.set('client_id', input.clientId);
   url.searchParams.set('redirect_uri', input.redirectUri);
   url.searchParams.set('response_type', 'code');
-  url.searchParams.set('scope', INSTAGRAM_REQUESTED_SCOPES.join(','));
+  url.searchParams.set('scope', getInstagramRequestedScopes(input.includeCommentManagement === true).join(','));
   url.searchParams.set('state', input.state);
   url.searchParams.set('enable_fb_login', '0');
   return url.toString();

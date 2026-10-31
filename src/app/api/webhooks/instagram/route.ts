@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyMetaSignature } from '@/lib/webhooks/meta-signature';
 import { normalizeInstagramMessage } from '@/lib/webhooks/instagram-message';
+import { normalizeInstagramComment } from '@/lib/webhooks/instagram-comment';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -92,6 +93,28 @@ export async function POST(request: NextRequest) {
               provider_sent_at: normalized.sentAt,
             }, { onConflict: 'social_account_id,provider_message_id', ignoreDuplicates: true });
             if (messageError) throw messageError;
+          }
+        }
+        if (record.kind === 'change' && record.value && typeof record.value === 'object') {
+          const change = record.value as Record<string, unknown>;
+          if (change.field === 'comments') {
+            const normalized = normalizeInstagramComment(change.value, entry.time);
+            if (normalized) {
+              const { error: commentError } = await admin.from('instagram_comments').upsert({
+                workspace_id: account.workspace_id,
+                social_account_id: account.id,
+                provider_comment_id: normalized.providerCommentId,
+                media_provider_id: normalized.mediaProviderId,
+                parent_provider_comment_id: normalized.parentProviderCommentId,
+                commenter_provider_id: normalized.commenterProviderId,
+                commenter_username: normalized.commenterUsername,
+                comment_text: normalized.text,
+                provider_created_at: normalized.createdAt,
+                last_seen_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'social_account_id,provider_comment_id' });
+              if (commentError) throw commentError;
+            }
           }
         }
         const serialized = JSON.stringify({ entry: providerAccountId, record });
