@@ -147,7 +147,7 @@ export default async function ChannelsPage({ searchParams }: {
         </section>
       </>}
 
-      <footer className="channels-footer"><span>RUFFNECK SOCIAL HUB · MULTI-PLATFORM CONNECTIONS 1.7.0</span><span>Official APIs only · Human-governed publishing · Encrypted credentials</span></footer>
+      <footer className="channels-footer"><span>RUFFNECK SOCIAL HUB · MULTI-PLATFORM CONNECTIONS 1.7.1</span><span>Official APIs only · Human-governed publishing · Encrypted credentials</span></footer>
     </div>
   </main>;
 }

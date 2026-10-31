@@ -64,8 +64,6 @@ export async function GET(request: NextRequest) {
     nonce: randomBytes(32).toString('base64url'),
     expiresAt: Math.floor(Date.now() / 1000) + 10 * 60,
   }, encryptionKey);
-  authorizationUrl.searchParams.set('state', state);
-
   const authorizationUrl = buildFacebookAuthorizationUrl({ appId, redirectUri, graphVersion, state });
   const response = NextResponse.redirect(authorizationUrl);
   response.cookies.set(STATE_COOKIE, state, {

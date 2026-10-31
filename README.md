@@ -1,4 +1,4 @@
-# RuffNeck Social Hub v1.7.0
+# RuffNeck Social Hub v1.7.1
 
 RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, publishing queue and Instagram single-image publishing worker, official Instagram Business Login connection, signed webhook ingestion, read-only messaging conversations, AI-assisted unsent DM reply drafts, the Instagram comment triage workflow, a shared multi-network provider registry, and official Facebook Pages OAuth connection.
 
@@ -79,7 +79,7 @@ The callback remains:
 
 Keep `META_WEBHOOK_VERIFY_TOKEN` and `INSTAGRAM_CLIENT_SECRET` configured. The route verifies `X-Hub-Signature-256` before processing events. Subscribe the connected Instagram professional account/app to the `comments` webhook field. Meta access requirements vary by integration path and whether the app is serving only app-owned/test accounts or other customers; verify current app-dashboard requirements and complete the required review before enabling broader client use.
 
-See `README-INSTAGRAM-COMMENT-TRIAGE-v1.5.0.md` and `README-FACEBOOK-PAGES-v1.7.0.md` for provider setup and capability boundaries.
+See `README-INSTAGRAM-COMMENT-TRIAGE-v1.5.0.md` and `README-FACEBOOK-PAGES-v1.7.1.md` for provider setup and capability boundaries.
 
 ## Local AI privacy
 

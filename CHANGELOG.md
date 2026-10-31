@@ -79,7 +79,7 @@
 - No comment reply, hide, delete or other provider action is executed.
 
 
-## 1.7.0 — Multi-platform provider layer and Facebook Pages connection
+## 1.7.1 — Multi-platform provider layer and Facebook Pages connection
 
 - Added a central registry for Facebook, Instagram, TikTok, YouTube, LinkedIn, X and WhatsApp Business.
 - Added official Facebook Login OAuth start/callback, signed state, permission verification, Page-list pagination and long-lived user-token exchange.
