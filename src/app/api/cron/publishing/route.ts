@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { dispatchInstagramImage, type InstagramJob } from '@/lib/publishing/instagram-dispatch';
+import { dispatchFacebookImage, dispatchInstagramImage, type InstagramJob } from '@/lib/publishing/instagram-dispatch';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +29,9 @@ export async function POST(request: NextRequest) {
 
   const results: Array<{ jobId: string; state: string }> = [];
   for (const raw of (jobs ?? []) as InstagramJob[]) {
-    const result = await dispatchInstagramImage(raw, process.env.META_GRAPH_API_VERSION || 'v25.0');
+    const result = raw.provider === 'facebook'
+      ? await dispatchFacebookImage(raw, process.env.FACEBOOK_GRAPH_API_VERSION || 'v26.0')
+      : await dispatchInstagramImage(raw, process.env.META_GRAPH_API_VERSION || 'v25.0');
     let state: 'succeeded' | 'retryable' | 'failed' | 'needs_review';
     let retryAt: string | null = null;
     if (result.kind === 'published') state = 'succeeded';

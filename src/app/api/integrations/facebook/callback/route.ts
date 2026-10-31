@@ -190,5 +190,14 @@ export async function GET(request: NextRequest) {
     return finish(request, workspaceId, 'storage');
   }
 
+  const { error: capabilityError } = await supabase.rpc('enable_facebook_page_publishing', {
+    target_workspace_id: workspaceId,
+    target_brand_id: brandId,
+  });
+  if (capabilityError) {
+    console.error('[integrations.facebook] Page publishing capability gate rejected:', { code: capabilityError.code });
+    return finish(request, workspaceId, capabilityError.code === 'PGRST202' || capabilityError.code === '42883' ? 'facebook_migration' : 'facebook_capability');
+  }
+
   return finish(request, workspaceId, 'connected');
 }

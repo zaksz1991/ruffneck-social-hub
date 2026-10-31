@@ -2,6 +2,7 @@ export const FACEBOOK_REQUESTED_SCOPES = [
   'public_profile',
   'pages_show_list',
   'pages_read_engagement',
+  'pages_manage_posts',
 ] as const;
 
 export const FACEBOOK_PAGE_SCOPES = [

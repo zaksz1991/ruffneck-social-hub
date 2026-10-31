@@ -12,6 +12,7 @@ type SocialAccount = {
   provider: string;
   display_name: string | null;
   connection_state: string;
+  capabilities: Record<string, unknown> | null;
 };
 type PublishingJob = {
   id: string;
@@ -27,7 +28,7 @@ type PublishingJob = {
 const roleCanSchedule = (role: string) => ['owner', 'admin', 'manager', 'publisher'].includes(role);
 
 const stateLabel: Record<string, string> = {
-  queued: 'Queued · dispatch disabled',
+  queued: 'Queued',
   claimed: 'Claimed',
   dispatching: 'Dispatching',
   succeeded: 'Published',
@@ -85,7 +86,7 @@ export default async function PublishingQueuePage({
     const [brandResult, contentResult, accountResult, jobResult] = await Promise.all([
       supabase.from('brands').select('id,name,timezone').eq('workspace_id', activeWorkspace.id).order('name'),
       supabase.from('content_items').select('id,brand_id,title,status,updated_at').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(100),
-      supabase.from('social_accounts').select('id,brand_id,provider,display_name,connection_state').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }),
+      supabase.from('social_accounts').select('id,brand_id,provider,display_name,connection_state,capabilities').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }),
       supabase.from('publishing_jobs').select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe').eq('workspace_id', activeWorkspace.id).order('scheduled_at', { ascending: true }).limit(100),
     ]);
 
@@ -99,7 +100,7 @@ export default async function PublishingQueuePage({
   const brandById = new Map(brands.map((brand) => [brand.id, brand]));
   const contentById = new Map(approvedContent.map((item) => [item.id, item]));
   const accountById = new Map(accounts.map((account) => [account.id, account]));
-  const connectedAccounts = accounts.filter((account) => account.connection_state === 'connected');
+  const connectedAccounts = accounts.filter((account) => account.connection_state === 'connected' && account.capabilities?.content_publish === true);
   const canSchedule = roleCanSchedule(role);
   const activeJobs = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable', 'needs_review'].includes(job.state));
   const errorMessages: Record<string, string> = {
@@ -152,8 +153,8 @@ export default async function PublishingQueuePage({
 
             <section className="publishing-safety-banner">
               <span className="publishing-safety-icon">✓</span>
-              <div><strong>Human-approved scheduling</strong><p>Only approved content and verified connected accounts can enter the queue. This release stores schedule records; provider dispatch is not enabled yet.</p></div>
-              <span className="publishing-gate">DISPATCH OFF</span>
+              <div><strong>Human-approved multi-network publishing</strong><p>Approved image posts can be dispatched to connected Instagram Business accounts and Facebook Pages when the required Meta permissions are granted. Other networks remain unavailable until their provider workers are implemented.</p></div>
+              <span className="publishing-gate">INSTAGRAM + FACEBOOK</span>
             </section>
 
             {canSchedule && approvedContent.length > 0 && connectedAccounts.length > 0 && (
@@ -180,7 +181,7 @@ export default async function PublishingQueuePage({
                     <input type="datetime-local" name="scheduled_local" required />
                     <small>Enter the wall-clock time in the selected content brand&apos;s saved timezone. The server validates the actual UTC schedule.</small>
                   </label>
-                  <div className="publishing-form-footer"><span>Scheduling does not post automatically in this release.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
+                  <div className="publishing-form-footer"><span>Only supported Meta destinations are dispatched by the worker.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
                 </form>
               </section>
             )}
@@ -189,7 +190,7 @@ export default async function PublishingQueuePage({
               <section className="publishing-prerequisite"><strong>No approved content is available.</strong><p>Create a draft in Content Studio, submit it for review and approve it before scheduling.</p><Link href="/content">Open Content Studio</Link></section>
             )}
             {canSchedule && approvedContent.length > 0 && connectedAccounts.length === 0 && (
-              <section className="publishing-prerequisite"><strong>No connected social destinations.</strong><p>Only social accounts with a verified <code>connected</code> state can be selected. Provider OAuth and publishing permissions must be configured before scheduling.</p><Link href="/#channels">View connected-channel setup</Link></section>
+              <section className="publishing-prerequisite"><strong>No publishing-enabled social destinations.</strong><p>Connect a supported Instagram Business account or Facebook Page and grant the required publishing permissions. A connected account without a verified publishing capability cannot enter the queue.</p><Link href="/#channels">View connected-channel setup</Link></section>
             )}
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}
 
@@ -217,7 +218,7 @@ export default async function PublishingQueuePage({
                 </div>
               )}
             </section>
-            <p className="publishing-footnote">No network post is sent by this page. A provider-specific worker, encrypted OAuth token handling, webhook reconciliation and delivery monitoring must be installed and tested before dispatch can be enabled.</p>
+            <p className="publishing-footnote">Supported dispatch: one public HTTPS image with caption to Instagram Business or Facebook Pages. Video, carousels, other networks and automatic retry after an uncertain provider response are not supported.</p>
           </>
         )}
       </div>

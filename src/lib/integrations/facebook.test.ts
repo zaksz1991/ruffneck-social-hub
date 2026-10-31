@@ -10,8 +10,8 @@ describe('Facebook Pages integration helpers', () => {
     expect(url.hostname).toBe('www.facebook.com');
     expect(url.pathname).toBe('/v26.0/dialog/oauth');
     expect(url.searchParams.get('scope')).toContain('pages_show_list');
+    expect(url.searchParams.get('scope')).toContain('pages_manage_posts');
     expect(url.searchParams.get('state')).toBe('state');
-    expect(url.searchParams.get('scope')).not.toContain('pages_manage_posts');
   });
 
   it('rejects malformed Graph API versions', () => {
