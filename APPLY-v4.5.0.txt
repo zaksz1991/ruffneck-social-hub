@@ -1,0 +1,61 @@
+RUFFNECK SOCIAL HUB — v4.5.0 INSTALLATION
+
+This is a cumulative overlay for the existing public repository:
+https://github.com/zaksz1991/ruffneck-social-hub
+Target branch: main
+
+FEATURE
+Human-approved public replies to top-level Instagram comments. AI never sends replies automatically. One publish attempt is allowed for each reviewed draft. A timeout or ambiguous provider response is recorded as UNKNOWN and is not retried. Hide/unhide, delete, DMs and automatic comment replies are not included.
+
+MERGE THESE FILES INTO THE EXISTING REPOSITORY
+- Replace package.json.
+- Replace scripts/audit-youtube-integration.mjs.
+- Replace scripts/audit-tiktok-integration.mjs.
+- Replace scripts/audit-linkedin-analytics.mjs.
+- Replace scripts/audit-provider-analytics.mjs.
+- Replace scripts/audit-campaign-intelligence.mjs.
+- Replace src/app/inbox/comments/page.tsx.
+- Replace src/app/inbox/comments/comment-reply-draft-studio.tsx.
+- Add src/app/actions/instagram-comments.ts.
+- Add src/lib/integrations/instagram-comment-management.ts.
+- Add src/lib/integrations/instagram-comment-token.ts.
+- Add src/lib/supabase/admin.ts.
+- Add src/app/inbox/comments/comments-publish.css.
+- Add scripts/audit-instagram-comments.mjs.
+- Add scripts/test-instagram-comments.mjs.
+- Add supabase/migrations/0032_instagram_comment_reply_sending.sql.
+
+Do not delete, replace or rename any other files. Preserve the existing workflows, TikTok/YouTube integrations, migrations 0001–0031, package dependencies and environment variables.
+
+DATABASE
+1. Open the existing Supabase project.
+2. Open SQL Editor.
+3. Open the supplied migration file 0032_instagram_comment_reply_sending.sql from this ZIP.
+4. Copy the entire SQL file into a new SQL query and run it once.
+5. Confirm the migration completed successfully before deploying the application.
+
+META / VERCEL CONFIGURATION
+- Keep INSTAGRAM_ENABLE_COMMENT_MANAGEMENT=false until the Meta app has the correct permission access.
+- To request the permission, set INSTAGRAM_ENABLE_COMMENT_MANAGEMENT=true in Vercel for Production (and Preview if required), then reconnect the Instagram professional account from Channels.
+- The account must grant both instagram_business_basic and instagram_business_manage_comments. Existing connections do not gain new scopes automatically.
+- Keep META_GRAPH_API_VERSION set to a supported Graph API version; if unset this code uses v26.0.
+- Ensure SOCIAL_TOKEN_ENCRYPTION_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY (or existing SUPABASE_SERVICE_KEY) are set as server environment variables.
+- Never prefix the service-role key or token encryption key with NEXT_PUBLIC_. Never put them in browser code.
+- Save environment variables and redeploy after changing them.
+
+RELEASE
+Commit the merged files to main using GitHub's web interface. Vercel should deploy the connected commit. Inspect the Vercel build logs and confirm the new build includes the Instagram comment audit before Next.js builds.
+
+POST-DEPLOY CHECK
+1. Use a test Instagram professional account and a test comment on media owned by that account.
+2. Confirm the comment appears in /inbox/comments.
+3. Generate a draft and mark it human-reviewed.
+4. Confirm the publishing control is visible only when the feature flag, account connection and scopes are all valid.
+5. Explicitly tick the consent checkbox and post once.
+6. Confirm the reply appears publicly on Instagram and the attempt is marked SUCCEEDED.
+7. Confirm a second submission is blocked.
+8. Test an unavailable/expired token and verify no reply is sent.
+9. Test a timeout/5xx condition only in a non-production environment. It must be marked UNKNOWN and must not offer automatic retry.
+
+VERIFICATION BOUNDARY
+The package's pure utility and static integration tests can be run locally. This generated overlay has not been applied to your GitHub repository, Supabase database, Meta app or Vercel deployment. No live Instagram reply was sent during preparation. A successful source test is not proof of Meta approval or live provider success.

@@ -1,0 +1,5 @@
+.reply-publish-form{display:grid;gap:10px;margin-top:12px;padding:14px;border:1px solid rgba(0,180,216,.35);border-radius:12px;background:rgba(0,180,216,.055)}
+.reply-publish-consent{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;line-height:1.45}
+.reply-publish-consent input{margin-top:3px;accent-color:#00b4d8}
+.reply-publish-form button{justify-self:start}
+.reply-publish-form small{opacity:.78;line-height:1.4}
