@@ -39,3 +39,37 @@
 .comment-card-header em{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.2px;padding:4px 7px;border-radius:5px;width:max-content}
 .comment-permission-active{background:#e8f7ef;color:#18815b}
 .comment-permission-inactive{background:#fff5e8;color:#9b641c}
+
+/* v3.1.0: unified inbox team workflow and private handoff notes */
+.inbox-workflow-panel{margin:22px 0;background:#fff;border:1px solid #e3eaf2;border-radius:16px;overflow:hidden}
+.inbox-workflow-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px 24px;border-bottom:1px solid #edf1f6}
+.inbox-workflow-heading h2{font-size:19px;margin:6px 0 5px;color:#102b4e}
+.inbox-workflow-heading p{font-size:12px;margin:0;color:#718096;line-height:1.55}
+.inbox-private-pill{font-size:9px;letter-spacing:.7px;font-weight:900;color:#087f68;background:#eaf8f2;padding:7px 9px;border-radius:20px;white-space:nowrap}
+.inbox-workflow-form{display:grid;grid-template-columns:1.5fr 1fr 1fr auto;align-items:end;gap:12px;padding:18px 24px;border-bottom:1px solid #edf1f6}
+.inbox-workflow-form label,.inbox-note-form label{display:grid;gap:7px;font-size:11px;font-weight:800;color:#64748b}
+.inbox-workflow-form select{width:100%;min-width:0;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:#142746;padding:10px 11px;font:inherit;font-size:12px}
+.inbox-workflow-form button,.inbox-note-form button{border:0;border-radius:8px;background:#0b1e3a;color:#fff;padding:11px 15px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.inbox-workflow-readonly{display:block;padding:10px 11px;border:1px solid #e5ebf3;border-radius:8px;background:#f7f9fc;color:#64748b;font-size:11px;line-height:1.5;font-weight:500}
+.inbox-workflow-current{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:13px 24px;border-bottom:1px solid #edf1f6;color:#64748b;font-size:10px}
+.workflow-state,.workflow-priority{padding:5px 8px;border-radius:20px;font-size:9px;font-weight:900;letter-spacing:.3px;background:#edf3fc;color:#46617f}
+.workflow-state.state-resolved{background:#e8f7ef;color:#18815b}.workflow-state.state-pending{background:#fff5e8;color:#9b641c}
+.workflow-priority.priority-high{background:#fff2e5;color:#a65a0d}.workflow-priority.priority-urgent{background:#fff0f0;color:#a12c37}.workflow-priority.priority-low{background:#f1f4f8;color:#778196}
+.inbox-workflow-current small{margin-left:auto;color:#8b98aa}
+.inbox-internal-notes{padding:18px 24px 22px}
+.inbox-internal-notes-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.inbox-internal-notes-heading h3{font-size:14px;margin:0;color:#102b4e}.inbox-internal-notes-heading span{font-size:10px;color:#8492a6}
+.inbox-note-form{display:grid;gap:9px;padding:14px;background:#f8fafc;border:1px solid #e8edf3;border-radius:11px}
+.inbox-note-form textarea{width:100%;min-height:76px;resize:vertical;border:1px solid #dce4ee;border-radius:8px;padding:11px;color:#1a2b46;font:inherit;font-size:12px;line-height:1.6;background:#fff}
+.inbox-note-form button{justify-self:start}
+.inbox-note-list{display:grid;gap:9px;margin-top:13px}
+.inbox-note-card{padding:13px 14px;border:1px solid #e6edf4;border-radius:10px;background:#fff}
+.inbox-note-card>div{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.inbox-note-card strong{font-size:11px;color:#304660}.inbox-note-card time{font-size:10px;color:#8a97a9}
+.inbox-note-card p{margin:8px 0 0;font-size:12px;color:#52647a;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.inbox-note-empty,.inbox-workflow-unavailable{margin:13px 0 0;padding:13px 14px;border-radius:9px;background:#f7f9fc;color:#718096;font-size:11px;line-height:1.65}
+.inbox-workflow-unavailable{margin:18px 24px 22px;border:1px solid #e5ebf3}.inbox-workflow-unavailable code{font-size:10px;color:#284b6b}
+.inbox-workflow-panel>.reply-action-message{margin-left:24px;margin-right:24px}
+@media(max-width:800px){.inbox-workflow-form{grid-template-columns:1fr 1fr}.inbox-workflow-form label:first-of-type{grid-column:1/-1}.inbox-workflow-form button{grid-column:1/-1}}
+@media(max-width:560px){.inbox-workflow-heading{padding:17px 16px}.inbox-workflow-form{grid-template-columns:1fr;padding:16px}.inbox-workflow-form label:first-of-type{grid-column:auto}.inbox-workflow-form button{grid-column:auto;width:100%}.inbox-workflow-current{padding:12px 16px}.inbox-workflow-current small{width:100%;margin-left:0}.inbox-internal-notes{padding:16px}.inbox-workflow-panel>.reply-action-message{margin-left:16px;margin-right:16px}.inbox-note-form button{width:100%}}
+.inbox-workflow-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}.inbox-workflow-chips span{font-size:9px;text-transform:uppercase;letter-spacing:.25px;font-weight:800;padding:4px 7px;border-radius:5px;background:#edf3fc;color:#46617f}.inbox-workflow-chips .priority-high{background:#fff2e5;color:#a65a0d}.inbox-workflow-chips .priority-urgent{background:#fff0f0;color:#a12c37}.inbox-workflow-chips .priority-low{background:#f1f4f8;color:#778196}

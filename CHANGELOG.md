@@ -1,3 +1,16 @@
+# Changelog
+
+## 3.1.0 — Unified inbox team workflow
+
+- Added workspace-scoped assignment, open/pending/resolved status and low/normal/high/urgent priority for Instagram and Facebook Messenger conversations.
+- Added internal handoff notes with author and timestamp. Notes are never sent to a social provider.
+- Added row-level read policies and security-definer mutation RPCs. Direct browser writes are revoked.
+- Restricts teammate assignment to workspace owners, admins and managers; publishers may update status and priority without changing assignment.
+- Added triage chips to the unified conversation list.
+- No automated customer replies, background message sending, or additional provider permissions were introduced.
+
+## Earlier releases
+
 ## 3.0.4 — 2026-11-01
 
 - Adds guarded pre-build removal of the known unreferenced AI provider variants component that persisted after ZIP overlays.

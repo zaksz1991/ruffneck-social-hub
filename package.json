@@ -1,14 +1,15 @@
 {
   "name": "ruffneck-social-hub",
-  "version": "3.0.4",
+  "version": "3.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/remove-known-stale-content-component.mjs && npm run audit:imports && next build",
+    "build": "node scripts/remove-known-stale-content-component.mjs && npm run audit:imports && npm run audit:workflow && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "audit:imports": "node scripts/audit-internal-imports.mjs"
+    "test": "node scripts/test-inbox-workflow.mjs && vitest run",
+    "audit:imports": "node scripts/audit-internal-imports.mjs",
+    "audit:workflow": "node scripts/audit-inbox-workflow.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

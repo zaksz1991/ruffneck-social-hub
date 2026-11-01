@@ -134,3 +134,8 @@ The production build now runs `scripts/audit-internal-imports.mjs` before `next 
 The incomplete, unreferenced `src/app/content/ai-provider-variant-generator.tsx` component is omitted from the complete source package. However, ZIP overlay extraction does not delete old files that are absent from the archive. The Vercel build log showed that the v3.0.3 repository still contained that component. Version 3.0.4 corrects this deployment gap: `scripts/remove-known-stale-content-component.mjs` runs before the source audit, verifies the known five-import signature, confirms no other source file imports the component, and then removes only that obsolete file. It refuses to delete a changed or referenced file. The internal import/export audit runs immediately afterward and `next build` starts only when the audit passes.
 
 No Supabase migration or new environment variable is introduced. The existing v3.0.0–v3.0.3 features are retained. See `README-v3.0.4-BUILD-REPAIR.md` and `RELEASE-NOTES-v3.0.4.md`.
+
+
+## v3.1.0 team inbox workflow
+
+See `README-v3.1.0-TEAM-INBOX-WORKFLOW.md`. Apply `supabase/migrations/0020_unified_inbox_team_workflow.sql` after migration 0019.

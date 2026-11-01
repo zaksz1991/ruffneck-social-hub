@@ -431,3 +431,63 @@ export async function sendFacebookReplyDraft(formData: FormData): Promise<void> 
   revalidatePath(page);
   redirect(`${page}?send_action=${outcome}`);
 }
+
+/** Saves team-owned triage metadata. This never calls a social provider. */
+export async function updateInboxConversationWorkflow(formData: FormData): Promise<void> {
+  const provider = formText(formData, 'provider');
+  const conversationId = formText(formData, 'conversation_id');
+  const assignedTo = formText(formData, 'assigned_to');
+  const status = formText(formData, 'status');
+  const priority = formText(formData, 'priority');
+  const page = isUuid(conversationId)
+    ? (provider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`)
+    : '/inbox/conversations';
+
+  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId) ||
+      (assignedTo !== '' && !isUuid(assignedTo)) ||
+      !['open', 'pending', 'resolved'].includes(status) ||
+      !['low', 'normal', 'high', 'urgent'].includes(priority)) {
+    redirect(`${page}?workflow_action=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { error } = await supabase.rpc('set_inbox_conversation_workflow', {
+    target_provider: provider,
+    target_conversation_id: conversationId,
+    target_assigned_to: assignedTo || null,
+    target_status: status,
+    target_priority: priority,
+  });
+  if (error) redirect(`${page}?workflow_action=failed`);
+  revalidatePath(page);
+  revalidatePath('/inbox/conversations');
+  redirect(`${page}?workflow_action=saved`);
+}
+
+/** Adds an internal-only note; note text is never sent to Instagram or Meta. */
+export async function addInboxInternalNote(formData: FormData): Promise<void> {
+  const provider = formText(formData, 'provider');
+  const conversationId = formText(formData, 'conversation_id');
+  const body = formText(formData, 'body');
+  const page = isUuid(conversationId)
+    ? (provider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`)
+    : '/inbox/conversations';
+
+  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId) || !body || body.length > 3000) {
+    redirect(`${page}?note_action=invalid`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { error } = await supabase.rpc('add_inbox_internal_note', {
+    target_provider: provider,
+    target_conversation_id: conversationId,
+    target_body: body,
+  });
+  if (error) redirect(`${page}?note_action=failed`);
+  revalidatePath(page);
+  redirect(`${page}?note_action=added`);
+}
+
