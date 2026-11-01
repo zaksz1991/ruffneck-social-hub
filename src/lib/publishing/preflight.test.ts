@@ -64,4 +64,14 @@ describe('publishing schedule preflight', () => {
     const result = preflightScheduleTargets({ ...baseContent, status: 'draft' }, [destination()]);
     expect(result.destinations[0].issues).toContain('content_not_approved');
   });
+
+  it('validates the exact provider variant media instead of the master media', () => {
+    const masterWithImage = { ...baseContent, mediaRefs: ['https://cdn.example.com/master.jpg'] };
+    const linkedinVariant = { ...masterWithImage, body: 'Provider-specific text', mediaRefs: [] };
+    expect(preflightScheduleTargets(masterWithImage, [destination()]).destinations[0].issues).toContain('linkedin_text_only');
+    expect(preflightScheduleTargets(linkedinVariant, [destination()]).blockedCount).toBe(0);
+
+    const instagramVariant = { ...baseContent, mediaRefs: ['https://cdn.example.com/instagram.jpg'] };
+    expect(preflightScheduleTargets(instagramVariant, [destination({ provider: 'instagram' })]).blockedCount).toBe(0);
+  });
 });

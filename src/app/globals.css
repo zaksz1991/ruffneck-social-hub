@@ -147,3 +147,29 @@
 .activity-empty,.activity-empty-inline{display:grid;justify-items:center;padding:42px 20px;border:1px dashed #dbe3eb;border-radius:10px;text-align:center}.activity-empty h2,.activity-empty-inline h3{margin:0 0 6px;color:#2a3d57;font-family:Manrope,sans-serif;font-size:15px}.activity-empty p,.activity-empty-inline p{max-width:560px;margin:0;color:#8996a7;font-size:10px;line-height:1.8}.activity-empty a{margin-top:14px;color:#078b9e;font-size:9px;font-weight:900}.activity-footnote{margin:18px 0 0;color:#97a2b0;font-size:8px;line-height:1.7;text-align:center}
 @media(max-width:900px){.activity-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.activity-filter-actions{grid-column:1/-1}.activity-topbar nav{gap:10px}}
 @media(max-width:760px){.activity-topbar{height:62px;padding:0 16px}.activity-brand{min-width:0}.activity-brand img{width:155px}.activity-topbar nav{display:none}.activity-back{font-size:8px}.activity-main{width:calc(100% - 30px);padding:28px 0 42px}.activity-heading{align-items:flex-start;flex-direction:column}.activity-heading h1{font-size:28px}.activity-workspace-chip{width:100%;min-width:0}.activity-security-note{align-items:flex-start;flex-direction:column;gap:4px}.activity-summary{grid-template-columns:1fr 1fr;gap:8px}.activity-summary article{padding:12px}.activity-summary article:last-child{grid-column:1/-1}.audit-log-panel{padding:16px}.activity-panel-heading{flex-direction:column}.activity-filters{grid-template-columns:1fr}.activity-filter-actions{grid-column:auto}.activity-event{grid-template-columns:14px minmax(0,1fr);gap:9px}.activity-event time{grid-column:2;padding:0}.activity-event-marker:after{bottom:-44px}}
+
+/* v2.15.0 — approved provider-specific content variants */
+.provider-variants-panel{display:grid;gap:13px;margin-top:18px;padding:15px;border:1px solid #dcebef;border-radius:10px;background:linear-gradient(180deg,#f8fcfd,#fff)}
+.provider-variants-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.provider-variants-heading h4{margin:5px 0;color:#1b354d;font-family:Manrope,sans-serif;font-size:13px}
+.provider-variants-heading p{max-width:660px;margin:0;color:#7d8da0;font-size:9px;line-height:1.65}
+.provider-variants-count{padding:6px 8px;border:1px solid #d8e9ed;border-radius:16px;color:#07879c;font-size:7px;font-weight:900;letter-spacing:.7px;white-space:nowrap}
+.provider-variant-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.provider-variant-card{display:grid;gap:8px;padding:12px;border:1px solid #e3ebf0;border-radius:9px;background:#fff;min-width:0}
+.provider-variant-topline,.provider-variant-meta{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.provider-variant-topline>strong{color:#31465f;font-size:10px}
+.provider-variant-meta{color:#8a98a8;font-size:7px}
+.provider-variant-meta span:first-child{color:#07889b;font-weight:900;letter-spacing:.5px}
+.variant-status-draft{background:#f0f3f7;color:#78879a}
+.variant-status-in_review{background:#fff6e7;color:#b57c20}
+.variant-status-approved{background:#e8f8f0;color:#19815e}
+.variant-status-changes_requested{background:#fff0ed;color:#b65b4b}
+.provider-variant-create{padding-top:10px;border-top:1px solid #e9eff3}
+.provider-variant-create summary{width:max-content;color:#087f94;font-size:9px;font-weight:900;cursor:pointer}
+.provider-variant-create .content-edit-form{max-width:760px}
+.provider-variants-panel .content-review-form input{max-width:230px}
+.publishing-provider-variants{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px;border:1px solid #dfebf0;border-radius:9px;background:#f8fcfd}
+.publishing-provider-variants>p{grid-column:1/-1;margin:0;color:#8190a1;font-size:8px;line-height:1.6}
+.publishing-provider-variants label{display:grid;gap:6px;color:#43566d;font-size:8px;font-weight:900}
+.publishing-provider-variants label select{min-height:38px}
+@media(max-width:760px){.provider-variants-heading{align-items:flex-start;flex-direction:column}.provider-variant-list{grid-template-columns:1fr}.provider-variants-panel{padding:12px}.publishing-provider-variants{grid-template-columns:1fr}}

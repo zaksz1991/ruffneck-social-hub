@@ -6,6 +6,25 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isScheduleUuid, validateScheduleInput } from '@/lib/publishing/validation';
 import { preflightScheduleTargets, type PreflightDestination } from '@/lib/publishing/preflight';
 import { isCancellableJobState, parseBulkCancelSelection } from '@/lib/publishing/bulk-actions';
+import { isApprovedVariantForProvider } from '@/lib/content/provider-variants';
+
+type ScheduleVariantRow = {
+  id: string;
+  workspace_id: string;
+  content_id: string;
+  provider: string;
+  body: string;
+  media_refs: unknown;
+  status: string;
+};
+type ScheduleAccountRow = {
+  id: string;
+  brand_id: string;
+  provider: string;
+  display_name: string | null;
+  connection_state: string;
+  capabilities: Record<string, unknown> | null;
+};
 
 function field(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -59,23 +78,56 @@ export async function scheduleApprovedContent(formData: FormData) {
     returnToQueue(workspaceId, 'error=preflight&reason=lookup&blocked=1');
   }
   const preflightContent = contentResult.data as { brand_id: string; status: string; body: string; media_refs: unknown };
-  const preflightDestinations = (accountResult.data ?? []).map((account) => ({
-    id: account.id,
-    brandId: account.brand_id,
-    provider: account.provider,
-    displayName: account.display_name,
-    connectionState: account.connection_state,
-    canPublish: account.capabilities?.content_publish === true,
-  })) as PreflightDestination[];
-  const preflight = preflightScheduleTargets({
-    brandId: preflightContent.brand_id,
-    status: preflightContent.status,
-    body: preflightContent.body,
-    mediaRefs: preflightContent.media_refs,
-  }, preflightDestinations);
-  if (preflight.blockedCount > 0) {
-    const reason = preflight.issueCodes[0] ?? 'provider_unsupported';
-    returnToQueue(workspaceId, `error=preflight&reason=${encodeURIComponent(reason)}&blocked=${preflight.blockedCount}`);
+  const variantIdsByProvider = new Map<string, string>();
+  for (const provider of ['instagram', 'facebook', 'linkedin']) {
+    const variantId = field(formData, `variant_${provider}`);
+    if (variantId && !isScheduleUuid(variantId)) returnToQueue(workspaceId, 'error=variant');
+    if (variantId) variantIdsByProvider.set(provider, variantId);
+  }
+  const selectedVariantIds = [...new Set(variantIdsByProvider.values())];
+  const variantResult = selectedVariantIds.length
+    ? await supabase.from('content_variants')
+      .select('id,workspace_id,content_id,provider,body,media_refs,status')
+      .eq('workspace_id', workspaceId)
+      .eq('content_id', contentId)
+      .in('id', selectedVariantIds)
+    : { data: [], error: null };
+  if (variantResult.error || (variantResult.data ?? []).length !== selectedVariantIds.length) {
+    returnToQueue(workspaceId, 'error=variant');
+  }
+  const variantRows = (variantResult.data ?? []) as ScheduleVariantRow[];
+  const variantsById = new Map<string, ScheduleVariantRow>(variantRows.map((variant) => [variant.id, variant]));
+  const selectedAccounts = (accountResult.data ?? []) as ScheduleAccountRow[];
+
+  const perDestinationPreflight = selectedAccounts.map((account) => {
+    const variantId = variantIdsByProvider.get(account.provider) ?? null;
+    const variant = variantId ? variantsById.get(variantId) : null;
+    if (variantId && (!variant || !isApprovedVariantForProvider(
+      { provider: variant.provider, status: variant.status, contentId: variant.content_id },
+      { provider: account.provider, contentId },
+    ))) {
+      return { destination: { id: account.id, brandId: account.brand_id, provider: account.provider, displayName: account.display_name, connectionState: account.connection_state, canPublish: account.capabilities?.content_publish === true }, issues: ['variant_invalid'] as const };
+    }
+    const destination = {
+      id: account.id,
+      brandId: account.brand_id,
+      provider: account.provider,
+      displayName: account.display_name,
+      connectionState: account.connection_state,
+      canPublish: account.capabilities?.content_publish === true,
+    } as PreflightDestination;
+    const check = preflightScheduleTargets({
+      brandId: preflightContent.brand_id,
+      status: preflightContent.status,
+      body: variant?.body ?? preflightContent.body,
+      mediaRefs: variant?.media_refs ?? preflightContent.media_refs,
+    }, [destination]);
+    return check.destinations[0];
+  });
+  const blockedDestinations = perDestinationPreflight.filter((result) => result.issues.length > 0);
+  if (blockedDestinations.length > 0) {
+    const reason = blockedDestinations[0].issues[0] ?? 'provider_unsupported';
+    returnToQueue(workspaceId, `error=preflight&reason=${encodeURIComponent(reason)}&blocked=${blockedDestinations.length}`);
   }
 
   let created = 0;
@@ -86,15 +138,19 @@ export async function scheduleApprovedContent(formData: FormData) {
   // Each destination is an independent, database-validated queue operation.
   // A failure for one network/account does not discard successful schedules.
   for (const accountId of accountIds) {
+    const targetAccount = selectedAccounts.find((account) => account.id === accountId);
+    const targetVariantId = targetAccount ? variantIdsByProvider.get(targetAccount.provider) ?? null : null;
     const { error } = await supabase.rpc('schedule_approved_content', {
       target_content_id: parsed.value.contentId,
       target_social_account_id: accountId,
       target_scheduled_local: parsed.value.scheduledLocal,
+      target_variant_id: targetVariantId,
     });
     if (!error) {
       created += 1;
       continue;
     }
+    if (error.code === 'PGRST202' || error.code === '42883') returnToQueue(workspaceId, 'error=variant');
     failed += 1;
     if (error.code === '23505') duplicate += 1;
     if (error.code === '42501') denied = true;

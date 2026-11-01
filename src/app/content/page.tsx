@@ -5,6 +5,10 @@ import {
   reviewContentItem,
   submitContentForReview,
   updateContentDraft,
+  createContentVariant,
+  updateContentVariant,
+  submitContentVariantForReview,
+  reviewContentVariant,
 } from '@/app/actions/content';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { canCreateContent, canReviewContent } from '@/lib/content/validation';
@@ -25,6 +29,13 @@ type ContentItem = {
   last_reviewed_at: string | null;
 };
 type Review = { id: string; content_id: string; decision: string; note: string; created_at: string };
+type ContentVariant = {
+  id: string; content_id: string; provider: 'instagram' | 'facebook' | 'linkedin';
+  variant_name: string; body: string; media_refs: unknown;
+  status: 'draft' | 'in_review' | 'approved' | 'changes_requested';
+  created_by: string; last_reviewed_at: string | null; updated_at: string;
+};
+type VariantReview = { id: string; variant_id: string; decision: string; note: string; created_at: string };
 
 const statusLabel: Record<ContentItem['status'], string> = {
   draft: 'Draft',
@@ -42,6 +53,15 @@ const errors: Record<string, string> = {
   submit: 'The item could not be submitted. It may no longer be a draft or your role may not permit submission.',
   review: 'The review action could not be completed. Confirm the item is awaiting review and your role can approve it.',
   media: 'Use one public HTTPS image URL, or leave the image field blank.',
+  'variant-provider': 'Choose Instagram, Facebook or LinkedIn. Other providers do not have an active publishing worker.',
+  'variant-name': 'Variant names must contain 2–60 characters.',
+  'variant-body': 'Variant copy must contain 1–5,000 characters.',
+  'variant-media': 'Use one public HTTPS image URL, or leave the image field blank.',
+  'variant-duplicate': 'A variant with that name already exists for this provider and master content.',
+  'variant-create': 'The provider variant could not be created. Confirm the master content is approved and your role can create variants.',
+  'variant-update': 'The provider variant could not be updated. Only draft variants or variants returned for changes can be edited.',
+  'variant-submit': 'The provider variant could not be submitted for review.',
+  'variant-review': 'The provider variant review could not be completed. Confirm it is awaiting review and your role can approve it.',
 };
 
 const success: Record<string, string> = {
@@ -50,6 +70,11 @@ const success: Record<string, string> = {
   submitted: 'Content submitted to the approval queue.',
   approved: 'Content approved. It is not published yet.',
   changes: 'Changes requested. The item has returned to draft status.',
+  'variant-created': 'Provider-specific copy saved as a draft. It must be reviewed before scheduling.',
+  'variant-updated': 'Provider variant changes saved as a draft.',
+  'variant-submitted': 'Provider variant submitted for review.',
+  'variant-approved': 'Provider variant approved and available for matching destinations.',
+  'variant-changes': 'Changes requested for the provider variant.',
 };
 
 function formatDate(value: string) {
@@ -77,6 +102,9 @@ export default async function ContentStudioPage({
   let brands: Brand[] = [];
   let items: ContentItem[] = [];
   let reviews: Review[] = [];
+  let variants: ContentVariant[] = [];
+  let variantReviews: VariantReview[] = [];
+  let variantsUnavailable = false;
 
   if (activeWorkspace) {
     const { data: member } = await supabase
@@ -87,20 +115,35 @@ export default async function ContentStudioPage({
       .maybeSingle();
     role = member?.role ?? 'member';
 
-    const [{ data: brandRows }, { data: contentRows }, { data: reviewRows }] = await Promise.all([
+    const [{ data: brandRows }, { data: contentRows }, { data: reviewRows }, variantResult, variantReviewResult] = await Promise.all([
       supabase.from('brands').select('id,name,timezone').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: true }),
       supabase.from('content_items').select('id,workspace_id,brand_id,created_by,title,body,media_refs,status,created_at,updated_at,last_reviewed_at').eq('workspace_id', activeWorkspace.id).order('updated_at', { ascending: false }).limit(100),
       supabase.from('content_reviews').select('id,content_id,decision,note,created_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }).limit(40),
+      supabase.from('content_variants').select('id,content_id,provider,variant_name,body,media_refs,status,created_by,last_reviewed_at,updated_at').eq('workspace_id', activeWorkspace.id).order('updated_at', { ascending: false }).limit(250),
+      supabase.from('content_variant_reviews').select('id,variant_id,decision,note,created_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }).limit(100),
     ]);
     brands = (brandRows ?? []) as Brand[];
     items = (contentRows ?? []) as ContentItem[];
     reviews = (reviewRows ?? []) as Review[];
+    variants = (variantResult.data ?? []) as ContentVariant[];
+    variantReviews = (variantReviewResult.data ?? []) as VariantReview[];
+    variantsUnavailable = Boolean(variantResult.error || variantReviewResult.error);
   }
 
   const brandNames = new Map(brands.map((brand) => [brand.id, brand.name]));
   const reviewByContent = new Map<string, Review>();
   for (const review of reviews) {
     if (!reviewByContent.has(review.content_id)) reviewByContent.set(review.content_id, review);
+  }
+  const variantByContent = new Map<string, ContentVariant[]>();
+  for (const variant of variants) {
+    const current = variantByContent.get(variant.content_id) ?? [];
+    current.push(variant);
+    variantByContent.set(variant.content_id, current);
+  }
+  const reviewByVariant = new Map<string, VariantReview>();
+  for (const review of variantReviews) {
+    if (!reviewByVariant.has(review.variant_id)) reviewByVariant.set(review.variant_id, review);
   }
   const canCreate = canCreateContent(role);
   const canReview = canReviewContent(role);
@@ -125,6 +168,7 @@ export default async function ContentStudioPage({
 
         {params.error && <p className="notice error">{errors[params.error] ?? 'The requested content operation failed.'}</p>}
         {params.saved && <p className="notice success">{success[params.saved] ?? 'Content updated.'}</p>}
+        {variantsUnavailable && <p className="notice error">Provider variant storage is unavailable. Apply migration 0018_provider_content_variants.sql after migration 0017 to enable cross-platform copy variants.</p>}
 
         {!activeWorkspace ? (
           <section className="content-empty-workspace"><h2>No workspace available</h2><p>Create or join a workspace before preparing content.</p><Link className="content-primary-button" href="/">Return to workspace setup</Link></section>
@@ -159,6 +203,7 @@ export default async function ContentStudioPage({
                 <div className="content-item-list">
                   {items.map((item) => {
                     const latestReview = reviewByContent.get(item.id);
+                    const itemVariants = variantByContent.get(item.id) ?? [];
                     const canEdit = item.status === 'draft' && (item.created_by === user.id || ['owner', 'admin', 'manager', 'publisher'].includes(role));
                     return (
                       <article className="content-item-card" key={item.id}>
@@ -169,6 +214,56 @@ export default async function ContentStudioPage({
 
                         {canEdit && (
                           <details className="content-edit-details"><summary>Edit draft</summary><form action={updateContentDraft} className="content-edit-form"><input type="hidden" name="workspace_id" value={activeWorkspace.id} /><input type="hidden" name="content_id" value={item.id} /><label>Title<input name="title" minLength={2} maxLength={160} required defaultValue={item.title} /></label><label>Post copy<textarea name="body" minLength={1} maxLength={5000} rows={4} required defaultValue={item.body} /></label><label>Image URL (optional)<input name="media_url" type="url" inputMode="url" defaultValue={Array.isArray(item.media_refs) && typeof item.media_refs[0] === 'string' ? item.media_refs[0] : ''} placeholder="https://your-public-image-url.jpg" /></label><button type="submit" className="content-secondary-button">Save changes</button></form></details>
+                        )}
+
+
+                        {item.status === 'approved' && !variantsUnavailable && (
+                          <section className="provider-variants-panel" aria-label={`Provider variants for ${item.title}`}>
+                            <div className="provider-variants-heading"><div><span className="eyebrow">CROSS-PLATFORM COPY</span><h4>Provider-specific variants</h4><p>Each platform copy has its own review. Approved variants are frozen and used by the publishing worker for that destination.</p></div><span className="provider-variants-count">{itemVariants.length} VARIANTS</span></div>
+                            {itemVariants.length > 0 && (
+                              <div className="provider-variant-list">
+                                {itemVariants.map((variant) => {
+                                  const latestVariantReview = reviewByVariant.get(variant.id);
+                                  const canEditVariant = ['draft', 'changes_requested'].includes(variant.status)
+                                    && (variant.created_by === user.id || ['owner', 'admin', 'manager', 'publisher'].includes(role));
+                                  const mediaUrl = Array.isArray(variant.media_refs) && typeof variant.media_refs[0] === 'string' ? variant.media_refs[0] : '';
+                                  return (
+                                    <article className="provider-variant-card" key={variant.id}>
+                                      <div className="provider-variant-topline"><strong>{variant.variant_name}</strong><span className={`content-status variant-status-${variant.status}`}>{variant.status.replaceAll('_', ' ')}</span></div>
+                                      <div className="provider-variant-meta"><span>{variant.provider.toUpperCase()}</span><span>{mediaUrl ? 'One image attached' : 'Text only'}</span><time dateTime={variant.updated_at}>{formatDate(variant.updated_at)}</time></div>
+                                      <p className="content-item-copy">{variant.body}</p>
+                                      {latestVariantReview && <div className={`content-review-note ${latestVariantReview.decision === 'approved' ? 'review-approved' : 'review-changes'}`}><strong>{latestVariantReview.decision === 'approved' ? 'Latest variant review: approved' : 'Latest variant review: changes requested'}</strong>{latestVariantReview.note && <span>{latestVariantReview.note}</span>}<time dateTime={latestVariantReview.created_at}>{formatDate(latestVariantReview.created_at)}</time></div>}
+                                      {canEditVariant && (
+                                        <details className="content-edit-details"><summary>Edit provider variant</summary><form action={updateContentVariant} className="content-edit-form">
+                                          <input type="hidden" name="workspace_id" value={activeWorkspace.id} />
+                                          <input type="hidden" name="variant_id" value={variant.id} />
+                                          <input type="hidden" name="provider" value={variant.provider} />
+                                          <label>Variant name<input name="variant_name" minLength={2} maxLength={60} required defaultValue={variant.variant_name} /></label>
+                                          <label>Platform copy<textarea name="body" minLength={1} maxLength={5000} rows={4} required defaultValue={variant.body} /></label>
+                                          <label>Image URL (optional)<input name="media_url" type="url" inputMode="url" defaultValue={mediaUrl} placeholder="Leave blank for text-only content" /></label>
+                                          <button type="submit" className="content-secondary-button">Save variant</button>
+                                        </form></details>
+                                      )}
+                                      <div className="content-item-actions">
+                                        {['draft', 'changes_requested'].includes(variant.status) && (variant.created_by === user.id || canCreate) && <form action={submitContentVariantForReview}><input type="hidden" name="workspace_id" value={activeWorkspace.id} /><input type="hidden" name="variant_id" value={variant.id} /><button type="submit" className="content-secondary-button">Submit variant for review</button></form>}
+                                        {variant.status === 'in_review' && canReview && <form action={reviewContentVariant} className="content-review-form"><input type="hidden" name="workspace_id" value={activeWorkspace.id} /><input type="hidden" name="variant_id" value={variant.id} /><input name="note" maxLength={1000} placeholder="Optional review note" aria-label="Optional variant review note" /><button type="submit" name="decision" value="approved" className="content-primary-button">Approve variant</button><button type="submit" name="decision" value="changes_requested" className="content-secondary-button">Request changes</button></form>}
+                                        {variant.status === 'approved' && <span className="content-approved-hint">Approved for {variant.provider}; selected explicitly during scheduling.</span>}
+                                      </div>
+                                    </article>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {canCreate && <details className="provider-variant-create"><summary>Create provider variant</summary><form action={createContentVariant} className="content-edit-form">
+                              <input type="hidden" name="workspace_id" value={activeWorkspace.id} />
+                              <input type="hidden" name="content_id" value={item.id} />
+                              <label>Platform<select name="provider" required defaultValue="instagram"><option value="instagram">Instagram Business</option><option value="facebook">Facebook Page</option><option value="linkedin">LinkedIn Organization</option></select></label>
+                              <label>Variant name<input name="variant_name" minLength={2} maxLength={60} required placeholder="e.g. Instagram short caption" /></label>
+                              <label>Platform copy<textarea name="body" minLength={1} maxLength={5000} rows={4} required defaultValue={item.body} /></label>
+                              <label>Image URL (optional)<input name="media_url" type="url" inputMode="url" defaultValue={Array.isArray(item.media_refs) && typeof item.media_refs[0] === 'string' ? item.media_refs[0] : ''} placeholder="Leave blank for text-only content" /></label>
+                              <div className="content-form-footer"><small>Instagram and Facebook currently require one image. LinkedIn currently accepts text-only posts. Variant must be approved separately.</small><button type="submit" className="content-primary-button">Save provider variant</button></div>
+                            </form></details>}
+                          </section>
                         )}
 
                         <div className="content-item-actions">
@@ -182,7 +277,7 @@ export default async function ContentStudioPage({
                 </div>
               )}
             </section>
-            <p className="content-studio-footnote">No social network is connected by this workflow. Approval records readiness only; it does not create a publishing job or send content to a platform.</p>
+            <p className="content-studio-footnote">Master content and each provider variant require human approval. An approved variant is immutable and is selected per platform when scheduling. Scheduling creates a queue record; it does not publish immediately.</p>
           </>
         )}
       </div>

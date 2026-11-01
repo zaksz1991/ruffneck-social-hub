@@ -184,3 +184,13 @@
 - Each RPC re-locks and rechecks the job state, preserving the existing audit event and preventing cancellation of jobs that have begun processing or have already been published.
 - Results report cancelled, failed and skipped items; existing single-item cancellation remains available.
 - No migration or environment variable changes.
+
+## 2.15.0 — Provider-specific content variants
+
+- Added named copy and optional single-image variants for the active Instagram, Facebook and LinkedIn publishing workers.
+- Added a separate draft, review, approval and change-request lifecycle for provider variants.
+- Made approved variants immutable through the application workflow.
+- Added per-provider variant selection to multi-destination scheduling.
+- Rechecked provider, workspace, master-content and variant approval on the server before queue insertion.
+- Updated the server-only publishing claim RPC to return the exact approved variant copy and media bound to each job.
+- Added migration 0018; no environment variables or package dependencies changed.

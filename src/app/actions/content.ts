@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isUuid, validateContentInput } from '@/lib/content/validation';
+import { validateProviderVariantInput } from '@/lib/content/provider-variants';
 
 function formText(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -105,4 +106,105 @@ export async function reviewContentItem(formData: FormData) {
   if (error) contentRedirect(workspaceId, 'error=review');
   revalidatePath('/content');
   contentRedirect(workspaceId, decision === 'approved' ? 'saved=approved' : 'saved=changes');
+}
+
+
+function variantRedirect(workspaceId: string, query: string): never {
+  redirect(`/content?workspace=${encodeURIComponent(workspaceId)}&${query}`);
+}
+
+export async function createContentVariant(formData: FormData) {
+  const workspaceId = formText(formData, 'workspace_id');
+  const contentId = formText(formData, 'content_id');
+  const parsed = validateProviderVariantInput({
+    provider: formText(formData, 'provider'),
+    name: formText(formData, 'variant_name'),
+    body: formText(formData, 'body'),
+    mediaUrl: formText(formData, 'media_url'),
+  });
+  if (!isUuid(workspaceId) || !isUuid(contentId)) redirect('/content?error=input');
+  if (!parsed.ok) variantRedirect(workspaceId, `error=variant-${parsed.reason}`);
+
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc('create_content_variant', {
+    target_content_id: contentId,
+    target_provider: parsed.value.provider,
+    target_variant_name: parsed.value.name,
+    target_variant_body: parsed.value.body,
+    target_media_refs: parsed.value.mediaRefs,
+  });
+  if (error) {
+    console.error('[content.variant-create] Rejected:', { code: error.code });
+    variantRedirect(workspaceId, error.code === '23505' ? 'error=variant-duplicate' : 'error=variant-create');
+  }
+  revalidatePath('/content');
+  revalidatePath('/publishing');
+  variantRedirect(workspaceId, 'saved=variant-created');
+}
+
+export async function updateContentVariant(formData: FormData) {
+  const workspaceId = formText(formData, 'workspace_id');
+  const variantId = formText(formData, 'variant_id');
+  const parsed = validateProviderVariantInput({
+    provider: formText(formData, 'provider'),
+    name: formText(formData, 'variant_name'),
+    body: formText(formData, 'body'),
+    mediaUrl: formText(formData, 'media_url'),
+  });
+  if (!isUuid(workspaceId) || !isUuid(variantId)) redirect('/content?error=input');
+  if (!parsed.ok) variantRedirect(workspaceId, `error=variant-${parsed.reason}`);
+
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc('update_content_variant', {
+    target_variant_id: variantId,
+    target_variant_name: parsed.value.name,
+    target_variant_body: parsed.value.body,
+    target_media_refs: parsed.value.mediaRefs,
+  });
+  if (error) {
+    console.error('[content.variant-update] Rejected:', { code: error.code });
+    variantRedirect(workspaceId, 'error=variant-update');
+  }
+  revalidatePath('/content');
+  revalidatePath('/publishing');
+  variantRedirect(workspaceId, 'saved=variant-updated');
+}
+
+export async function submitContentVariantForReview(formData: FormData) {
+  const workspaceId = formText(formData, 'workspace_id');
+  const variantId = formText(formData, 'variant_id');
+  if (!isUuid(workspaceId) || !isUuid(variantId)) redirect('/content?error=input');
+
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc('submit_content_variant_for_review', { target_variant_id: variantId });
+  if (error) {
+    console.error('[content.variant-submit] Rejected:', { code: error.code });
+    variantRedirect(workspaceId, 'error=variant-submit');
+  }
+  revalidatePath('/content');
+  variantRedirect(workspaceId, 'saved=variant-submitted');
+}
+
+export async function reviewContentVariant(formData: FormData) {
+  const workspaceId = formText(formData, 'workspace_id');
+  const variantId = formText(formData, 'variant_id');
+  const decision = formText(formData, 'decision');
+  const note = formText(formData, 'note');
+  if (!isUuid(workspaceId) || !isUuid(variantId) || !['approved', 'changes_requested'].includes(decision) || note.length > 1000) {
+    redirect('/content?error=input');
+  }
+
+  const { supabase } = await requireUser();
+  const { error } = await supabase.rpc('review_content_variant', {
+    target_variant_id: variantId,
+    review_decision: decision,
+    review_note: note,
+  });
+  if (error) {
+    console.error('[content.variant-review] Rejected:', { code: error.code });
+    variantRedirect(workspaceId, 'error=variant-review');
+  }
+  revalidatePath('/content');
+  revalidatePath('/publishing');
+  variantRedirect(workspaceId, decision === 'approved' ? 'saved=variant-approved' : 'saved=variant-changes');
 }

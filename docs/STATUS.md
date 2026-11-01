@@ -90,3 +90,14 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Publishing preflight now checks the selected content and each destination both in the client UI and again on the authenticated server action before any queue writes. It does not verify remote image reachability or provider acceptance.
 - v2.12.0 adds no database migration or environment variable.
 - New preflight helper assertions passed in a standalone local runtime check. Changed source files passed TypeScript syntax transpilation. The full Vitest suite, dependency-backed typecheck, production Next.js build, live provider tests and Vercel deployment were not run.
+
+## 2.15.0 provider-specific content variants
+
+- Added named variants for the currently implemented Instagram, Facebook and LinkedIn publishing providers.
+- Master content must already be approved. Each provider variant then follows a separate draft → in-review → approved / changes-requested lifecycle.
+- Approved variants are immutable through the application workflow; a requested change returns the variant to draft for another review.
+- Scheduling can select one approved variant per provider for a multi-destination batch. The authenticated server revalidates the variant's workspace, master-content relationship, provider and approval state for each selected account.
+- Migration 0018 adds variant and review tables, `publishing_jobs.variant_id`, role-checked RPCs, and the worker claim projection that supplies the selected variant's copy and media to the existing dispatch functions.
+- Existing publishing jobs remain valid and continue to use master content because their new `variant_id` is null.
+- TikTok, YouTube, X and WhatsApp Business remain planned, with no active publishing worker.
+- Migration 0018 has not been applied to the live Supabase project as part of this package build. Live provider publishing, full Vitest suite, dependency-backed typecheck, production Next.js build and Vercel deployment are not verified here.

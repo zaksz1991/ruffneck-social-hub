@@ -1,13 +1,13 @@
-# RuffNeck Social Hub v2.14.0
+# RuffNeck Social Hub v2.15.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
 
 ## Core modules
 
 - Supabase email/password authentication and callback handling.
 - Workspace membership, multiple brands, team invitations and role-aware access.
-- Content Studio with draft, approval and publishing schedule workflows.
-- Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, LinkedIn text-only organization publishing, multi-destination scheduling and per-destination preflight validation.
+- Content Studio with master-content approval plus separate provider-specific copy/media variants and review workflows for Instagram, Facebook and LinkedIn.
+- Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, LinkedIn text-only organization publishing, multi-destination scheduling, approved provider-variant selection and per-destination preflight validation.
 - Encrypted provider token vault shared by official Instagram, Facebook Pages and LinkedIn organization connection flows.
 - Central provider registry for Facebook, Instagram, LinkedIn, TikTok, YouTube, X and WhatsApp Business, with implemented integrations clearly separated from planned ones.
 - Meta webhook signature verification and workspace-scoped event journal.
@@ -38,7 +38,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0017. Versions 2.13.0 and 2.14.0 add no database migrations. Existing installations that have applied migrations 0001–0017 do not need to run SQL for these releases. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
+The complete ZIP contains migrations 0001–0018. Version 2.15.0 adds `0018_provider_content_variants.sql`. Existing installations that have already applied migrations 0001–0017 must apply migration 0018 once, using the Supabase SQL Editor, before enabling provider-specific variants and variant-aware scheduling. Do not rerun migrations 0001–0017. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
 
 ## Environment variables
 
@@ -121,3 +121,12 @@ Owners, administrators, managers and publishers can select eligible queue record
 ## v2.14.0 workspace audit activity
 
 Workspace owners and administrators can open **Activity log** from the dashboard to review records in the existing `audit_events` table. Category, outcome, time-period and text filters are applied before 50-record pagination; filtered counts are exact. The page uses the existing owner/admin row-level security policy and selectively displays allowlisted metadata. Invitation email addresses, credentials, access tokens and arbitrary metadata are not rendered. The default view is the last 30 days, and all displayed timestamps are UTC. The page shows events that existing database functions and workers have recorded; it does not claim that every external provider action is captured. No migration or new environment variable is required.
+
+
+## v2.15.0 provider-specific content variants
+
+Content Studio now supports separate copy and optional single-image variants for the active Instagram Business, Facebook Pages and LinkedIn organization publishing workers. Each variant is attached to an approved master content item and has its own draft, review and approval lifecycle. A variant cannot be scheduled until it has been approved by an authorized reviewer. Approved variants cannot be edited through the application workflow; a reviewer must request changes before a new version can be submitted.
+
+When scheduling, choose the approved copy for each selected provider. Multiple accounts on the same provider use the same selected variant. Server-side scheduling verifies the variant's workspace, master content, provider and approval state. The publishing worker then supplies the selected variant's copy and media to the existing provider dispatcher. Existing queue jobs with no variant continue to use their approved master content.
+
+Apply `supabase/migrations/0018_provider_content_variants.sql` once after migration 0017. No new environment variables or package dependencies are required. Instagram and Facebook still require one public HTTPS image; LinkedIn remains text-only. TikTok, YouTube, X and WhatsApp Business are still not available for publishing.
