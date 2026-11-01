@@ -1,3 +1,14 @@
+# Changelog
+
+## 3.8.0 — Routing automation insights
+
+- Added a read-only manager dashboard for routing execution metrics, provider mix, per-rule outcomes, daily activity and safe reason codes.
+- Added filters for 7-, 30- and 90-day windows, provider and execution outcome.
+- Added a paginated safe execution journal.
+- Limited reporting queries to safe execution metadata and the latest 1,000 matching records, with explicit sample disclosure.
+- Added integration and regression safeguards to the build and test scripts.
+- No database migration, provider permission or environment variable change.
+
 ## v3.5.0 — 2026-11-01
 
 - Added deterministic AI reply safety scans for Instagram and Facebook Messenger drafts: brand restrictions, escalation triggers, high-risk customer topics, possible unsupported commitments and language mismatch signals.

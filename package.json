@@ -1,13 +1,13 @@
 {
   "name": "ruffneck-social-hub",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/remove-known-stale-content-component.mjs && npm run audit:imports && npm run audit:workflow && npm run audit:saved-replies && npm run audit:sla && npm run audit:ai-triage && npm run audit:reply-safety && npm run audit:reply-playbooks && npm run audit:automation && next build",
+    "build": "node scripts/remove-known-stale-content-component.mjs && npm run audit:imports && npm run audit:workflow && npm run audit:saved-replies && npm run audit:sla && npm run audit:ai-triage && npm run audit:reply-safety && npm run audit:reply-playbooks && npm run audit:automation && npm run audit:automation-insights && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-inbox-workflow.mjs && node scripts/test-saved-replies.mjs && node scripts/test-inbox-sla.mjs && node scripts/test-ai-triage.mjs && node scripts/audit-reply-safety.mjs && node scripts/test-reply-safety.mjs && node scripts/audit-reply-playbooks.mjs && node scripts/test-reply-playbooks.mjs && node scripts/test-inbox-automation.mjs && vitest run",
+    "test": "node scripts/test-inbox-workflow.mjs && node scripts/test-saved-replies.mjs && node scripts/test-inbox-sla.mjs && node scripts/test-ai-triage.mjs && node scripts/audit-reply-safety.mjs && node scripts/test-reply-safety.mjs && node scripts/audit-reply-playbooks.mjs && node scripts/test-reply-playbooks.mjs && node scripts/test-inbox-automation.mjs && node scripts/test-inbox-automation-insights.mjs && vitest run",
     "audit:imports": "node scripts/audit-internal-imports.mjs",
     "audit:workflow": "node scripts/audit-inbox-workflow.mjs",
     "audit:saved-replies": "node scripts/audit-saved-replies.mjs",
@@ -15,7 +15,8 @@
     "audit:ai-triage": "node scripts/audit-ai-triage.mjs",
     "audit:reply-safety": "node scripts/audit-reply-safety.mjs",
     "audit:reply-playbooks": "node scripts/audit-reply-playbooks.mjs",
-    "audit:automation": "node scripts/audit-inbox-automation.mjs"
+    "audit:automation": "node scripts/audit-inbox-automation.mjs",
+    "audit:automation-insights": "node scripts/audit-inbox-automation-insights.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
