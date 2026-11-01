@@ -174,6 +174,17 @@ export function normalizeYouTubeVideoDetails(value: unknown): Map<string, { titl
   return result;
 }
 
+/**
+ * Copy media bytes into an exact-length ArrayBuffer suitable for fetch BodyInit.
+ * Node Buffer uses Uint8Array<ArrayBufferLike>; DOM fetch typings increasingly
+ * require an ArrayBuffer-backed view and reject Buffer<ArrayBufferLike>.
+ */
+export function toYouTubeUploadBody(bytes: Uint8Array): ArrayBuffer {
+  const body = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(body).set(bytes);
+  return body;
+}
+
 export function validateYouTubeVideoSourceUrl(value: unknown, verifiedHosts: string[]): { ok: true; url: string; hostname: string } | { ok: false; reason: string } {
   if (typeof value !== 'string' || value.length > 2_048) return { ok: false, reason: 'url_invalid' };
   let url: URL;

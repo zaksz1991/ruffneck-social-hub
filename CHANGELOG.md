@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.4.1 — YouTube upload fetch-body TypeScript compatibility repair
+
+- Fixed the Vercel TypeScript build failure in the private YouTube upload route: Node Buffer bytes are copied into an exact-length `ArrayBuffer` before being passed to `fetch`, matching the current DOM `BodyInit` type contract without unsafe type assertions.
+- Added a regression test proving byte-for-byte copying, exact length and independence from later source-buffer mutation.
+- Kept the YouTube private-upload policy, byte cap, host allowlist, explicit consent, upload outcome handling and no-automatic-retry behavior unchanged.
+- This is a targeted build repair; no database migration, environment variable, OAuth scope or provider permission change.
+
 ## 4.4.0 — YouTube channel analytics and private video uploads
 
 - Added Google OAuth for owned YouTube channels, signed cookie-bound state, channel discovery and encrypted channel-bound token bundles with server-side refresh.

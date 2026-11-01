@@ -28,7 +28,7 @@ const requirements = [
     'YOUTUBE_ANALYTICS_SCOPES', "'owner', 'admin', 'manager', 'analyst'",
   ]],
   ['src/app/api/integrations/youtube/upload/route.ts', [
-    "privacyStatus: 'private'", "method: 'PUT'", 'validateYouTubeUploadSessionUrl',
+    "privacyStatus: 'private'", "method: 'PUT'", 'validateYouTubeUploadSessionUrl', 'toYouTubeUploadBody(uploadBytes)', 'body: uploadBody',
     'YOUTUBE_VERIFIED_MEDIA_HOSTS', 'YOUTUBE_MAX_UPLOAD_BYTES', 'status: \'unknown\'',
     'create_youtube_video_upload_request', 'record_youtube_video_upload_result',
     'AbortSignal.timeout(32_000)', 'redirect: \'manual\'',
@@ -65,7 +65,7 @@ for (const [relative, tokens] of requirements) {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '4.4.0') failures.push(`package.json: expected 4.4.0, got ${pkg.version}`);
+if (pkg.version !== '4.4.1') failures.push(`package.json: expected 4.4.1, got ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:youtube && next build')) failures.push('package.json: YouTube audit must gate next build');
 if (!String(pkg.scripts?.test ?? '').includes('npm run test:youtube')) failures.push('package.json: YouTube regression script missing from test command');
 

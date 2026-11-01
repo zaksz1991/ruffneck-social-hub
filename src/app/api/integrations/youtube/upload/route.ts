@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getFreshYouTubeAccessToken } from '@/lib/integrations/youtube-token';
-import { buildYouTubeResumableUploadUrl, safeYouTubeErrorCode, validateYouTubeUploadSessionUrl, validateYouTubeVideoSourceUrl } from '@/lib/integrations/youtube';
+import { buildYouTubeResumableUploadUrl, safeYouTubeErrorCode, toYouTubeUploadBody, validateYouTubeUploadSessionUrl, validateYouTubeVideoSourceUrl } from '@/lib/integrations/youtube';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -189,11 +189,15 @@ export async function POST(request: NextRequest) {
 
   let uploadResponse: Response;
   let providerVideoId = '';
+  // Node Buffer is a Uint8Array<ArrayBufferLike>; newer DOM fetch typings do
+  // not accept that generic type as BodyInit. Copy the bounded bytes into a
+  // standalone ArrayBuffer so the request body is portable across Node/DOM TS.
+  const uploadBody = toYouTubeUploadBody(uploadBytes);
   try {
     uploadResponse = await fetch(uploadSessionUrl, {
       method: 'PUT',
       headers: { 'content-type': mimeType, 'content-length': String(uploadBytes.byteLength), accept: 'application/json' },
-      body: uploadBytes,
+      body: uploadBody,
       cache: 'no-store', signal: AbortSignal.timeout(32_000),
     });
     const body = await readJson(uploadResponse);

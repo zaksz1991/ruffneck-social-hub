@@ -19,6 +19,7 @@ import {
   parseYouTubeTokenBundle,
   validateYouTubeUploadSessionUrl,
   validateYouTubeVideoSourceUrl,
+  toYouTubeUploadBody,
 } from '../src/lib/integrations/youtube.ts';
 import { createProviderOAuthState, verifyProviderOAuthState } from '../src/lib/integrations/provider-oauth-state.ts';
 
@@ -144,6 +145,16 @@ check('Private upload media source permits only exact verified HTTPS hostnames a
   assert.equal(validateYouTubeVideoSourceUrl('https://media.example.com/video.mp4', ['*.example.com']).ok, false);
 });
 
+check('YouTube upload request body is copied into an exact-length ArrayBuffer accepted by fetch', () => {
+  const source = Buffer.from([0, 1, 2, 127, 128, 255]);
+  const body = toYouTubeUploadBody(source);
+  assert.equal(body instanceof ArrayBuffer, true);
+  assert.equal(body.byteLength, source.byteLength);
+  assert.deepEqual([...new Uint8Array(body)], [...source]);
+  source.fill(0);
+  assert.deepEqual([...new Uint8Array(body)], [0, 1, 2, 127, 128, 255]);
+});
+
 check('Resumable YouTube uploads accept only HTTPS Google API upload-session URLs', () => {
   const init = buildYouTubeResumableUploadUrl();
   assert.equal(init.hostname, 'www.googleapis.com');
@@ -196,6 +207,8 @@ check('YouTube uploads remain private, approved-content-only and are never sched
   assert.match(migration, /content_upload', \('https:\/\/www\.googleapis\.com\/auth\/youtube\.upload' = any\(clean_scopes\)\)/);
   assert.match(migration, /status in \('initiating', 'succeeded', 'failed', 'unknown'\)/);
   assert.match(route, /privacyStatus: 'private'/);
+  assert.match(route, /toYouTubeUploadBody\(uploadBytes\)/);
+  assert.match(route, /body: uploadBody/);
   assert.match(route, /sourceResponse = await fetch\(validated\.url[\s\S]*?AbortSignal\.timeout\(8_000\)/);
 assert.match(route, /AbortSignal.timeout\(32_000\)/);
   assert.match(route, /export const maxDuration = 60/);
