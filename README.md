@@ -1,4 +1,4 @@
-# RuffNeck Social Hub v3.2.0
+# RuffNeck Social Hub v3.4.0
 
 RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
@@ -15,6 +15,8 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Facebook Messenger conversations with human-reviewed text replies, a guarded 24-hour send window and one-attempt send protection.
 - Unified inbox team workflow: assignment, open/pending/resolved status, priority and private handoff notes.
 - Workspace-shared saved replies with channel scope and atomic creation of unsent provider drafts.
+- First-response SLA reporting and team workload analytics for Instagram and Facebook Messenger.
+- Advisory AI intent, sentiment, summary, escalation and suggested-priority triage on both supported inbox channels; priority changes require an explicit team action.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
@@ -26,7 +28,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
 - Marking a comment Reviewed or Ignored changes only its RuffNeck internal triage status.
 - Marking an AI draft human-reviewed does not publish it.
-- This release does not send Instagram comment replies, hide/unhide comments, delete comments, send DMs, or automate moderation.
+- This release does not send Instagram comment replies, hide/unhide comments, delete comments, send DMs automatically, or automate moderation. AI triage never sends a customer message or changes workflow status/assignment.
 - Meta app permissions, account eligibility, webhook subscriptions, app review and access-level approval are independent operational requirements. A code path does not prove provider access.
 
 ## Stack
@@ -40,7 +42,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0021` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing database upgraded through v3.1.0 (migrations 0001–0020), apply `0021_inbox_saved_replies.sql` once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the individual release notes for Meta messaging, brand voice, team workflow and saved-reply setup.
+Fresh installations apply migrations `0001` through `0023` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing database upgraded through v3.3.0 (migrations 0001–0022), apply `0023_inbox_ai_conversation_triage.sql` once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the individual release notes for Meta messaging, brand voice, team workflow, saved replies, SLA analytics and AI triage setup.
 
 ## Environment variables
 
@@ -85,7 +87,7 @@ See `README-INSTAGRAM-COMMENT-TRIAGE-v1.5.0.md`, `README-FACEBOOK-PUBLISHING-v1.
 
 ## Local AI privacy
 
-AI drafting is optional. A sanitized brand voice profile plus the relevant message or comment text is sent from the server to the configured inference endpoint. Use a private, authenticated inference service. The user-supplied text is treated as untrusted data. No AI tool can call Instagram provider actions in this release.
+AI drafting and conversation triage are optional. A sanitized brand voice profile plus up to 12 recent message texts is sent from the server to the configured inference endpoint for triage. Use a private, authenticated inference service and review your endpoint's retention policy. The user-supplied text is treated as untrusted data, but the model output is not a guaranteed privacy filter. AI triage is advisory and cannot send messages or change workflow status/assignment; a team member must explicitly apply a suggested priority.
 
 ## Replace the repository contents
 
@@ -148,3 +150,7 @@ See `README-v3.1.0-TEAM-INBOX-WORKFLOW.md`. Apply `supabase/migrations/0020_unif
 Apply `supabase/migrations/0021_inbox_saved_replies.sql` after migration 0020. Owners, admins and managers can create, update and delete workspace-shared templates. Templates can be scoped to Instagram, Facebook Messenger or both. Authorized team members can use a template to create an editable draft tied atomically to the latest inbound conversation message. Template use never sends a message. Facebook drafts still follow the explicit human-review, permission, 24-hour-window and one-attempt send protections. Instagram drafts remain unsent.
 
 See `README-v3.2.0-SAVED-REPLIES.md` and `RELEASE-MANIFEST-v3.2.0.md` for the complete feature and verification boundaries.
+
+## v3.4.0 AI conversation triage
+
+Open an Instagram or Facebook Messenger thread and select **Analyse conversation** after the latest inbound text message. Review the intent, sentiment, summary, escalation recommendation and suggested priority. Analysis does not change the conversation. Applying the priority is a separate human action; it preserves the current status and assignment, and the server rejects stale assessments after a newer message arrives. Apply migration `0023_inbox_ai_conversation_triage.sql` once after 0022. See `README-v3.4.0-AI-CONVERSATION-TRIAGE.md`.

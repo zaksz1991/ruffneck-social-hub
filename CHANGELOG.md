@@ -1,3 +1,12 @@
+## v3.4.0 — 2026-11-01
+
+- Added local-model AI conversation intent, sentiment, summary, escalation and suggested-priority triage to Instagram and Facebook Messenger threads.
+- Added strict JSON schema validation, brand escalation-trigger context, prompt-injection safeguards, bounded summaries and private endpoint timeouts.
+- Added workspace-role-checked persistence anchored to the exact latest inbound message; stale assessments are rejected if a newer message arrives during inference.
+- Added an explicit human action to apply only the suggested priority while preserving current workflow status and assignment.
+- Added migration 0023, RLS-protected workspace reads, a protected persistence RPC, safe numeric/category audit metadata and new regression/build audits.
+- No automatic messages, public replies, status changes, assignments or provider API sends were introduced.
+
 # Changelog
 
 ## v3.3.0 — 2026-11-01

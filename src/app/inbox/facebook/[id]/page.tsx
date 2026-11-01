@@ -4,14 +4,16 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import FacebookReplyDraftStudio from './reply-draft-studio';
 import SavedReplyPicker, { type InboxSavedReply } from '@/app/inbox/saved-reply-picker';
 import InboxConversationWorkflowPanel, { type InboxWorkflow, type InboxInternalNote, type InboxTeammate } from '@/app/inbox/conversation-workflow-panel';
+import ConversationAiTriage from '@/app/inbox/conversation-ai-triage';
 import '../../inbox.css';
 
 type Conversation = { id: string; workspace_id: string; participant_provider_id: string; social_account_id: string; last_message_at: string };
-type Message = { id: string; direction: 'inbound'|'outbound'; message_text: string; attachment_types: string[]; provider_sent_at: string };
+type Message = { id: string; direction: 'inbound'|'outbound'; message_text: string; attachment_types: string[]; provider_sent_at: string; received_at: string };
 type Draft = { id: string; draft_text: string; model: string; status: 'draft'|'reviewed'|'discarded'|'sent'; created_at: string; reviewed_at: string | null; sent_at: string | null };
 type Attempt = { id: string; draft_id: string; status: string; safe_error_code: string | null; created_at: string };
+type Triage = { id: string; source_last_message_id: string; intent: string; sentiment: string; suggested_priority: 'low'|'normal'|'high'|'urgent'; escalation_required: boolean; confidence: number; summary: string; reason: string; model: string; created_at: string };
 
-export default async function FacebookConversationDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ draft_action?: string; send_action?: string; workflow_action?: string; note_action?: string }> }) {
+export default async function FacebookConversationDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ draft_action?: string; send_action?: string; workflow_action?: string; note_action?: string; triage_action?: string }> }) {
   const { id } = await params;
   const query = await searchParams;
   const supabase = await createSupabaseServerClient();
@@ -20,9 +22,9 @@ export default async function FacebookConversationDetail({ params, searchParams 
   const { data: conversation, error } = await supabase.from('facebook_conversations')
     .select('id,workspace_id,participant_provider_id,social_account_id,last_message_at').eq('id', id).maybeSingle();
   if (error || !conversation) notFound();
-  const [messageResult, draftResult, accountResult, attemptResult, membershipResult] = await Promise.all([
-    supabase.from('facebook_messages').select('id,direction,message_text,attachment_types,provider_sent_at')
-      .eq('conversation_id', id).order('provider_sent_at', { ascending: false }).limit(500),
+  const [messageResult, draftResult, accountResult, attemptResult, membershipResult, triageResult] = await Promise.all([
+    supabase.from('facebook_messages').select('id,direction,message_text,attachment_types,provider_sent_at,received_at')
+      .eq('conversation_id', id).order('provider_sent_at', { ascending: false }).order('received_at', { ascending: false }).limit(500),
     supabase.from('facebook_reply_drafts').select('id,draft_text,model,status,created_at,reviewed_at,sent_at')
       .eq('conversation_id', id).order('created_at', { ascending: false }).limit(50),
     supabase.from('social_accounts').select('display_name,capabilities,granted_scopes,connection_state')
@@ -30,6 +32,8 @@ export default async function FacebookConversationDetail({ params, searchParams 
     supabase.from('facebook_message_send_attempts').select('id,draft_id,status,safe_error_code,created_at')
       .eq('conversation_id', id).order('created_at', { ascending: false }).limit(50),
     supabase.from('workspace_members').select('role').eq('workspace_id', conversation.workspace_id).eq('user_id', user.id).maybeSingle(),
+    supabase.from('inbox_ai_triage').select('id,source_last_message_id,intent,sentiment,suggested_priority,escalation_required,confidence,summary,reason,model,created_at')
+      .eq('provider', 'facebook').eq('conversation_id', id).order('created_at', { ascending: false }).limit(5),
   ]);
   if (messageResult.error || draftResult.error) notFound();
   const c = conversation as Conversation;
@@ -42,6 +46,7 @@ export default async function FacebookConversationDetail({ params, searchParams 
   const attempts = (attemptResult.data ?? []) as Attempt[];
   const account = accountResult.data;
   const latest = messages[messages.length - 1];
+  const triage = ((triageResult.data ?? []) as Triage[]).find((item) => item.source_last_message_id === latest?.id) ?? null;
   const role = membershipResult.data?.role ?? '';
   let canAssign = ['owner', 'admin', 'manager'].includes(role);
   const canUpdate = ['owner', 'admin', 'manager', 'publisher'].includes(role);
@@ -72,10 +77,12 @@ export default async function FacebookConversationDetail({ params, searchParams 
     : !sendAllowed ? 'The Page authorizer does not have the Send API MESSAGE task.'
     : !hoursOpen ? 'The latest customer message is outside the standard 24-hour reply window.' : '';
     return <main className="inbox-shell"><header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" /></Link><nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/comments">Comments</Link><Link href="/inbox/saved-replies">Saved replies</Link><Link href="/inbox/sla">Inbox SLA</Link></nav><Link href="/inbox/conversations" className="inbox-back">All conversations</Link></header><section className="inbox-main"><div className="inbox-heading"><div><span className="eyebrow">FACEBOOK · MESSENGER THREAD</span><h1>{account?.display_name ?? 'Facebook Page'} conversation</h1><p>Participant reference: {c.participant_provider_id}</p></div></div>
+    {query.triage_action && <div className={['failed','invalid','forbidden','stale','unavailable'].includes(query.triage_action) ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{query.triage_action === 'priority_applied' ? 'The suggested priority was applied. Conversation status and assignment were preserved.' : query.triage_action === 'stale' ? 'A newer message arrived. Run AI triage again before applying a priority.' : query.triage_action === 'forbidden' ? 'Your workspace role cannot apply priority changes.' : 'The AI priority suggestion could not be applied.'}</div>}
     {query.draft_action && <div className={query.draft_action === 'failed' || query.draft_action === 'invalid' ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{query.draft_action === 'template_added' ? 'Saved reply copied into a new editable draft. It has not been sent.' : query.draft_action === 'template_requires_inbound' ? 'A saved reply requires the latest message to be from the customer.' : query.draft_action === 'template_forbidden' ? 'Your workspace role cannot create reply drafts.' : query.draft_action === 'template_unavailable' ? 'That saved reply is unavailable for this workspace or channel.' : query.draft_action === 'template_failed' ? 'The saved reply could not be converted into a draft. Confirm migrations 0018 and 0021.' : query.draft_action === 'reviewed' ? 'Draft marked as human-reviewed. No message was sent.' : query.draft_action === 'discarded' ? 'Draft discarded.' : query.draft_action === 'saved' ? 'Draft changes saved.' : 'The draft action could not be completed.'}</div>}
     {query.send_action && <div className={query.send_action === 'sent' ? 'reply-action-message' : 'reply-action-message is-error'} role="status">{query.send_action === 'sent' ? 'Facebook confirmed the message send.' : query.send_action === 'uncertain' ? 'The send outcome is uncertain. Do not retry this draft. Check the Page inbox in Meta Business Suite before creating a new draft.' : query.send_action === 'provider_rejected' ? 'Meta rejected the send request. Review Page permissions and create a new draft after correcting the issue.' : query.send_action === 'permissions' ? 'Messenger permission or webhook subscription is unavailable.' : query.send_action === 'already_attempted' ? 'This draft already has a send attempt. Check Meta before taking further action.' : query.send_action === 'blocked' ? 'The draft is outside the send policy, the message window has expired, or the conversation changed. Refresh the thread.' : 'The send action could not be started.'}</div>}
     <div className="inbox-notice"><strong>Messenger reply controls</strong><p>{subscribed ? 'Page permissions and message webhook subscription are active.' : 'This Page has not completed the Messenger permission and webhook subscription checks.'} Sending is restricted to human-reviewed text drafts in the standard 24-hour window and requires a Page member with the Send API MESSAGE task (or full Page management). No broadcasts, follow-up campaigns, AI auto-send or attachment sends are enabled.</p><p><strong>Current window:</strong> {hoursOpen ? 'Open based on the latest inbound message. The send action rechecks this on the server.' : 'Closed or unavailable. A new inbound customer message is required.'}</p></div>
     <InboxConversationWorkflowPanel provider="facebook" conversationId={id} workflow={workflow} notes={notes} teammates={teammates} canAssign={canAssign} canUpdate={canUpdate} available={workflowAvailable} workflowAction={query.workflow_action} noteAction={query.note_action}/>
+    <ConversationAiTriage provider="facebook" conversationId={id} triage={triage} canGenerate={canDraft} canApplyPriority={canUpdate} hasLatestInbound={latest?.direction === 'inbound' && Boolean(latest.message_text.trim())} disabledReason={!canDraft ? 'Your workspace role is read-only for AI triage.' : 'AI triage requires a text message from the customer.'} />
     <section className="inbox-events"><div className="inbox-section-title"><div><h2>Message history</h2><p>{messages.length} messages · oldest first</p></div></div>{!messages.length ? <div className="inbox-empty"><p>No messages are stored for this conversation.</p></div> : <div className="inbox-event-list">{messages.map(m => <article className="inbox-event" key={m.id}><div className="event-symbol">{m.direction === 'inbound' ? 'IN' : 'OUT'}</div><div className="event-copy"><div className="event-title"><strong>{m.direction === 'inbound' ? 'Incoming message' : 'Page reply'}</strong></div><p style={{ whiteSpace:'pre-wrap' }}>{m.message_text}</p>{m.attachment_types?.length > 0 && <small>Attachment types: {m.attachment_types.join(', ')} · file links are not retained</small>}<small>{new Date(m.provider_sent_at).toLocaleString()}</small></div></article>)}</div>}</section>
     {!sendAllowed && subscribed && <div className="inbox-inline-note">This Page connection can receive Messenger events, but its authorizing Page role does not have the Send API MESSAGE task. Replies cannot be sent from RuffNeck with this Page access.</div>}
     <SavedReplyPicker provider="facebook" conversationId={id} replies={savedReplies} canUse={canDraft} hasLatestInbound={latest?.direction === 'inbound'} />

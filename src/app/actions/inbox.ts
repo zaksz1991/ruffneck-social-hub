@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { generateLocalAiReplyDraft, type ReplyHistoryMessage } from '@/lib/ai/reply-draft';
+import { generateLocalAiConversationTriage, type ConversationTriageMessage } from '@/lib/ai/conversation-triage';
 import { validateSavedReplyInput } from '@/lib/inbox/saved-replies';
 
 export type GenerateReplyDraftState = {
@@ -611,4 +612,139 @@ export async function saveInboxSlaPolicy(formData: FormData): Promise<void> {
   revalidatePath('/inbox/sla');
   revalidatePath('/inbox/conversations');
   redirect(`${page}${page.includes('?') ? '&' : '?'}policy=saved`);
+}
+
+
+export type GenerateInboxTriageState = {
+  status: 'idle' | 'success' | 'error';
+  message?: string;
+};
+
+/** Runs workspace-scoped AI triage for the latest inbound Instagram or Messenger message. */
+export async function generateInboxConversationTriage(
+  _previousState: GenerateInboxTriageState,
+  formData: FormData,
+): Promise<GenerateInboxTriageState> {
+  const provider = formText(formData, 'provider');
+  const conversationId = formText(formData, 'conversation_id');
+  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId)) {
+    return { status: 'error', message: 'The provider or conversation reference is invalid.' };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { status: 'error', message: 'Sign in to analyse this conversation.' };
+
+  const conversationTable = provider === 'instagram' ? 'instagram_conversations' : 'facebook_conversations';
+  const messageTable = provider === 'instagram' ? 'instagram_messages' : 'facebook_messages';
+  const { data: conversation, error: conversationError } = await supabase.from(conversationTable)
+    .select('id,workspace_id,social_account_id').eq('id', conversationId).maybeSingle();
+  if (conversationError || !conversation) return { status: 'error', message: 'This conversation is unavailable in your workspace.' };
+
+  const { data: membership, error: membershipError } = await supabase.from('workspace_members')
+    .select('role').eq('workspace_id', conversation.workspace_id).eq('user_id', user.id).maybeSingle();
+  if (membershipError || !membership || !['owner', 'admin', 'manager', 'publisher', 'client_approver'].includes(membership.role)) {
+    return { status: 'error', message: 'Your workspace role cannot run AI conversation triage.' };
+  }
+
+  const { data: recentRows, error: messagesError } = await supabase.from(messageTable)
+    .select('id,direction,message_text,provider_sent_at,received_at')
+    .eq('conversation_id', conversationId)
+    .order('provider_sent_at', { ascending: false })
+    .order('received_at', { ascending: false })
+    .limit(12);
+  if (messagesError) return { status: 'error', message: 'The conversation history could not be loaded.' };
+  const newestFirst = (recentRows ?? []) as Array<ConversationTriageMessage & { id: string; received_at: string }>;
+  const latest = newestFirst[0];
+  if (!latest || latest.direction !== 'inbound') {
+    return { status: 'error', message: 'AI triage is available only when the latest message is from the customer.' };
+  }
+  if (!latest.message_text?.trim()) {
+    return { status: 'error', message: 'This message has no text to analyse.' };
+  }
+  const history = [...newestFirst].reverse().map(({ direction, message_text, provider_sent_at }) => ({ direction, message_text, provider_sent_at }));
+
+  const { data: account, error: accountError } = await supabase.from('social_accounts')
+    .select('brand_id').eq('id', conversation.social_account_id).eq('workspace_id', conversation.workspace_id).maybeSingle();
+  if (accountError || !account) return { status: 'error', message: 'The connected brand could not be identified.' };
+  const { data: brand, error: brandError } = await supabase.from('brands')
+    .select('voice_profile').eq('id', account.brand_id).eq('workspace_id', conversation.workspace_id).maybeSingle();
+  if (brandError || !brand) return { status: 'error', message: 'The brand voice profile could not be loaded.' };
+
+  try {
+    const generated = await generateLocalAiConversationTriage({ history, brandVoice: brand.voice_profile });
+    const { data: triageId, error: saveError } = await supabase.rpc('save_inbox_ai_triage', {
+      target_provider: provider,
+      target_conversation_id: conversationId,
+      target_source_last_message_id: latest.id,
+      target_intent: generated.triage.intent,
+      target_sentiment: generated.triage.sentiment,
+      target_suggested_priority: generated.triage.suggestedPriority,
+      target_escalation_required: generated.triage.escalationRequired,
+      target_confidence: generated.triage.confidence,
+      target_summary: generated.triage.summary,
+      target_reason: generated.triage.reason,
+      target_model: generated.model,
+    });
+    if (saveError || !triageId) {
+      return { status: 'error', message: saveError?.message?.includes('conversation changed')
+        ? 'A new message arrived while triage was running. Refresh the conversation and retry.'
+        : 'The AI assessment could not be saved. Apply migration 0023 and retry.' };
+    }
+    revalidatePath(`/inbox/${provider === 'facebook' ? 'facebook' : 'conversations'}/${conversationId}`);
+    return { status: 'success', message: 'AI assessment saved. No conversation priority, status or customer message was changed.' };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'The local AI triage request failed.';
+    return { status: 'error', message: message.slice(0, 220) };
+  }
+}
+
+/** Applies only the saved AI priority suggestion after checking that it still targets the latest message. */
+export async function applyInboxAiTriagePriority(formData: FormData): Promise<void> {
+  const provider = formText(formData, 'provider');
+  const conversationId = formText(formData, 'conversation_id');
+  const triageId = formText(formData, 'triage_id');
+  const page = provider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`;
+  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId) || !isUuid(triageId)) {
+    redirect('/inbox/conversations?triage_action=invalid');
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: triage, error: triageError } = await supabase.from('inbox_ai_triage')
+    .select('id,workspace_id,provider,conversation_id,source_last_message_id,suggested_priority')
+    .eq('id', triageId).eq('provider', provider).eq('conversation_id', conversationId).maybeSingle();
+  if (triageError || !triage) redirect(`${page}?triage_action=unavailable`);
+
+  const { data: membership, error: membershipError } = await supabase.from('workspace_members')
+    .select('role').eq('workspace_id', triage.workspace_id).eq('user_id', user.id).maybeSingle();
+  if (membershipError || !membership || !['owner', 'admin', 'manager', 'publisher'].includes(membership.role)) {
+    redirect(`${page}?triage_action=forbidden`);
+  }
+
+  const messageTable = provider === 'instagram' ? 'instagram_messages' : 'facebook_messages';
+  const { data: newestRows, error: newestError } = await supabase.from(messageTable)
+    .select('id,direction').eq('conversation_id', conversationId)
+    .order('provider_sent_at', { ascending: false }).order('received_at', { ascending: false }).limit(1);
+  if (newestError || !newestRows?.[0] || newestRows[0].id !== triage.source_last_message_id || newestRows[0].direction !== 'inbound') {
+    redirect(`${page}?triage_action=stale`);
+  }
+
+  const { data: existingWorkflow, error: workflowReadError } = await supabase.from('inbox_conversation_workflows')
+    .select('assigned_to,status').eq('workspace_id', triage.workspace_id)
+    .eq('provider', provider).eq('conversation_id', conversationId).maybeSingle();
+  if (workflowReadError) redirect(`${page}?triage_action=failed`);
+  const { error: applyError } = await supabase.rpc('set_inbox_conversation_workflow', {
+    target_provider: provider,
+    target_conversation_id: conversationId,
+    target_assigned_to: existingWorkflow?.assigned_to ?? null,
+    target_status: existingWorkflow?.status ?? 'open',
+    target_priority: triage.suggested_priority,
+  });
+  if (applyError) redirect(`${page}?triage_action=failed`);
+  revalidatePath(page);
+  revalidatePath('/inbox/conversations');
+  revalidatePath('/inbox/sla');
+  redirect(`${page}?triage_action=priority_applied`);
 }
