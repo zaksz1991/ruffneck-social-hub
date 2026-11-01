@@ -23,6 +23,7 @@ const errorMessages: Record<string, string> = {
   facebook_configuration: 'Facebook connection is not configured. Add FACEBOOK_APP_ID and FACEBOOK_APP_SECRET in Vercel.',
   linkedin_configuration: 'LinkedIn connection is not configured. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET in Vercel.',
   tiktok_configuration: 'TikTok connection is not configured. Add TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET and the token encryption key in Vercel.',
+  whatsapp_configuration: 'WhatsApp connection is not configured. Add FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID and the token encryption key in Vercel.',
   youtube_configuration: 'YouTube connection is not configured. Add YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, NEXT_PUBLIC_SITE_URL and the token encryption key in Vercel.',
   youtube_migration: 'Apply Supabase migration 0031_youtube_channel_analytics_and_private_video_uploads.sql after migration 0030, then reconnect YouTube.',
   youtube_scopes: 'Google did not grant the required YouTube read and Analytics permissions. Reconnect and approve those scopes. Upload permission is optional and only enables private video uploads.',
@@ -90,6 +91,7 @@ function ProviderCard({ provider, brands, accounts, canConnect, configured }: {
   const isLinkedIn = provider.id === 'linkedin';
   const isTikTok = provider.id === 'tiktok';
   const isYouTube = provider.id === 'youtube';
+  const isWhatsApp = provider.id === 'whatsapp';
   const active = provider.availability === 'available';
   return <article className={`platform-card ${active ? 'platform-card-available' : 'platform-card-planned'}`}>
     <div className="platform-card-top">
@@ -109,7 +111,7 @@ function ProviderCard({ provider, brands, accounts, canConnect, configured }: {
             {existing.map((account) => <small key={account.id}>{account.display_name ?? account.provider_account_id} · {account.connection_state}</small>)}
           </div>
           {canConnect && configured
-            ? <a className="platform-connect-button" href={`/api/integrations/${provider.id}/start?workspace=${encodeURIComponent(brand.workspace_id)}&brand=${encodeURIComponent(brand.id)}`}>Connect {isFacebook ? 'Facebook Pages' : isInstagram ? 'Instagram' : isLinkedIn ? 'LinkedIn Pages' : isTikTok ? 'TikTok' : isYouTube ? 'YouTube' : provider.name}<span>→</span></a>
+            ? <a className="platform-connect-button" href={isWhatsApp ? `/channels/whatsapp?workspace=${encodeURIComponent(brand.workspace_id)}&brand=${encodeURIComponent(brand.id)}` : `/api/integrations/${provider.id}/start?workspace=${encodeURIComponent(brand.workspace_id)}&brand=${encodeURIComponent(brand.id)}`}>Connect {isFacebook ? 'Facebook Pages' : isInstagram ? 'Instagram' : isLinkedIn ? 'LinkedIn Pages' : isTikTok ? 'TikTok' : isYouTube ? 'YouTube' : provider.name}<span>→</span></a>
             : <span className="platform-connect-disabled">{!canConnect ? 'Manager access required' : 'App credentials required'}</span>}
         </div>;
       })}
@@ -146,6 +148,7 @@ export default async function ChannelsPage({ searchParams }: {
   const configuredLinkedIn = Boolean(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET && process.env.SOCIAL_TOKEN_ENCRYPTION_KEY && process.env.NEXT_PUBLIC_SITE_URL);
   const configuredTikTok = Boolean(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET && process.env.SOCIAL_TOKEN_ENCRYPTION_KEY && process.env.NEXT_PUBLIC_SITE_URL);
   const configuredYouTube = Boolean(process.env.YOUTUBE_CLIENT_ID && process.env.YOUTUBE_CLIENT_SECRET && process.env.SOCIAL_TOKEN_ENCRYPTION_KEY && process.env.NEXT_PUBLIC_SITE_URL);
+  const configuredWhatsApp = Boolean(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.env.WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID && process.env.SOCIAL_TOKEN_ENCRYPTION_KEY);
 
   return <main className="channels-shell">
     <header className="channels-topbar">
@@ -167,6 +170,7 @@ export default async function ChannelsPage({ searchParams }: {
       {params.connected === 'linkedin' && <div className="channels-notice channels-success" role="status">LinkedIn organization Pages connected. Only approved administrator Pages were stored; tokens are encrypted server-side. Official organic post analytics is enabled when rw_organization_admin was approved; publishing remains independently gated.</div>}
       {params.connected === 'tiktok' && <div className="channels-notice channels-success" role="status">TikTok account connected. The server encrypted the access and refresh tokens. Video analytics and TikTok inbox video transfer are enabled only when their corresponding scopes were granted; direct publishing remains disabled.</div>}
       {params.connected === 'youtube' && <div className="channels-notice channels-success" role="status">YouTube channel connection completed. Access and refresh tokens are encrypted server-side. Official channel analytics are enabled. Private video uploads are available when youtube.upload is granted; scheduled/public dispatch remains disabled.</div>}
+      {params.connected === 'whatsapp' && <div className="channels-notice channels-success" role="status">WhatsApp Business phone number connected. The access token is encrypted server-side and the WhatsApp Business Account is subscribed to app webhooks.</div>}
 
       {!activeWorkspace ? <section className="channels-empty"><h2>No workspace available</h2><p>Create or join a workspace before connecting social accounts.</p><Link href="/">Go to workspace overview</Link></section> : <>
         <section className="platform-overview">
@@ -178,17 +182,17 @@ export default async function ChannelsPage({ searchParams }: {
               brands={brands}
               accounts={accounts}
               canConnect={canConnect}
-              configured={provider.id === 'facebook' ? configuredFacebook : provider.id === 'instagram' ? configuredInstagram : provider.id === 'linkedin' ? configuredLinkedIn : provider.id === 'tiktok' ? configuredTikTok : provider.id === 'youtube' ? configuredYouTube : false}
+              configured={provider.id === 'facebook' ? configuredFacebook : provider.id === 'instagram' ? configuredInstagram : provider.id === 'linkedin' ? configuredLinkedIn : provider.id === 'tiktok' ? configuredTikTok : provider.id === 'youtube' ? configuredYouTube : provider.id === 'whatsapp' ? configuredWhatsApp : false}
             />)}
           </div>
         </section>
 
-        <section className="channels-account-section"><div className="channels-section-head"><div><span className="channels-kicker">CONNECTED DESTINATIONS</span><h2>Workspace accounts</h2><p>Connected Facebook Pages, Instagram professional accounts, TikTok creator accounts, YouTube channels and LinkedIn organization Pages are visible only to members of the active workspace. Facebook Messenger is enabled separately and requires approved messaging scopes plus webhook subscription.</p></div><span className="channels-count">{accounts.length} ACCOUNT{accounts.length === 1 ? '' : 'S'}</span></div>
-          {accountError ? <div className="channels-empty"><strong>Account list unavailable</strong><p>The account query failed. Confirm the database migrations are applied.</p></div> : accounts.length === 0 ? <div className="channels-empty"><strong>No connected accounts yet</strong><p>Connect Facebook Pages, Instagram professional accounts, TikTok creator accounts, YouTube channels or LinkedIn organization Pages to a brand above.</p></div> : <div className="channels-account-list">{accounts.map((account) => <article className="channels-account-row" key={account.id}><div className={`channels-account-icon channels-account-icon-${account.provider}`}>{providerIcon(account.provider)}</div><div className="channels-account-copy"><strong>{account.display_name ?? account.provider_account_id}</strong><span>{account.provider.toUpperCase()} · {brands.find((brand) => brand.id === account.brand_id)?.name ?? 'Brand unavailable'}</span></div><span className={`channels-state channels-state-${account.connection_state}`}>{account.connection_state}</span><div className="channels-scopes">{account.granted_scopes.map((scope) => <small key={scope}>{scope.replaceAll('_', ' ')}</small>)}{account.provider === 'facebook' && <small>Messenger: {account.capabilities?.messaging === true && account.capabilities?.webhook_messages_subscribed === true ? 'ACTIVE' : 'NOT ENABLED'}</small>}</div></article>)}</div>}
+        <section className="channels-account-section"><div className="channels-section-head"><div><span className="channels-kicker">CONNECTED DESTINATIONS</span><h2>Workspace accounts</h2><p>Connected Facebook Pages, Instagram professional accounts, WhatsApp Business phone numbers, TikTok creator accounts, YouTube channels and LinkedIn organization Pages are visible only to members of the active workspace. Facebook Messenger is enabled separately and requires approved messaging scopes plus webhook subscription.</p></div><span className="channels-count">{accounts.length} ACCOUNT{accounts.length === 1 ? '' : 'S'}</span></div>
+          {accountError ? <div className="channels-empty"><strong>Account list unavailable</strong><p>The account query failed. Confirm the database migrations are applied.</p></div> : accounts.length === 0 ? <div className="channels-empty"><strong>No connected accounts yet</strong><p>Connect Facebook Pages, Instagram professional accounts, WhatsApp Business phone numbers, TikTok creator accounts, YouTube channels or LinkedIn organization Pages to a brand above.</p></div> : <div className="channels-account-list">{accounts.map((account) => <article className="channels-account-row" key={account.id}><div className={`channels-account-icon channels-account-icon-${account.provider}`}>{providerIcon(account.provider)}</div><div className="channels-account-copy"><strong>{account.display_name ?? account.provider_account_id}</strong><span>{account.provider.toUpperCase()} · {brands.find((brand) => brand.id === account.brand_id)?.name ?? 'Brand unavailable'}</span></div><span className={`channels-state channels-state-${account.connection_state}`}>{account.connection_state}</span><div className="channels-scopes">{account.granted_scopes.map((scope) => <small key={scope}>{scope.replaceAll('_', ' ')}</small>)}{account.provider === 'facebook' && <small>Messenger: {account.capabilities?.messaging === true && account.capabilities?.webhook_messages_subscribed === true ? 'ACTIVE' : 'NOT ENABLED'}</small>}</div></article>)}</div>}
         </section>
       </>}
 
-      <footer className="channels-footer"><span>RUFFNECK SOCIAL HUB · MULTI-PLATFORM CONNECTIONS 4.4.0</span><span>Official APIs only · Human-governed publishing · Encrypted credentials</span></footer>
+      <footer className="channels-footer"><span>RUFFNECK SOCIAL HUB · MULTI-PLATFORM CONNECTIONS 4.6.0</span><span>Official APIs only · Human-governed publishing · Encrypted credentials</span></footer>
     </div>
   </main>;
 }

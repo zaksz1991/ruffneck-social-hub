@@ -1,0 +1,70 @@
+RUFFNECK SOCIAL HUB v4.6.0 — WHATSAPP BUSINESS CLOUD API
+
+PACKAGE
+Cumulative full-project source package based on RuffNeck Social Hub v4.5.0 with WhatsApp Business integration added. Preserve existing files and assets.
+
+DATABASE
+- Apply supabase/migrations/0033_whatsapp_cloud_api_inbox.sql once, after 0032_instagram_comment_reply_sending.sql.
+- In Supabase Dashboard > SQL Editor, run the complete migration file.
+- Do not rerun it after success.
+
+VERCEL ENVIRONMENT VARIABLES
+Required server-side values:
+- FACEBOOK_APP_ID
+- FACEBOOK_APP_SECRET
+- WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID
+- SOCIAL_TOKEN_ENCRYPTION_KEY
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY (or existing SUPABASE_SERVICE_KEY)
+- WHATSAPP_WEBHOOK_VERIFY_TOKEN (or META_WEBHOOK_VERIFY_TOKEN)
+Optional:
+- WHATSAPP_GRAPH_API_VERSION=v26.0
+- WHATSAPP_APP_SECRET (falls back to FACEBOOK_APP_SECRET)
+Never prefix secrets or the Supabase service-role key with NEXT_PUBLIC_.
+
+META CONFIGURATION
+- Configure WhatsApp Embedded Signup v4 in Facebook Login for Business.
+- Select WhatsApp Cloud API, WhatsApp Business Account assets, system-user access token, whatsapp_business_management and whatsapp_business_messaging.
+- Configure webhook callback:
+  https://ruffneck-social-hub.vercel.app/api/webhooks/whatsapp
+- Use the exact WHATSAPP_WEBHOOK_VERIFY_TOKEN value.
+- Subscribe the whatsapp_business_account object to the messages field.
+- Complete all required business verification, Tech Provider/partner status, App Review and Advanced Access approvals for the intended customer-onboarding model.
+
+PHONE REGISTRATION
+The WhatsApp connection page asks the workspace operator for a six-digit two-step verification PIN. Meta's phone-number /register endpoint is called during connection. The PIN is not retained by RuffNeck; store it securely yourself for future phone verification. Meta requires Embedded Signup phone numbers to be registered within 14 days.
+
+GITHUB GUI INSTALLATION
+1. Extract this ZIP using File Explorer.
+2. Open github.com/zaksz1991/ruffneck-social-hub, branch main.
+3. Merge the included project folders. Upload all changed/new files while preserving the folder hierarchy. Do not delete existing files or assets.
+4. Commit the updated files using GitHub's web interface.
+5. Confirm the resulting Vercel deployment build completes.
+
+SUPABASE GUI INSTALLATION
+1. Open the existing Supabase project.
+2. Open SQL Editor.
+3. Paste the full contents of supabase/migrations/0033_whatsapp_cloud_api_inbox.sql.
+4. Run once. Confirm success before using the WhatsApp inbox.
+
+META WEBHOOK / TEST
+1. Confirm the Meta webhook callback verifies successfully.
+2. Confirm the messages subscription is active.
+3. Use a Meta test WABA/phone and a consenting test recipient.
+4. Connect the WhatsApp number from RuffNeck Channels.
+5. Send an inbound test message. Confirm it appears in Unified Inbox.
+6. Review a reply draft and confirm the separate one-time send action.
+7. Check sent/delivered/read/failed receipt updates.
+8. Test only with a non-production test account before enabling real customer messaging.
+
+SAFETY
+- Human review and explicit send confirmation are required.
+- Text messages are only sent inside the 24-hour service window.
+- Outside the window, only approved templates that need no variables/media are supported.
+- Template sends require a recorded operator attestation that customer opt-in was verified. Keep the underlying opt-in record yourself.
+- Timeouts/5xx/429 outcomes become UNKNOWN and are never retried automatically.
+- Inbound media is metadata-only. Outbound media and bulk messaging are not included.
+- WhatsApp, Meta API usage and message charges are subject to Meta's current commercial and messaging policies.
+
+The source-level tests do not prove Meta approval, live webhook delivery, database migration application or deployment. See VERIFICATION-v4.6.0.md.

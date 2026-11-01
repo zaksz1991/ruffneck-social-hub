@@ -1,5 +1,15 @@
 # Changelog
 
+## v4.6.0 — WhatsApp Business Cloud API
+
+- Added official Meta WhatsApp Embedded Signup v4, server-side token validation, six-digit phone registration and WABA webhook subscription.
+- Added signed WhatsApp message webhooks, idempotent inbound message storage and account-scoped delivery/read/failure receipts.
+- Added WhatsApp to the Unified Inbox with assignment, priority, private notes, human-reviewed text drafts and one-attempt sending.
+- Added 24-hour service-window enforcement, approved static-template support and recorded template opt-in attestations.
+- Added optional local AI reply drafts; AI never sends messages.
+- Added migration 0033 plus focused integration tests and source/security audits.
+- Inbound media remains metadata-only; outbound media, broadcasts, automatic replies, parameterized templates, WhatsApp CRM/triage/SLA/routing are not included.
+
 ## 4.4.1 — YouTube upload fetch-body TypeScript compatibility repair
 
 - Fixed the Vercel TypeScript build failure in the private YouTube upload route: Node Buffer bytes are copied into an exact-length `ArrayBuffer` before being passed to `fetch`, matching the current DOM `BodyInit` type contract without unsafe type assertions.
@@ -101,6 +111,16 @@
 
 # Changelog
 
+## v4.6.0 — WhatsApp Business Cloud API
+
+- Added official Meta WhatsApp Embedded Signup v4, server-side token validation, six-digit phone registration and WABA webhook subscription.
+- Added signed WhatsApp message webhooks, idempotent inbound message storage and account-scoped delivery/read/failure receipts.
+- Added WhatsApp to the Unified Inbox with assignment, priority, private notes, human-reviewed text drafts and one-attempt sending.
+- Added 24-hour service-window enforcement, approved static-template support and recorded template opt-in attestations.
+- Added optional local AI reply drafts; AI never sends messages.
+- Added migration 0033 plus focused integration tests and source/security audits.
+- Inbound media remains metadata-only; outbound media, broadcasts, automatic replies, parameterized templates, WhatsApp CRM/triage/SLA/routing are not included.
+
 ## v3.3.0 — 2026-11-01
 
 - Added workspace-configurable first-response SLA targets for low, normal, high and urgent inbox priorities.
@@ -150,6 +170,16 @@
 - No database migration or new environment variable is required.
 
 # Changelog
+
+## v4.6.0 — WhatsApp Business Cloud API
+
+- Added official Meta WhatsApp Embedded Signup v4, server-side token validation, six-digit phone registration and WABA webhook subscription.
+- Added signed WhatsApp message webhooks, idempotent inbound message storage and account-scoped delivery/read/failure receipts.
+- Added WhatsApp to the Unified Inbox with assignment, priority, private notes, human-reviewed text drafts and one-attempt sending.
+- Added 24-hour service-window enforcement, approved static-template support and recorded template opt-in attestations.
+- Added optional local AI reply drafts; AI never sends messages.
+- Added migration 0033 plus focused integration tests and source/security audits.
+- Inbound media remains metadata-only; outbound media, broadcasts, automatic replies, parameterized templates, WhatsApp CRM/triage/SLA/routing are not included.
 
 ## 3.0.0 — 2026-11-01
 

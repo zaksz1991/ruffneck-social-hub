@@ -49,9 +49,10 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     notes: 'Not connectable in this release. API access tier and rate limits must be confirmed first.',
   },
   {
-    id: 'whatsapp', name: 'WhatsApp Business', accountLabel: 'WhatsApp Business number', availability: 'planned',
-    connectionMethod: 'WhatsApp Business Platform / Cloud API', supportedSurfaces: [],
-    notes: 'Not connectable in this release. Business verification, phone-number registration and messaging policy setup are required.',
+    id: 'whatsapp', name: 'WhatsApp Business', accountLabel: 'WhatsApp Business number', availability: 'available',
+    connectionMethod: 'Meta WhatsApp Embedded Signup v4 and WhatsApp Cloud API',
+    supportedSurfaces: ['Verified business phone-number connection with encrypted token storage', 'Inbound text and supported media event ingestion', 'Human-reviewed text replies inside the 24-hour customer-service window', 'Approved template messages outside the 24-hour window', 'Delivery/read receipts, contact history and unified inbox', 'AI-assisted reply drafting without automatic sending'],
+    notes: 'Official Cloud API only. Meta permission approval, business eligibility and a correctly configured Embedded Signup v4 flow are required. No WhatsApp Web automation, unsolicited auto-messaging or automatic AI sending is used.',
   },
 ] as const;
 

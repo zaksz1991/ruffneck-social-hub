@@ -578,10 +578,10 @@ export async function updateInboxConversationWorkflow(formData: FormData): Promi
   const status = formText(formData, 'status');
   const priority = formText(formData, 'priority');
   const page = isUuid(conversationId)
-    ? (provider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`)
+    ? (provider === 'facebook' ? `/inbox/facebook/${conversationId}` : provider === 'whatsapp' ? `/inbox/whatsapp/${conversationId}` : `/inbox/conversations/${conversationId}`)
     : '/inbox/conversations';
 
-  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId) ||
+  if (!['instagram', 'facebook', 'whatsapp'].includes(provider) || !isUuid(conversationId) ||
       (assignedTo !== '' && !isUuid(assignedTo)) ||
       !['open', 'pending', 'resolved'].includes(status) ||
       !['low', 'normal', 'high', 'urgent'].includes(priority)) {
@@ -610,10 +610,10 @@ export async function addInboxInternalNote(formData: FormData): Promise<void> {
   const conversationId = formText(formData, 'conversation_id');
   const body = formText(formData, 'body');
   const page = isUuid(conversationId)
-    ? (provider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`)
+    ? (provider === 'facebook' ? `/inbox/facebook/${conversationId}` : provider === 'whatsapp' ? `/inbox/whatsapp/${conversationId}` : `/inbox/conversations/${conversationId}`)
     : '/inbox/conversations';
 
-  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId) || !body || body.length > 3000) {
+  if (!['instagram', 'facebook', 'whatsapp'].includes(provider) || !isUuid(conversationId) || !body || body.length > 3000) {
     redirect(`${page}?note_action=invalid`);
   }
   const supabase = await createSupabaseServerClient();

@@ -23,7 +23,7 @@ export type InboxTeammate = {
 };
 
 type Props = {
-  provider: 'instagram' | 'facebook';
+  provider: 'instagram' | 'facebook' | 'whatsapp';
   conversationId: string;
   workflow: InboxWorkflow | null;
   notes: InboxInternalNote[];
