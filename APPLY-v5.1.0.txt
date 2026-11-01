@@ -1,0 +1,8 @@
+RUFFNECK SOCIAL HUB v5.1.0 — APPLY
+
+1. Merge all files from this patch into the existing repository, preserving unrelated files.
+2. Apply supabase/migrations/0038_whatsapp_contact_opt_out_controls.sql exactly once, after 0037.
+3. Commit and allow Vercel to build.
+4. In a controlled WhatsApp test conversation, send STOP and confirm the inbox shows OPTED OUT. Confirm text/template and media send attempts are blocked. Send START and confirm OPTED IN.
+
+No new environment variables. No external WhatsApp provider. No automatic acknowledgement.

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { verifyMetaSignature } from '@/lib/webhooks/meta-signature';
 import { normalizeWhatsAppMessage, normalizeWhatsAppStatus } from '@/lib/webhooks/whatsapp-message';
+import { classifyWhatsAppConsentKeyword } from '@/lib/integrations/whatsapp-consent';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
           const journal = await admin.from('provider_webhook_events').upsert({
             workspace_id: account.workspace_id, social_account_id: account.id, provider: 'whatsapp',
             event_kind: 'messaging', idempotency_key: eventKey, provider_event_at: normalized.sentAt,
-            payload: { phone_number_id: phoneId, message_id: normalized.providerMessageId, message_type: normalized.attachmentTypes[0] ?? 'text' },
+            payload: { phone_number_id: phoneId, message_id: normalized.providerMessageId, message_type: normalized.attachmentTypes[0] ?? 'text', consent_action: classifyWhatsAppConsentKeyword(normalized.text) },
           }, { onConflict: 'idempotency_key', ignoreDuplicates: true });
           if (journal.error) throw journal.error;
         }

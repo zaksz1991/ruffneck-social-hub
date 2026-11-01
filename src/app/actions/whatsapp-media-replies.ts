@@ -140,7 +140,7 @@ export async function sendWhatsAppMediaReplyDraft(formData: FormData): Promise<v
   // The attempt ledger is acquired after upload but immediately before the only customer-send request.
   // A failed/ambiguous send is permanently locked; the media upload itself does not message the customer.
   const { data: attemptId, error: beginError } = await ctx.supabase.rpc('begin_whatsapp_media_reply_send', { target_draft_id: draftId });
-  if (beginError || !attemptId) resultPath(conversationId, beginError?.code === '23505' ? 'already_attempted' : 'send_window_or_permission');
+  if (beginError || !attemptId) resultPath(conversationId, beginError?.code === '23505' ? 'already_attempted' : beginError?.message?.includes('recipient has opted out') ? 'recipient_opted_out' : 'send_window_or_permission');
 
   const mediaObject: Obj = { id: providerMediaId };
   if (['image', 'video', 'document'].includes(draft.media_type) && draft.caption) mediaObject.caption = draft.caption;

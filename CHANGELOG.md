@@ -450,3 +450,9 @@
 - Added WhatsApp CRM and AI triage surfaces to the WhatsApp conversation detail page.
 - Added migration 0034; existing Instagram and Facebook behaviour remains supported.
 - WhatsApp SLA analytics, routing automation and AI playbook generation remain excluded.
+
+## v5.1.0 — WhatsApp recipient opt-out controls
+
+- Added exact inbound STOP/UNSUBSCRIBE suppression and START/UNSTOP re-enable handling.
+- Enforced suppression at the database send-attempt boundary for text/template and media.
+- Added consent visibility to the WhatsApp inbox and regression guards.

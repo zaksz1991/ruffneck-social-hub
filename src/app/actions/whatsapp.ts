@@ -139,7 +139,7 @@ export async function sendWhatsAppDraft(formData: FormData): Promise<void> {
     if (!wabaId || !draft.template_name || !draft.template_language || !await validateApprovedTemplate(token!, wabaId, version!, draft.template_name, draft.template_language)) resultPath(conversationId, 'template_not_approved_or_unsupported');
   }
   const { data: attemptId, error: beginError } = await ctx.supabase.rpc('begin_whatsapp_message_send', { target_draft_id: draftId, target_template_opt_in_confirmed: draft.draft_type === 'template' && templateOptInConfirmed });
-  if (beginError || !attemptId) resultPath(conversationId, beginError?.code === '23505' ? 'already_attempted' : 'send_window_or_permission');
+  if (beginError || !attemptId) resultPath(conversationId, beginError?.code === '23505' ? 'already_attempted' : beginError?.message?.includes('recipient has opted out') ? 'recipient_opted_out' : 'send_window_or_permission');
   const url = buildWhatsAppMessagesUrl(version!, account.provider_account_id);
   const payload = draft.draft_type === 'template'
     ? { messaging_product: 'whatsapp', to: conversation.participant_provider_id, type: 'template', template: { name: draft.template_name, language: { code: draft.template_language } } }

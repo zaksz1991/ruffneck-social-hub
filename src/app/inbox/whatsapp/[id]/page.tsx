@@ -29,6 +29,7 @@ const actionMessages: Record<string,string> = {
   send_window_or_permission: 'The 24-hour messaging window or account permissions prevented sending. Use an approved template when the window has closed.',
   template_not_approved_or_unsupported: 'The template is not approved, is unavailable in this language, or requires parameters not supported in this release.',
   template_opt_in_required: 'Confirm that this customer has opted in to receive this business-initiated WhatsApp message.',
+  recipient_opted_out: 'This customer has opted out. WhatsApp sends are blocked until the customer sends START or UNSTOP.',
   media_draft_created: 'Media reply draft saved. Review the attachment and caption before sending.',
   media_reviewed: 'Media reply marked as reviewed. Sending still requires explicit confirmation.',
   media_sent: 'Meta accepted the media message. Delivery status will update from WhatsApp webhooks.',
@@ -36,6 +37,7 @@ const actionMessages: Record<string,string> = {
   media_provider_rejected_no_retry: 'Meta rejected the media send. The attempt is recorded and cannot be retried from this draft.',
   media_already_attempted: 'A send attempt already exists for this media draft. No retry is permitted.',
   media_send_window_or_permission: 'The 24-hour customer-service window or account permissions prevented the media send.',
+  media_recipient_opted_out: 'This customer has opted out. WhatsApp media sends are blocked until the customer sends START or UNSTOP.',
   media_asset_already_drafted: 'This media attachment already has an active reply draft.',
   media_source_media_no_longer_available: 'The scanned source file has expired or is no longer available.',
   media_source_media_integrity_failed: 'The stored media failed integrity validation and was not sent.',
@@ -74,7 +76,7 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
   const { data: conversation, error } = await supabase.from('whatsapp_conversations')
     .select('id,workspace_id,social_account_id,participant_provider_id,participant_name,last_message_at').eq('id', id).maybeSingle();
   if (error || !conversation) notFound();
-  const [messagesResult,draftsResult,accountResult,membershipResult,attemptsResult,triageResult,crmResult,mediaResult,mediaReplyDraftsResult,mediaReplyAttemptsResult] = await Promise.all([
+  const [messagesResult,draftsResult,accountResult,membershipResult,attemptsResult,triageResult,crmResult,mediaResult,mediaReplyDraftsResult,mediaReplyAttemptsResult,consentResult] = await Promise.all([
     supabase.from('whatsapp_messages').select('id,direction,message_text,message_type,attachment_types,delivery_status,provider_sent_at,received_at').eq('conversation_id',id).order('provider_sent_at',{ascending:false}).order('received_at',{ascending:false}).limit(500),
     supabase.from('whatsapp_reply_drafts').select('id,draft_text,draft_type,template_name,template_language,model,status,reviewed_by,created_at,reviewed_at,sent_at').eq('conversation_id',id).order('created_at',{ascending:false}).limit(30),
     supabase.from('social_accounts').select('id,display_name,provider_account_id,connection_state,capabilities,granted_scopes').eq('id',conversation.social_account_id).maybeSingle(),
@@ -85,6 +87,7 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
     supabase.from('whatsapp_media_assets').select('id,message_id,media_kind,declared_mime_type,actual_mime_type,original_filename,scan_status,safe_error_code,file_size,retention_expires_at,created_at').eq('conversation_id',id).order('created_at',{ascending:false}).limit(50),
     supabase.from('whatsapp_media_reply_drafts').select('id,created_by,source_asset_id,media_type,caption,filename,mime_type,file_size,status,created_at,reviewed_at,sent_at').eq('conversation_id',id).order('created_at',{ascending:false}).limit(30),
     supabase.from('whatsapp_media_reply_send_attempts').select('id,draft_id,status,safe_error_code,provider_media_id,created_at').eq('conversation_id',id).order('created_at',{ascending:false}).limit(30),
+    supabase.from('whatsapp_contact_preferences').select('consent_status,source_keyword,updated_at').eq('social_account_id',conversation.social_account_id).eq('participant_provider_id',conversation.participant_provider_id).maybeSingle(),
   ]);
   if (messagesResult.error || draftsResult.error || !membershipResult.data) notFound();
   const messages = ((messagesResult.data ?? []) as Message[]).reverse();
@@ -95,6 +98,7 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
   const mediaAssets = (mediaResult.data ?? []) as WhatsAppMediaAsset[];
   const mediaReplyDrafts = (mediaReplyDraftsResult.data ?? []) as WhatsAppMediaReplyDraft[];
   const mediaReplyAttempts = (mediaReplyAttemptsResult.data ?? []) as WhatsAppMediaReplyAttempt[];
+  const consentStatus = consentResult.data?.consent_status ?? 'unknown';
   const account = accountResult.data;
   const role = membershipResult.data.role;
   const canDraft = ['owner','admin','manager','publisher','client_approver'].includes(role);
@@ -110,10 +114,10 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
   let teammates: InboxTeammate[] = []; let canAssign = ['owner','admin','manager'].includes(role);
   if (canAssign) { const team = await supabase.rpc('list_workspace_team',{target_workspace_id:conversation.workspace_id}); if (team.error) canAssign=false; else teammates=(team.data ?? []) as InboxTeammate[]; }
   return <main className="inbox-shell"><header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link><nav><Link href="/">Overview</Link><Link href="/channels">Channels</Link><Link href="/inbox/conversations">Unified Inbox</Link><Link href="/inbox/saved-replies">Saved replies</Link><Link href={`/inbox/customers?workspace=${conversation.workspace_id}`}>Customer CRM</Link><span>WhatsApp conversation</span></nav><Link href={`/inbox/conversations?workspace=${conversation.workspace_id}`} className="inbox-back">All conversations</Link></header>
-    <section className="inbox-main"><div className="inbox-heading"><div><span className="eyebrow">WHATSAPP BUSINESS · CLOUD API</span><h1>{conversation.participant_name || `+${conversation.participant_provider_id}`}</h1><p>Customer number: +{conversation.participant_provider_id} · Business: {account?.display_name ?? account?.provider_account_id ?? 'WhatsApp account'}</p></div><div className="inbox-workspace"><small>MESSAGING WINDOW</small><strong>{windowOpen ? '24-hour window open' : 'Template required'}</strong><span>{latestInbound ? `Last inbound ${new Date(latestInbound.provider_sent_at).toLocaleString()}` : 'No inbound message'}</span></div></div>
+    <section className="inbox-main"><div className="inbox-heading"><div><span className="eyebrow">WHATSAPP BUSINESS · CLOUD API</span><h1>{conversation.participant_name || `+${conversation.participant_provider_id}`}</h1><p>Customer number: +{conversation.participant_provider_id} · Business: {account?.display_name ?? account?.provider_account_id ?? 'WhatsApp account'}</p></div><div className="inbox-workspace"><small>MESSAGING WINDOW</small><strong>{windowOpen ? '24-hour window open' : 'Template required'}</strong><span>{latestInbound ? `Last inbound ${new Date(latestInbound.provider_sent_at).toLocaleString()}` : 'No inbound message'}</span><span>Customer preference: <strong>{String(consentStatus).replaceAll('_',' ').toUpperCase()}</strong></span>{consentResult.error && <span>Consent controls unavailable until migration 0038 is applied.</span>}</div></div>
     {query.action && <div className={`inbox-notice ${['sent','draft_created','ai_draft_created','template_draft_created','reviewed'].includes(query.action) ? '' : 'wa-error'}`} role="status">{actionMessages[query.action] ?? `Action status: ${query.action.replaceAll('_',' ')}`}</div>}
     {query.media_action && <div className={`inbox-notice ${query.media_action === 'media_ready' ? '' : 'wa-error'}`} role="status">{mediaActionMessages[query.media_action] ?? `Media status: ${query.media_action.replaceAll('_',' ')}`}</div>}
-    <div className="inbox-notice"><strong>Human approval enforced</strong><p>No message is sent when an AI draft is generated. A workspace operator must inspect and mark the draft reviewed, then separately confirm the send. Free-form replies are limited to the 24-hour customer-service window. Outside that window, only approved templates can be sent.</p></div>
+    <div className="inbox-notice"><strong>Human approval and consent controls enforced</strong><p>No message is sent when an AI draft is generated. A workspace operator must inspect and mark the draft reviewed, then separately confirm the send. Free-form replies are limited to the 24-hour customer-service window. Outside that window, only approved templates can be sent. Exact inbound STOP, STOP ALL, STOPALL, UNSUBSCRIBE, CANCEL, END or QUIT commands suppress future text, template and media sends. The customer can explicitly re-enable messaging by sending START or UNSTOP.</p></div>
     <section className="wa-draft-panel"><div className="inbox-workflow-heading"><div><span className="eyebrow">CUSTOMER RELATIONSHIP</span><h2>{customerProfile?.display_label || 'WhatsApp customer profile'}</h2><p>{customerProfile ? `CRM stage: ${String(customerProfile.relationship_stage).replaceAll('_',' ')} · ${(customerProfile.tags ?? []).join(', ') || 'No tags'}` : 'Create a provider-scoped CRM record for this WhatsApp contact.'}</p></div><Link href={`/inbox/customers?workspace=${conversation.workspace_id}${customerProfile?.id ? `&profile=${customerProfile.id}` : ''}`} className="inbox-back">Open CRM</Link></div>
       {!customerProfile && ['owner','admin','manager','publisher'].includes(role) && <form action={saveInboxCustomerProfile} className="wa-composer"><input type="hidden" name="workspace_id" value={conversation.workspace_id}/><input type="hidden" name="provider" value="whatsapp"/><input type="hidden" name="conversation_id" value={id}/><input type="hidden" name="relationship_stage" value="lead"/><input type="hidden" name="display_label" value={conversation.participant_name ?? ''}/><input type="hidden" name="tags" value=""/><button type="submit">Add customer to CRM</button></form>}
     </section>
