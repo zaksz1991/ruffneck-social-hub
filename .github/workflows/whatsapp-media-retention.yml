@@ -1,0 +1,29 @@
+name: WhatsApp media retention
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: ruffneck-whatsapp-media-retention
+  cancel-in-progress: false
+jobs:
+  purge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Purge expired private WhatsApp media
+        env:
+          WORKER_URL: ${{ secrets.RSH_WORKER_URL }}
+          WORKER_SECRET: ${{ secrets.SOCIAL_PUBLISH_CRON_SECRET }}
+        run: |
+          set -eu
+          test -n "$WORKER_URL"
+          test -n "$WORKER_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --max-time 90 \
+            --request POST \
+            --header "Authorization: Bearer $WORKER_SECRET" \
+            --header "Content-Type: application/json" \
+            "${WORKER_URL%/}/api/cron/whatsapp-media-retention"

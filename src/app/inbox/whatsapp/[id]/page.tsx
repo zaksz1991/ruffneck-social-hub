@@ -15,6 +15,7 @@ type Message = { id: string; direction: 'inbound'|'outbound'; message_text: stri
 type Draft = { id: string; draft_text: string; draft_type: 'text'|'template'; template_name: string|null; template_language: string|null; model: string; status: 'draft'|'reviewed'|'sent'|'discarded'; reviewed_by: string|null; created_at: string; reviewed_at: string|null; sent_at: string|null };
 type Attempt = { id: string; draft_id: string; status: string; safe_error_code: string|null; created_at: string };
 type Triage = { id: string; source_last_message_id: string; intent: string; sentiment: string; suggested_priority: 'low'|'normal'|'high'|'urgent'; escalation_required: boolean; confidence: number; summary: string; reason: string; model: string; created_at: string };
+type WhatsAppMediaAsset = { id: string; message_id: string; media_kind: string; declared_mime_type: string; original_filename: string|null; scan_status: string; safe_error_code: string|null; file_size: number|null; retention_expires_at: string|null; created_at: string };
 const actionMessages: Record<string,string> = {
   draft_created: 'Draft saved. Review it before sending.', ai_draft_created: 'AI draft prepared. Check every detail before review.', template_draft_created: 'Template draft prepared. Confirm the content and recipient before sending.',
   reviewed: 'Draft marked as reviewed. Sending still requires explicit confirmation.', sent: 'Meta accepted the message. Delivery status will update from WhatsApp webhooks.',
@@ -28,15 +29,27 @@ const actionMessages: Record<string,string> = {
   ai_not_configured: 'Local AI is not configured. Manual drafting remains available.', ai_failed: 'The configured local AI service could not prepare a draft.',
   account_unavailable: 'WhatsApp account credentials are unavailable or expired. Reconnect the account.', token_unavailable: 'The encrypted WhatsApp access token could not be decrypted.',
 };
+const mediaActionMessages: Record<string,string> = {
+  media_ready: 'Media passed SHA-256 integrity checks and ClamAV scanning. It is stored privately and will be deleted after 30 days.',
+  scanner_unavailable: 'The malware scanner is unavailable or not configured. The file was not stored and can be retried later.',
+  infected_file_blocked: 'ClamAV detected a threat. The file was blocked and was not stored.',
+  media_rejected: 'The media failed type, size, or integrity validation. It was not stored.',
+  provider_media_unavailable: 'Meta could not provide this media file. It may have expired or the connection may need attention.',
+  account_unavailable: 'The connected WhatsApp account or access token is unavailable.',
+  token_unavailable: 'The WhatsApp access token could not be decrypted.',
+  storage_unavailable: 'Private media storage is unavailable. No download link was created.',
+  retrieval_failed: 'Media retrieval failed. The file was not made available.',
+  already_processing_or_unavailable: 'This media is already being processed or cannot be retried in its current state.',
+};
 
-export default async function WhatsAppConversationPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ action?: string; workflow_action?: string; note_action?: string }> }) {
+export default async function WhatsAppConversationPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ action?: string; media_action?: string; workflow_action?: string; note_action?: string }> }) {
   const { id } = await params; const query = await searchParams;
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser(); if (!user) redirect('/login');
   const { data: conversation, error } = await supabase.from('whatsapp_conversations')
     .select('id,workspace_id,social_account_id,participant_provider_id,participant_name,last_message_at').eq('id', id).maybeSingle();
   if (error || !conversation) notFound();
-  const [messagesResult,draftsResult,accountResult,membershipResult,attemptsResult,triageResult,crmResult] = await Promise.all([
+  const [messagesResult,draftsResult,accountResult,membershipResult,attemptsResult,triageResult,crmResult,mediaResult] = await Promise.all([
     supabase.from('whatsapp_messages').select('id,direction,message_text,message_type,attachment_types,delivery_status,provider_sent_at,received_at').eq('conversation_id',id).order('provider_sent_at',{ascending:false}).order('received_at',{ascending:false}).limit(500),
     supabase.from('whatsapp_reply_drafts').select('id,draft_text,draft_type,template_name,template_language,model,status,reviewed_by,created_at,reviewed_at,sent_at').eq('conversation_id',id).order('created_at',{ascending:false}).limit(30),
     supabase.from('social_accounts').select('id,display_name,provider_account_id,connection_state,capabilities,granted_scopes').eq('id',conversation.social_account_id).maybeSingle(),
@@ -44,6 +57,7 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
     supabase.from('whatsapp_message_send_attempts').select('id,draft_id,status,safe_error_code,created_at').eq('conversation_id',id).order('created_at',{ascending:false}).limit(30),
     supabase.from('inbox_ai_triage').select('id,source_last_message_id,intent,sentiment,suggested_priority,escalation_required,confidence,summary,reason,model,created_at').eq('provider','whatsapp').eq('conversation_id',id).order('created_at',{ascending:false}).limit(5),
     supabase.from('inbox_customer_profiles').select('id,display_label,relationship_stage,tags').eq('provider','whatsapp').eq('conversation_id',id).eq('workspace_id',conversation.workspace_id).maybeSingle(),
+    supabase.from('whatsapp_media_assets').select('id,message_id,media_kind,declared_mime_type,original_filename,scan_status,safe_error_code,file_size,retention_expires_at,created_at').eq('conversation_id',id).order('created_at',{ascending:false}).limit(50),
   ]);
   if (messagesResult.error || draftsResult.error || !membershipResult.data) notFound();
   const messages = ((messagesResult.data ?? []) as Message[]).reverse();
@@ -51,10 +65,12 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
   const attempts = (attemptsResult.data ?? []) as Attempt[];
   const triage = ((triageResult.data ?? []) as Triage[]).find((item) => item.source_last_message_id === messages[messages.length - 1]?.id) ?? null;
   const customerProfile = crmResult.data ?? null;
+  const mediaAssets = (mediaResult.data ?? []) as WhatsAppMediaAsset[];
   const account = accountResult.data;
   const role = membershipResult.data.role;
   const canDraft = ['owner','admin','manager','publisher','client_approver'].includes(role);
   const canSend = ['owner','admin','manager','publisher'].includes(role);
+  const mediaScannerConfigured = Boolean(process.env.WHATSAPP_MEDIA_SCANNER_URL && process.env.WHATSAPP_MEDIA_SCANNER_TOKEN);
   const latest = messages[messages.length - 1];
   const latestInbound = [...messages].reverse().find((message) => message.direction === 'inbound');
   const windowOpen = isWhatsAppServiceWindowOpen(latestInbound?.provider_sent_at ?? null);
@@ -67,13 +83,26 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
   return <main className="inbox-shell"><header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link><nav><Link href="/">Overview</Link><Link href="/channels">Channels</Link><Link href="/inbox/conversations">Unified Inbox</Link><Link href="/inbox/saved-replies">Saved replies</Link><Link href={`/inbox/customers?workspace=${conversation.workspace_id}`}>Customer CRM</Link><span>WhatsApp conversation</span></nav><Link href={`/inbox/conversations?workspace=${conversation.workspace_id}`} className="inbox-back">All conversations</Link></header>
     <section className="inbox-main"><div className="inbox-heading"><div><span className="eyebrow">WHATSAPP BUSINESS · CLOUD API</span><h1>{conversation.participant_name || `+${conversation.participant_provider_id}`}</h1><p>Customer number: +{conversation.participant_provider_id} · Business: {account?.display_name ?? account?.provider_account_id ?? 'WhatsApp account'}</p></div><div className="inbox-workspace"><small>MESSAGING WINDOW</small><strong>{windowOpen ? '24-hour window open' : 'Template required'}</strong><span>{latestInbound ? `Last inbound ${new Date(latestInbound.provider_sent_at).toLocaleString()}` : 'No inbound message'}</span></div></div>
     {query.action && <div className={`inbox-notice ${['sent','draft_created','ai_draft_created','template_draft_created','reviewed'].includes(query.action) ? '' : 'wa-error'}`} role="status">{actionMessages[query.action] ?? `Action status: ${query.action.replaceAll('_',' ')}`}</div>}
+    {query.media_action && <div className={`inbox-notice ${query.media_action === 'media_ready' ? '' : 'wa-error'}`} role="status">{mediaActionMessages[query.media_action] ?? `Media status: ${query.media_action.replaceAll('_',' ')}`}</div>}
     <div className="inbox-notice"><strong>Human approval enforced</strong><p>No message is sent when an AI draft is generated. A workspace operator must inspect and mark the draft reviewed, then separately confirm the send. Free-form replies are limited to the 24-hour customer-service window. Outside that window, only approved templates can be sent.</p></div>
     <section className="wa-draft-panel"><div className="inbox-workflow-heading"><div><span className="eyebrow">CUSTOMER RELATIONSHIP</span><h2>{customerProfile?.display_label || 'WhatsApp customer profile'}</h2><p>{customerProfile ? `CRM stage: ${String(customerProfile.relationship_stage).replaceAll('_',' ')} · ${(customerProfile.tags ?? []).join(', ') || 'No tags'}` : 'Create a provider-scoped CRM record for this WhatsApp contact.'}</p></div><Link href={`/inbox/customers?workspace=${conversation.workspace_id}${customerProfile?.id ? `&profile=${customerProfile.id}` : ''}`} className="inbox-back">Open CRM</Link></div>
       {!customerProfile && ['owner','admin','manager','publisher'].includes(role) && <form action={saveInboxCustomerProfile} className="wa-composer"><input type="hidden" name="workspace_id" value={conversation.workspace_id}/><input type="hidden" name="provider" value="whatsapp"/><input type="hidden" name="conversation_id" value={id}/><input type="hidden" name="relationship_stage" value="lead"/><input type="hidden" name="display_label" value={conversation.participant_name ?? ''}/><input type="hidden" name="tags" value=""/><button type="submit">Add customer to CRM</button></form>}
     </section>
     <ConversationAiTriage provider="whatsapp" conversationId={id} triage={triage} canGenerate={['owner','admin','manager','publisher','client_approver'].includes(role)} canApplyPriority={['owner','admin','manager','publisher'].includes(role)} hasLatestInbound={messages[messages.length - 1]?.direction === 'inbound'} disabledReason={!process.env.LOCAL_AI_BASE_URL || !process.env.LOCAL_AI_MODEL ? 'Configure the private LOCAL_AI_BASE_URL and LOCAL_AI_MODEL to enable AI triage.' : ''}/>
     <section className="wa-message-panel"><div className="inbox-workflow-heading"><div><span className="eyebrow">CUSTOMER MESSAGE HISTORY</span><h2>{messages.length} messages</h2></div><span className="inbox-private-pill">OFFICIAL API</span></div>
-      {messages.length === 0 ? <p className="inbox-note-empty">No WhatsApp messages have been received for this conversation.</p> : <div className="wa-message-list">{messages.map((message) => <article key={message.id} className={`wa-message ${message.direction === 'outbound' ? 'wa-message-outbound' : 'wa-message-inbound'}`}><div className="wa-message-meta"><strong>{message.direction === 'outbound' ? 'Business' : 'Customer'}</strong><span>{message.message_type.toUpperCase()} · {message.delivery_status.toUpperCase()}</span></div><p>{message.message_text}</p>{message.attachment_types.length > 0 && <small>Attachment types: {message.attachment_types.join(', ')} · provider media links are not retained</small>}<time>{new Date(message.provider_sent_at).toLocaleString()}</time></article>)}</div>}
+      {messages.length === 0 ? <p className="inbox-note-empty">No WhatsApp messages have been received for this conversation.</p> : <div className="wa-message-list">{messages.map((message) => <article key={message.id} className={`wa-message ${message.direction === 'outbound' ? 'wa-message-outbound' : 'wa-message-inbound'}`}><div className="wa-message-meta"><strong>{message.direction === 'outbound' ? 'Business' : 'Customer'}</strong><span>{message.message_type.toUpperCase()} · {message.delivery_status.toUpperCase()}</span></div><p>{message.message_text}</p>{message.attachment_types.length > 0 && <small>Attachment types: {message.attachment_types.join(', ')}</small>}<time>{new Date(message.provider_sent_at).toLocaleString()}</time></article>)}</div>}
+    </section>
+    <section className="wa-draft-panel wa-media-panel"><div><span className="eyebrow">SECURE MEDIA VAULT</span><h2>Customer media</h2><p>Inbound media is retrieved only on request. The server verifies Meta’s SHA-256 digest, checks the file signature and requires a clean ClamAV scan before private storage. Files expire after 30 days.</p></div>
+      {mediaResult.error && <div className="inbox-notice wa-error">Media metadata is unavailable. Apply migration 0036 before enabling media retrieval.</div>}
+      {mediaAssets.length === 0 ? <p className="inbox-note-empty">No retrievable WhatsApp media attachments are recorded for this conversation.</p> : <div className="wa-media-list">{mediaAssets.map((media) => <article className="wa-media-card" key={media.id}><div className="wa-message-meta"><strong>{(media.original_filename || `${media.media_kind} attachment`).slice(0,120)}</strong><span className={`wa-state wa-state-${media.scan_status}`}>{media.scan_status.toUpperCase()}</span></div><p>{media.media_kind.toUpperCase()} · {media.declared_mime_type}{media.file_size ? ` · ${(media.file_size / 1024 / 1024).toFixed(2)} MB` : ''}</p><small>Received {new Date(media.created_at).toLocaleString()}{media.retention_expires_at ? ` · Retention ends ${new Date(media.retention_expires_at).toLocaleDateString()}` : ''}</small>
+        {media.scan_status === 'clean' && media.retention_expires_at && Date.parse(media.retention_expires_at) > Date.now() && <a className="wa-media-download" href={`/api/inbox/whatsapp/media/${media.id}`}>Download scanned file</a>}
+        {['pending','unavailable'].includes(media.scan_status) && canSend && mediaScannerConfigured && <form action={`/api/inbox/whatsapp/media/${media.id}/retrieve`} method="post" className="wa-confirm-form"><button type="submit">Retrieve, validate and scan</button></form>}
+        {['pending','unavailable'].includes(media.scan_status) && canSend && !mediaScannerConfigured && <small>Secure malware scanning is not configured. This file remains quarantined and unavailable.</small>}
+        {media.scan_status === 'processing' && <small>Media retrieval and malware scan are in progress.</small>}
+        {['infected','rejected','expired'].includes(media.scan_status) && <small>This file is blocked or expired. It cannot be downloaded.</small>}
+        {media.scan_status === 'unavailable' && media.safe_error_code && <small>Safe status: {media.safe_error_code.replaceAll('_',' ')}</small>}
+      </article>)}</div>}
+      <div className="wa-media-footnote">Supported types in this release: JPEG, PNG, WebP, MP4, 3GPP, AAC, M4A, MP3, AMR, OGG, PDF and plain text. Maximum 16 MB per file. Documents and other types remain quarantined when unsupported. Media scanning is fail-closed; the scanner must be configured before files can be stored.</div>
     </section>
     {canDraft && latestInbound && <section className="wa-draft-panel"><div><span className="eyebrow">RESPONSE STUDIO</span><h2>Prepare a reply</h2><p>{windowOpen ? 'A text reply can be sent after human review.' : 'The 24-hour window is closed. Prepare an approved template draft instead.'}</p></div>
       {windowOpen && <><form action={createWhatsAppDraft} className="wa-composer"><input type="hidden" name="conversation_id" value={id}/><label>Manual reply<textarea name="draft_text" rows={4} minLength={1} maxLength={4096} required placeholder="Write a customer response. Do not include unsupported promises or private credentials."/></label><button type="submit">Save as draft</button></form><form action={generateWhatsAppAiDraft} className="wa-ai-form"><input type="hidden" name="conversation_id" value={id}/><button type="submit" disabled={!process.env.LOCAL_AI_BASE_URL || !process.env.LOCAL_AI_MODEL}>Generate local AI draft</button><span>{process.env.LOCAL_AI_BASE_URL && process.env.LOCAL_AI_MODEL ? `Model: ${process.env.LOCAL_AI_MODEL}` : 'Local AI is optional; configure LOCAL_AI_BASE_URL and LOCAL_AI_MODEL to enable.'}</span></form></>}
@@ -87,5 +116,5 @@ export default async function WhatsAppConversationPage({ params, searchParams }:
         </article>; })}</div>}
     </section>
     <InboxConversationWorkflowPanel provider="whatsapp" conversationId={id} workflow={workflow} notes={(noteQuery.data ?? []) as InboxInternalNote[]} teammates={teammates} canAssign={canAssign} canUpdate={['owner','admin','manager','publisher'].includes(role)} available={!workflowQuery.error && !noteQuery.error} workflowAction={query.workflow_action} noteAction={query.note_action}/>
-    <footer className="inbox-footer">RUFFNECK SOCIAL HUB · WHATSAPP BUSINESS INBOX · V4.7.0</footer></section></main>;
+    <footer className="inbox-footer">RUFFNECK SOCIAL HUB · WHATSAPP BUSINESS INBOX · V4.9.0</footer></section></main>;
 }

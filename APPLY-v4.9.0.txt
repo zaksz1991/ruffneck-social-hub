@@ -1,0 +1,32 @@
+RUFFNECK SOCIAL HUB v4.9.0 — APPLY INSTRUCTIONS
+
+SOURCE BASELINE
+- This release was assembled from the v4.8.0 source snapshot present in this workspace.
+- It has not been merged into GitHub main and has not been compared with changes made after that snapshot.
+- Preserve any later repository edits before replacing project files.
+
+1. Extract the full project folder and inspect RELEASE-MANIFEST-v4.9.0.md.
+2. In Supabase SQL Editor, confirm migrations 0033, 0034 and 0035 have succeeded.
+3. Apply supabase/migrations/0036_whatsapp_secure_media_storage.sql once.
+4. ClamAV requires substantial memory: official guidance recommends at least 3 GiB RAM (4 GiB preferred). Render free instances provide 512 MB and are not suitable. Do not deploy the scanner to Render free. Use an HTTPS Docker host with at least 3 GiB RAM, or leave the scanner unconfigured and media retrieval disabled. Set the Docker root/build directory to services/whatsapp-media-scanner. Add WHATSAPP_MEDIA_SCANNER_TOKEN with a newly generated random value of at least 32 characters.
+5. Confirm the scanner's HTTPS /healthz endpoint returns a healthy response.
+6. In Vercel Project Settings > Environment Variables, add:
+   - WHATSAPP_MEDIA_SCANNER_URL = the scanner HTTPS base URL, without /scan
+   - WHATSAPP_MEDIA_SCANNER_TOKEN = the exact same scanner token
+   Keep both variables server-only; do not use NEXT_PUBLIC_. Redeploy the Next.js project.
+7. In GitHub repository Settings > Secrets and variables > Actions, confirm these existing secrets are configured:
+   - RSH_WORKER_URL = https://ruffneck-social-hub.vercel.app
+   - SOCIAL_PUBLISH_CRON_SECRET = the same value used by Vercel
+8. Enable the GitHub Actions workflow named WhatsApp media retention. It runs once daily and can be triggered manually.
+9. In a controlled workspace, receive a supported image/PDF from an authorised test number. Open the WhatsApp conversation and select Retrieve, validate and scan. Verify the status becomes CLEAN only after ClamAV confirms a clean scan, then test the download.
+10. Confirm a different workspace member cannot retrieve or download the file. Verify the private bucket has no public access and expired objects are deleted by the workflow.
+
+SAFETY AND FEATURE BOUNDARIES
+- Media retrieval is manual. It never downloads arbitrary browser-supplied URLs.
+- If the scanner is missing or unavailable, the app fails closed and does not store or expose the file.
+- Supported files are limited to the MIME allowlist and 16 MiB maximum documented in README-v4.9.0-WHATSAPP-SECURE-MEDIA.md.
+- Clean files are retained for 30 days, then purged by the GitHub Actions workflow. The workflow must remain enabled.
+- Outbound media messages, image previews, office documents, archives and unknown file types are not enabled.
+- No new Meta permission is requested.
+
+Do not deploy or enable media retrieval until the scanner, migration, private storage and retention workflow have passed controlled acceptance tests.

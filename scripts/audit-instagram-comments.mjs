@@ -19,8 +19,8 @@ for (const [relative, tokens] of requirements) {
   for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.7.0', '4.8.0'].includes(pkg.version)) failures.push(`package.json: unsupported release version ${pkg.version}`);
-if (!String(pkg.scripts?.build ?? '').includes('audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && next build')) failures.push('package.json: Instagram comment and WhatsApp audits must gate next build');
+if (!['4.7.0', '4.8.0', '4.9.0'].includes(pkg.version)) failures.push(`package.json: unsupported release version ${pkg.version}`);
+if (!String(pkg.scripts?.build ?? '').includes('audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && npm run audit:whatsapp-media && next build')) failures.push('package.json: Instagram comment and WhatsApp audits must gate next build');
 if (!String(pkg.scripts?.test ?? '').includes('npm run test:instagram-comments')) failures.push('package.json: Instagram comment tests missing from test command');
 if (failures.length) {
   console.error(`Instagram comment publishing audit failed: ${failures.length} issue(s).`);

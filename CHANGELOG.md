@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.9.0 — WhatsApp secure inbound media
+
+- Recorded safe WhatsApp media IDs, MIME metadata, provider SHA-256 digests and sanitized document names from signed inbound webhooks. Temporary media download URLs are never persisted.
+- Added manually triggered inbound media retrieval using the official Meta media lookup/download flow, strict CDN host/path allowlisting, redirect denial, a 16 MiB cap, MIME/signature validation and Meta SHA-256 verification.
+- Added a self-hosted, bearer-protected ClamAV scanner container. The app fails closed when the scanner is missing, offline or inconclusive; infected files are blocked.
+- Added private Supabase Storage persistence, workspace-authorized attachment downloads and a daily 30-day retention purge.
+- Added migration 0036, WhatsApp media regression checks and security audits. Outbound media sending remains disabled.
+
+
 ## 4.8.0 — WhatsApp SLA and deterministic routing
 
 - Included WhatsApp Business conversations in workspace first-response SLA reports and current-assignee workload aggregates.

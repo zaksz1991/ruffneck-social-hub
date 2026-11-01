@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
           const normalized = normalizeWhatsAppMessage(rawMessage);
           if (!normalized) continue;
           normalized.participantName = names.get(normalized.participantProviderId) ?? null;
-          const { error } = await admin.rpc('ingest_whatsapp_message', {
+          const { data: messageId, error } = await admin.rpc('ingest_whatsapp_message', {
             target_workspace_id: account.workspace_id,
             target_social_account_id: account.id,
             target_participant_provider_id: normalized.participantProviderId,
@@ -68,6 +68,25 @@ export async function POST(request: NextRequest) {
             target_provider_sent_at: normalized.sentAt,
           });
           if (error) throw error;
+          if (normalized.media && typeof messageId === 'string') {
+            const { data: storedMessage, error: storedMessageError } = await admin.from('whatsapp_messages')
+              .select('conversation_id').eq('id', messageId).eq('social_account_id', account.id).maybeSingle();
+            if (storedMessageError) throw storedMessageError;
+            if (!storedMessage?.conversation_id) throw new Error('WhatsApp media message mapping is unavailable.');
+            const mediaInsert = await admin.from('whatsapp_media_assets').upsert({
+              workspace_id: account.workspace_id,
+              social_account_id: account.id,
+              conversation_id: storedMessage.conversation_id,
+              message_id: messageId,
+              provider_media_id: normalized.media.providerMediaId,
+              media_kind: normalized.attachmentTypes[0] ?? 'document',
+              declared_mime_type: normalized.media.declaredMimeType,
+              provider_sha256: normalized.media.providerSha256,
+              original_filename: normalized.media.fileName,
+              scan_status: 'pending',
+            }, { onConflict: 'social_account_id,provider_media_id', ignoreDuplicates: true });
+            if (mediaInsert.error) throw mediaInsert.error;
+          }
           ingested++;
           const eventKey = createHash('sha256').update(`whatsapp:${phoneId}:${normalized.providerMessageId}`).digest('hex');
           const journal = await admin.from('provider_webhook_events').upsert({
