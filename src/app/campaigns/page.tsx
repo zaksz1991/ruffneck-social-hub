@@ -79,7 +79,7 @@ const notices: Record<string, string> = {
   insights_campaign_links: 'Campaign content associations could not be loaded.',
   insights_configuration: 'Server-side provider analytics configuration is incomplete.',
   insights_token_vault: 'Encrypted provider credentials could not be retrieved.',
-  insights_access: 'No connected Facebook or Instagram account has an explicitly granted insights permission. Reconnect the account from Channels and approve the requested insights permission.',
+  insights_access: 'No connected Facebook, Instagram or LinkedIn account has verifiable post-insights access. Reconnect the account from Channels and approve its provider-specific insights permission. LinkedIn requires Community Management API access and rw_organization_admin.',
 };
 const successNotices: Record<string, string> = {
   created: 'Campaign created.', linked: 'Content linked to campaign.', metrics: 'Manual performance snapshot saved.', status: 'Campaign status updated.',
@@ -171,14 +171,15 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
           </div>
 
           <section className="campaign-create-card provider-sync-card">
-            <div className="campaign-section-title"><div><span className="eyebrow">OFFICIAL PLATFORM DATA</span><h2>Sync provider insights</h2><p>Fetch post-level metrics from connected Facebook Pages and Instagram professional accounts. Only published posts already linked to a campaign are included.</p></div><span className="campaign-pill">HUMAN TRIGGERED</span></div>
+            <div className="campaign-section-title"><div><span className="eyebrow">OFFICIAL PLATFORM DATA</span><h2>Sync provider insights</h2><p>Fetch official post-level metrics from connected Facebook Pages, Instagram professional accounts and LinkedIn organization Pages. Only successful published posts already linked to a campaign are included.</p></div><span className="campaign-pill">HUMAN TRIGGERED</span></div>
             <div className="provider-sync-status">
               <span>{accounts.filter((account) => account.provider === 'facebook' && account.capabilities?.insights === true && account.granted_scopes?.includes('read_insights') && Array.isArray(account.capabilities?.page_tasks) && (account.capabilities.page_tasks.includes('ANALYZE') || account.capabilities.page_tasks.includes('MANAGE'))).length} Facebook accounts ready</span>
               <span>{accounts.filter((account) => account.provider === 'instagram' && account.capabilities?.insights === true && account.granted_scopes?.includes('instagram_business_manage_insights')).length} Instagram accounts ready</span>
-              <span>{accounts.filter((account) => ['facebook','instagram'].includes(account.provider) && account.connection_state !== 'connected').length} disconnected accounts</span>
+              <span>{accounts.filter((account) => account.provider === 'linkedin' && account.capabilities?.insights === true && account.granted_scopes?.includes('rw_organization_admin') && account.capabilities?.organization_role === 'ADMINISTRATOR').length} LinkedIn accounts ready</span>
+              <span>{accounts.filter((account) => ['facebook','instagram','linkedin'].includes(account.provider) && account.connection_state !== 'connected').length} disconnected accounts</span>
             </div>
             {canSyncProviderMetrics ? <form action={syncProviderCampaignAnalytics} className="provider-sync-form"><input type="hidden" name="workspace_id" value={workspace.id}/><small>Each run processes up to five recent published destinations. Repeating a sync on the same day updates that destination's snapshot. Existing manual entries remain separate.</small><button type="submit">Sync official insights</button></form> : <p className="campaign-muted">Your {role} role can view campaign reports but cannot initiate provider API synchronisation.</p>}
-            <p className="provider-sync-footnote">Meta requires explicit insights permissions. Facebook Page insights also require the Page ANALYZE or MANAGE task. Existing connections must be reconnected through Channels to grant the new permission. Provider metrics can be delayed or unavailable for some post types; a missing metric is stored as zero only when the provider successfully returns a valid insights response.</p>
+            <p className="provider-sync-footnote">Each provider requires its own approved insights permission. Facebook additionally requires the Page ANALYZE or MANAGE task. LinkedIn organization post statistics require Community Management API access, rw_organization_admin and an approved administrator role; existing LinkedIn connections must reconnect through Channels to grant this scope. LinkedIn reports organic post statistics only; saves are not supplied by this endpoint.</p>
           </section>
 
           {canOperate && brands.length > 0 && <section className="campaign-create-card">
@@ -195,7 +196,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             </form>
           </section>}
 
-          {loadError && <div className="campaign-notice warning"><strong>Some campaign data could not be loaded.</strong> Confirm migrations 0027 and 0028 are applied and your workspace role has read access. Existing rows are not replaced with sample values.</div>}
+          {loadError && <div className="campaign-notice warning"><strong>Some campaign data could not be loaded.</strong> Confirm migrations 0027, 0028 and 0029 are applied and your workspace role has read access. Existing rows are not replaced with sample values.</div>}
           {!canOperate && <p className="campaign-readonly-note">Your {role} role has read-only campaign access. Campaign creation and content linking are restricted to authorised publishing roles.</p>}
           {brands.length === 0 && <div className="campaign-empty"><h2>Add a brand first</h2><p>Campaigns are attached to one brand within the active workspace.</p><Link href="/brands">Open brands &amp; clients</Link></div>}
 
@@ -225,7 +226,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                     <div><span>Conversions*</span><strong>{number(totals.conversions)}</strong></div>
                   </div>
                   <div className="provider-metric-block">
-                    <div className="campaign-subheading"><strong>Official platform insights</strong><span>{providerTotals.destinationsTracked} destinations · Meta API</span></div>
+                    <div className="campaign-subheading"><strong>Official platform insights</strong><span>{providerTotals.destinationsTracked} destinations · {[...new Set(providerSnapshots.map((item) => PROVIDER_LABELS[item.provider] ?? item.provider))].join(', ') || 'No API data'}</span></div>
                     <div className="provider-metric-grid">
                       <div><span>Views / media views</span><strong>{number(providerTotals.impressions)}</strong></div>
                       <div><span>Reach</span><strong>{number(providerTotals.reach)}</strong></div>
@@ -233,7 +234,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       <div><span>Likes / reactions</span><strong>{number(providerTotals.likes)}</strong></div>
                       <div><span>Post clicks</span><strong>{number(providerTotals.clicks)}</strong></div>
                     </div>
-                    <p className="campaign-muted">{latestProviderFetch ? `Latest successful provider fetch: ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(latestProviderFetch))}.` : 'No official API insights have been synced for this campaign yet.'} Facebook media views and Instagram views are platform-specific metrics; do not compare them as identical reach measures.</p>
+                    <p className="campaign-muted">{latestProviderFetch ? `Latest successful provider fetch: ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(latestProviderFetch))}.` : 'No official API insights have been synced for this campaign yet.'} Meta views and LinkedIn impressions use provider-specific definitions. LinkedIn metrics are organic organization-post share statistics only; its unique impressions are summed per post, not deduplicated people, and the endpoint does not provide saves or paid/ad results.</p>
                   </div>
 
                   <div className="campaign-content-block"><div className="campaign-subheading"><strong>Campaign content</strong><span>{linkedContent.length} linked items</span></div>
@@ -260,7 +261,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             </div>}
           </section>
         </>}
-        <p className="campaign-footnote">Manual snapshots are entered by workspace members. Official Meta snapshots are fetched from the connected Facebook or Instagram provider API and stored separately. Meta data may be delayed, unavailable for some media types, or subject to provider metric definitions. These APIs do not provide website leads or conversions. UTM links label traffic sources but do not themselves collect analytics. Each campaign displays the latest snapshot per published destination; current page limits are 100 campaigns, 250 content items, 1,000 published jobs, 5,000 manual snapshots and 2,500 provider snapshots per workspace.</p>
+        <p className="campaign-footnote">Manual snapshots are entered by workspace members. Official provider snapshots are fetched from connected Facebook, Instagram or LinkedIn APIs and stored separately. LinkedIn reports organic organization-post statistics only; it does not supply saves, paid/ad metrics, website leads or conversions in this integration. Metric definitions vary by provider. UTM links label traffic sources but do not themselves collect analytics. Each campaign displays the latest snapshot per published destination; current page limits are 100 campaigns, 250 content items, 1,000 published jobs, 5,000 manual snapshots and 2,500 provider snapshots per workspace.</p>
       </section>
     </main>
   );

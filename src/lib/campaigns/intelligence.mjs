@@ -128,7 +128,7 @@ export function aggregateSnapshots(rows) {
   for (const row of latest) {
     for (const key of METRIC_KEYS) {
       const value = Number(row[key] ?? 0);
-      if (Number.isSafeInteger(value) && value >= 0) totals[key] += value;
+      if (Number.isSafeInteger(value) && (key === 'likes' ? value >= -MAX_METRIC_VALUE : value >= 0)) totals[key] += value;
     }
   }
   totals.engagements = totals.likes + totals.comments + totals.shares + totals.saves;

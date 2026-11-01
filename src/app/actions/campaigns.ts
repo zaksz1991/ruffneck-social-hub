@@ -161,12 +161,12 @@ export async function syncProviderCampaignAnalytics(formData: FormData) {
     .select('id,provider,provider_account_id,connection_state,granted_scopes,capabilities')
     .eq('workspace_id', workspaceId)
     .eq('connection_state', 'connected')
-    .in('provider', ['facebook', 'instagram']);
+    .in('provider', ['facebook', 'instagram', 'linkedin']);
   if (accountError) campaignRedirect(workspaceId, 'error=insights_accounts');
 
   type AccountRow = {
     id: string;
-    provider: 'facebook' | 'instagram';
+    provider: 'facebook' | 'instagram' | 'linkedin';
     provider_account_id: string;
     connection_state: string;
     granted_scopes: string[] | null;
@@ -180,7 +180,13 @@ export async function syncProviderCampaignAnalytics(formData: FormData) {
       return account.granted_scopes?.includes('read_insights') === true
         && (tasks.includes('ANALYZE') || tasks.includes('MANAGE'));
     }
-    return account.granted_scopes?.includes('instagram_business_manage_insights') === true;
+    if (account.provider === 'instagram') {
+      return account.granted_scopes?.includes('instagram_business_manage_insights') === true;
+    }
+    return account.granted_scopes?.includes('rw_organization_admin') === true
+      && account.capabilities?.organization_role === 'ADMINISTRATOR'
+      && typeof account.capabilities?.organization_urn === 'string'
+      && /^urn:li:organization:\d{1,20}$/.test(account.capabilities.organization_urn);
   });
   const eligibleIds = eligibleAccounts.map((account) => account.id);
   if (!eligibleIds.length) {
@@ -230,8 +236,9 @@ export async function syncProviderCampaignAnalytics(formData: FormData) {
 
   const { createClient } = await import('@supabase/supabase-js');
   const { decryptProviderSecret } = await import('@/lib/integrations/token-crypto');
-  const { fetchFacebookPostInsights, fetchInstagramMediaInsights } = await import('@/lib/analytics/provider-insights');
+  const { fetchFacebookPostInsights, fetchInstagramMediaInsights, fetchLinkedInOrganizationPostInsights } = await import('@/lib/analytics/provider-insights');
   const { getFacebookGraphVersion } = await import('@/lib/integrations/facebook');
+  const { getLinkedInVersion } = await import('@/lib/integrations/linkedin');
   const admin = createClient(serviceUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const tokenRowsResult = await admin.from('social_account_token_vault')
     .select('social_account_id,ciphertext,iv,auth_tag,token_expires_at')
@@ -246,6 +253,9 @@ export async function syncProviderCampaignAnalytics(formData: FormData) {
   catch { campaignRedirect(workspaceId, 'error=insights_configuration'); }
   const instagramVersion = process.env.META_GRAPH_API_VERSION || 'v26.0';
   if (!/^v\d+\.\d+$/.test(instagramVersion)) campaignRedirect(workspaceId, 'error=insights_configuration');
+  let linkedInVersion: string;
+  try { linkedInVersion = getLinkedInVersion(); }
+  catch { campaignRedirect(workspaceId, 'error=insights_configuration'); }
   const snapshotDate = new Date().toISOString().slice(0, 10);
   let synced = 0;
   let failed = 0;
@@ -262,13 +272,25 @@ export async function syncProviderCampaignAnalytics(formData: FormData) {
     }
     try {
       const token = decryptProviderSecret({ ciphertext: tokenRow.ciphertext, iv: tokenRow.iv, authTag: tokenRow.auth_tag });
-      const metrics = account.provider === 'facebook'
-        ? await fetchFacebookPostInsights({ postId: job.provider_post_id, token, graphVersion })
-        : await fetchInstagramMediaInsights({ mediaId: job.provider_post_id, token, graphVersion: instagramVersion });
+      let metrics: import('@/lib/analytics/provider-insights').ProviderMetrics;
+      if (account.provider === 'facebook') {
+        metrics = await fetchFacebookPostInsights({ postId: job.provider_post_id, token, graphVersion });
+      } else if (account.provider === 'instagram') {
+        metrics = await fetchInstagramMediaInsights({ mediaId: job.provider_post_id, token, graphVersion: instagramVersion });
+      } else {
+        const organizationUrn = account.capabilities?.organization_urn;
+        if (typeof organizationUrn !== 'string') throw new Error('provider_identifier_invalid');
+        metrics = await fetchLinkedInOrganizationPostInsights({
+          organizationUrn, postUrn: job.provider_post_id, token, apiVersion: linkedInVersion,
+        });
+      }
       const linkedCampaigns = campaignIdsByContent.get(job.content_id) ?? [];
       let savedCount = 0;
       for (const campaignId of linkedCampaigns) {
-        const { error } = await supabase.rpc('record_provider_analytics_snapshot', {
+        const snapshotRpc = account.provider === 'linkedin'
+          ? 'record_linkedin_provider_analytics_snapshot'
+          : 'record_provider_analytics_snapshot';
+        const { error } = await supabase.rpc(snapshotRpc, {
           target_campaign_id: campaignId,
           target_publishing_job_id: job.id,
           target_snapshot_date: snapshotDate,

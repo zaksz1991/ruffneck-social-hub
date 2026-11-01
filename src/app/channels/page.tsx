@@ -22,10 +22,11 @@ const errorMessages: Record<string, string> = {
   configuration: 'Instagram connection is not configured. Check the Instagram app credentials in Vercel.',
   facebook_configuration: 'Facebook connection is not configured. Add FACEBOOK_APP_ID and FACEBOOK_APP_SECRET in Vercel.',
   linkedin_configuration: 'LinkedIn connection is not configured. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET in Vercel.',
-  linkedin_migration: 'Apply Supabase migration 0016_linkedin_organization_connection.sql, then retry.',
+  linkedin_migration: 'Apply the LinkedIn and publishing migrations in order through 0029_linkedin_organization_post_analytics.sql, then reconnect the Page.',
   linkedin_no_pages: 'LinkedIn returned no approved organization Pages for which this member is an administrator.',
-  linkedin_organizations: 'LinkedIn organization access could not be verified. Confirm that the app has approved r_organization_admin and w_organization_social access.',
-  linkedin_http_403: 'LinkedIn denied organization access. The app needs approved Marketing API access with r_organization_admin, and the member must be an approved Page administrator.',
+  linkedin_analytics_scope: 'LinkedIn did not grant rw_organization_admin. Apply for Community Management API access in your LinkedIn developer app, then reconnect the Page to enable official post analytics.',
+  linkedin_organizations: 'LinkedIn organization access could not be verified. Confirm Community Management API approval, rw_organization_admin and w_organization_social consent, and an approved administrator role.',
+  linkedin_http_403: 'LinkedIn denied organization access. The app needs approved organization API access and the member must be an approved Page administrator. Analytics additionally requires rw_organization_admin.',
   linkedin_http_401: 'LinkedIn rejected the access token. Confirm the OAuth client and reconnect the account.',
   linkedin_invalid_token: 'LinkedIn rejected the access token. Reconnect the account and verify the app credentials.',
   linkedin_invalid_pages: 'LinkedIn organization data failed validation. No unverified Page was connected.',
@@ -137,7 +138,7 @@ export default async function ChannelsPage({ searchParams }: {
       {params.error && <div className="channels-notice channels-error" role="alert">{errorMessages[params.error] ?? 'The provider connection could not be completed. No unverified account was marked connected.'}</div>}
       {params.connected === 'instagram' && <div className="channels-notice channels-success" role="status">Instagram professional account connected. The encrypted token is stored server-side.</div>}
       {params.connected === 'facebook' && <div className="channels-notice channels-success" role="status">Facebook Page connection completed. All verified Pages returned by Meta were assigned to the selected brand; their tokens are encrypted server-side.</div>}
-      {params.connected === 'linkedin' && <div className="channels-notice channels-success" role="status">LinkedIn organization Pages connected. Only approved administrator Pages were stored; tokens are encrypted server-side and publishing remains disabled.</div>}
+      {params.connected === 'linkedin' && <div className="channels-notice channels-success" role="status">LinkedIn organization Pages connected. Only approved administrator Pages were stored; tokens are encrypted server-side. Official organic post analytics is enabled when rw_organization_admin was approved; publishing remains independently gated.</div>}
 
       {!activeWorkspace ? <section className="channels-empty"><h2>No workspace available</h2><p>Create or join a workspace before connecting social accounts.</p><Link href="/">Go to workspace overview</Link></section> : <>
         <section className="platform-overview">

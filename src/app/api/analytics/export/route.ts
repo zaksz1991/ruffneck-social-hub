@@ -18,6 +18,7 @@ type Job = {
   last_error_safe: string | null;
 };
 type Account = { id: string; provider: string; display_name: string | null };
+type ProviderSnapshot = { campaign_id: string; publishing_job_id: string; social_account_id: string; provider: string; snapshot_date: string; impressions: number; reach: number; likes: number; comments: number; shares: number; saves: number; clicks: number; source: string; fetched_at: string };
 
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -37,17 +38,19 @@ export async function GET(request: NextRequest) {
   if (!membership) return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
 
   const since = new Date(Date.now() - range * 86400000).toISOString();
-  const [workspaceResult, accountResult, jobResult] = await Promise.all([
+  const [workspaceResult, accountResult, jobResult, providerSnapshotResult] = await Promise.all([
     supabase.from('workspaces').select('name').eq('id', workspaceId).maybeSingle(),
     supabase.from('social_accounts').select('id,provider,display_name').eq('workspace_id', workspaceId),
     supabase.from('publishing_jobs').select('id,social_account_id,state,created_at,scheduled_at,delivered_at,provider_post_id,attempts,last_error_code,last_error_safe').eq('workspace_id', workspaceId).gte('created_at', since).order('created_at', { ascending: false }).limit(5000),
+    supabase.from('provider_analytics_snapshots').select('campaign_id,publishing_job_id,social_account_id,provider,snapshot_date,impressions,reach,likes,comments,shares,saves,clicks,source,fetched_at').eq('workspace_id', workspaceId).gte('snapshot_date', since.slice(0, 10)).order('snapshot_date', { ascending: false }).order('fetched_at', { ascending: false }).limit(5000),
   ]);
-  if (workspaceResult.error || accountResult.error || jobResult.error) {
+  if (workspaceResult.error || accountResult.error || jobResult.error || providerSnapshotResult.error) {
     return NextResponse.json({ error: 'Analytics export could not be generated.' }, { status: 503 });
   }
 
   const accounts = (accountResult.data ?? []) as Account[];
   const jobs = (jobResult.data ?? []) as Job[];
+  const providerSnapshots = (providerSnapshotResult.data ?? []) as ProviderSnapshot[];
   const accountMap = new Map(accounts.map((account) => [account.id, account]));
   const published = jobs.filter((job) => job.state === 'succeeded').length;
   const pending = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable'].includes(job.state)).length;
@@ -73,6 +76,19 @@ export async function GET(request: NextRequest) {
       job.attempts, job.last_error_code ?? '', job.last_error_safe ?? '',
     ]);
   }
+
+  rows.push([], ['Official provider post-performance snapshots'],
+    ['Source', 'campaign_id', 'publishing_job_id', 'social_account_id', 'platform', 'snapshot_date', 'views_or_impressions', 'post_level_reach_or_unique_impressions', 'likes', 'comments', 'shares', 'saves', 'clicks', 'fetched_at_utc']);
+  for (const snapshot of providerSnapshots) {
+    rows.push([
+      snapshot.source, snapshot.campaign_id, snapshot.publishing_job_id, snapshot.social_account_id,
+      snapshot.provider, snapshot.snapshot_date, snapshot.impressions, snapshot.reach,
+      snapshot.likes, snapshot.comments, snapshot.shares, snapshot.saves, snapshot.clicks, snapshot.fetched_at,
+    ]);
+  }
+
+  rows.push([], ['Metric interpretation'],
+    ['LinkedIn rows contain organic organization-post share statistics only. LinkedIn does not expose saves or paid/ad performance through this endpoint. Reach and impressions are post-level sums and are not deduplicated across audiences or posts. Provider metric definitions differ. The CSV preserves one row per campaign association, so a destination linked to multiple campaigns can appear in multiple rows.']);
 
   const csv = `\uFEFF${toCsv(rows)}`;
   const safeWorkspace = (workspaceResult.data?.name ?? 'workspace').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '').slice(0, 48) || 'workspace';

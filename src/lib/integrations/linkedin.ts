@@ -1,7 +1,13 @@
 export const LINKEDIN_REQUESTED_SCOPES = [
-  'r_organization_admin',
+  'rw_organization_admin',
   'w_organization_social',
 ] as const;
+
+export function normalizeLinkedInGrantedScopes(value: unknown): string[] {
+  if (typeof value !== 'string' || value.length > 4_096) return [];
+  const requested = new Set<string>(LINKEDIN_REQUESTED_SCOPES);
+  return [...new Set(value.split(/[\s,]+/).map((scope) => scope.trim()).filter((scope) => requested.has(scope)))];
+}
 
 export type LinkedInOrganization = {
   id: string;

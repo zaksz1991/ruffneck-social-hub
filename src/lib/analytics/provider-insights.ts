@@ -103,6 +103,85 @@ export function buildFacebookPostInsightsUrls(input: { postId: string; graphVers
   return { insights, post };
 }
 
+
+function safeSignedCount(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : 0;
+  return Number.isSafeInteger(parsed) && Math.abs(parsed) <= MAX_METRIC ? parsed : 0;
+}
+
+/** Builds LinkedIn's official organization post-statistics request.
+ * LinkedIn exposes share URNs and UGC-post URNs through different query keys.
+ */
+export function buildLinkedInOrganizationPostInsightsUrl(input: {
+  organizationUrn: string; postUrn: string; apiVersion: string;
+}): URL {
+  if (!/^urn:li:organization:\d{1,20}$/.test(input.organizationUrn) ||
+      !/^20\d{2}(0[1-9]|1[0-2])$/.test(input.apiVersion)) {
+    throw new Error('provider_identifier_invalid');
+  }
+  const shareMatch = /^urn:li:share:\d{1,30}$/.test(input.postUrn);
+  const ugcMatch = /^urn:li:ugcPost:\d{1,30}$/.test(input.postUrn);
+  if (!shareMatch && !ugcMatch) throw new Error('provider_identifier_invalid');
+
+  const url = new URL('https://api.linkedin.com/rest/organizationalEntityShareStatistics');
+  url.searchParams.set('q', 'organizationalEntity');
+  url.searchParams.set('organizationalEntity', input.organizationUrn);
+  if (shareMatch) url.searchParams.set('shares', `List(${input.postUrn})`);
+  else url.searchParams.set('ugcPosts[0]', input.postUrn);
+  return url;
+}
+
+export function normalizeLinkedInOrganizationPostInsights(value: unknown, postUrn: string): ProviderMetrics {
+  const root = record(value);
+  if (!root || !Array.isArray(root.elements)) throw new Error('provider_payload_invalid');
+  if (root.elements.length === 0) return { ...ZERO };
+  const element = root.elements.map(record).find((item) => item &&
+    (item.share === postUrn || item.ugcPost === postUrn));
+  if (!element) throw new Error('provider_payload_invalid');
+  const stats = record(element.totalShareStatistics);
+  if (!stats) throw new Error('provider_payload_invalid');
+  return {
+    ...ZERO,
+    impressions: safeCount(stats.impressionCount),
+    reach: safeCount(stats.uniqueImpressionsCount),
+    // LinkedIn documents that this organic like count can be negative when
+    // an unlike is attributed after a sponsored like. Preserve the signed value.
+    likes: safeSignedCount(stats.likeCount),
+    comments: safeCount(stats.commentCount),
+    shares: safeCount(stats.shareCount),
+    clicks: safeCount(stats.clickCount),
+    // Organization share statistics do not expose a post-save metric.
+    saves: 0,
+  };
+}
+
+export async function fetchLinkedInOrganizationPostInsights(input: {
+  organizationUrn: string; postUrn: string; token: string; apiVersion: string;
+}): Promise<ProviderMetrics> {
+  const url = buildLinkedInOrganizationPostInsightsUrl(input);
+  const response = await fetch(url, {
+    headers: {
+      authorization: `Bearer ${input.token}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+      'LinkedIn-Version': input.apiVersion,
+      accept: 'application/json',
+    },
+    cache: 'no-store',
+    signal: AbortSignal.timeout(8_000),
+  });
+  let body: unknown = {};
+  try { body = await response.json(); } catch { /* Provider errors are normalized below. */ }
+  const root = record(body) ?? {};
+  if (!response.ok) {
+    const code = typeof root.code === 'string' && /^[A-Za-z0-9_-]{1,32}$/.test(root.code)
+      ? `provider_${root.code.toLowerCase()}`
+      : typeof root.serviceErrorCode === 'number' && Number.isSafeInteger(root.serviceErrorCode)
+        ? `provider_${root.serviceErrorCode}` : `provider_http_${response.status}`;
+    throw new Error(code);
+  }
+  return normalizeLinkedInOrganizationPostInsights(root, input.postUrn);
+}
+
 async function providerJson(url: URL, token: string): Promise<JsonRecord> {
   const response = await fetch(url, {
     headers: { authorization: `Bearer ${token}`, accept: 'application/json' },

@@ -108,6 +108,18 @@ check('campaign aggregation does not double-count superseded snapshots', () => {
   assert.equal(totals.clicks, 13);
   assert.equal(totals.destinationsTracked, 2);
 });
+check('LinkedIn signed organic likes aggregate while manual negative entries remain rejected', () => {
+  const totals = aggregateSnapshots([{
+    publishing_job_id: 'linkedin-job', snapshot_date: '2026-11-01', updated_at: '2026-11-01T10:00:00Z',
+    impressions: 50, reach: 40, likes: -1, comments: 2, shares: 1, saves: 0, clicks: 4,
+  }]);
+  assert.equal(totals.likes, -1);
+  assert.equal(totals.engagements, 2);
+  assert.deepEqual(validateMetricValues({
+    snapshotDate: '2026-11-01', impressions: 0, reach: 0, likes: -1, comments: 0,
+    shares: 0, saves: 0, clicks: 0, leads: 0, conversions: 0,
+  }, '2026-11-01'), { ok: false, reason: 'metric_value', field: 'likes' });
+});
 check('campaign SQL applies tenant RLS and no direct authenticated write grants', () => {
   const sql = fs.readFileSync(path.resolve('supabase/migrations/0027_publishing_campaign_intelligence.sql'), 'utf8');
   for (const table of ['publishing_campaigns', 'campaign_content_items', 'campaign_metric_snapshots']) {

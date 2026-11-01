@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { verifyProviderOAuthState } from '@/lib/integrations/provider-oauth-state';
 import {
   getLinkedInVersion,
+  normalizeLinkedInGrantedScopes,
   normalizeLinkedInAdminOrganizations,
   safeLinkedInErrorCode,
   type LinkedInOrganization,
@@ -137,8 +138,12 @@ export async function GET(request: NextRequest) {
     return finish(request, workspaceId, 'exchange');
   }
 
-  if (typeof tokenBody.scope === 'string' && !tokenBody.scope.split(/[ ,]+/).includes('w_organization_social')) {
+  const grantedScopes = normalizeLinkedInGrantedScopes(tokenBody.scope);
+  if (!grantedScopes.includes('w_organization_social')) {
     return finish(request, workspaceId, 'linkedin_publish_scope');
+  }
+  if (!grantedScopes.includes('rw_organization_admin')) {
+    return finish(request, workspaceId, 'linkedin_analytics_scope');
   }
   const accessToken = String(tokenBody.access_token);
   const expiresIn = typeof tokenBody.expires_in === 'number' ? tokenBody.expires_in : 0;
@@ -175,7 +180,7 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.rpc('store_linkedin_organization_connections', {
     target_workspace_id: workspaceId,
     target_brand_id: brandId,
-    target_granted_scopes: ['r_organization_admin', 'w_organization_social'],
+    target_granted_scopes: grantedScopes,
     target_organizations: encryptedOrganizations,
     target_token_expires_at: tokenExpiresAt,
   });
@@ -184,7 +189,7 @@ export async function GET(request: NextRequest) {
     if (error.code === '23505') return finish(request, workspaceId, 'already_connected');
     if (error.code === '42501') return finish(request, workspaceId, 'permission');
     if (error.code === 'PGRST202' || error.code === '42883') return finish(request, workspaceId, 'linkedin_migration');
-    if (error.code === '22023') return finish(request, workspaceId, 'linkedin_invalid_pages');
+    if (error.code === '22023') return finish(request, workspaceId, 'linkedin_migration');
     return finish(request, workspaceId, 'storage');
   }
 

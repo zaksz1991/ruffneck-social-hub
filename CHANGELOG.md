@@ -12,6 +12,16 @@
 
 # Changelog
 
+## 4.2.0 — LinkedIn organic organization-post analytics
+
+- Added human-triggered LinkedIn organization-post insights for successful published destinations already linked to campaigns, supporting both share and UGC-post URNs.
+- Added least-privilege OAuth consent checks for `rw_organization_admin` and `w_organization_social`; the separate Advertising API-only `r_organization_admin` scope is no longer required by this feature.
+- Added normalized organic impressions, unique impressions, likes, comments, shares and clicks; saves are not supplied by the endpoint and remain zero.
+- Preserved LinkedIn's documented signed organic like count, including a negative count where an unlike is attributed after a sponsored like.
+- Added provider-specific database persistence with workspace, brand, campaign, publication, organization-role and scope validation.
+- Added cross-platform provider analytics reporting and CSV export; destination snapshots are deduplicated across multiple campaign associations.
+- Added pre-build integration audit and deterministic regression tests. Full Next.js production build, live Supabase migration and LinkedIn API verification remain deployment acceptance requirements.
+
 ## 4.1.0 — Official Meta campaign analytics
 
 - Added human-triggered post-level insights collection for connected Facebook Pages and Instagram professional accounts, scoped to successful published destinations already linked to a campaign.

@@ -38,8 +38,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
   {
     id: 'linkedin', name: 'LinkedIn Pages', accountLabel: 'LinkedIn Page', availability: 'available',
     connectionMethod: 'LinkedIn OAuth and approved organization APIs',
-    supportedSurfaces: ['Managed organization Page discovery', 'Encrypted access-token storage', 'Administrator-role verification'],
-    notes: 'Page connection is read-only in this release. LinkedIn Marketing API access and r_organization_admin approval are required; publishing is not enabled.',
+    supportedSurfaces: ['Managed organization Page discovery', 'Encrypted access-token storage', 'Administrator-role verification', 'Official organic organization-post analytics when approved'],
+    notes: 'Post analytics uses LinkedIn Community Management organization share statistics and requires approved rw_organization_admin access and an administrator Page role. Paid/ad reporting and follower/visitor analytics are not included. Publishing permissions are independently controlled.',
   },
   {
     id: 'x', name: 'X', accountLabel: 'X account', availability: 'planned',

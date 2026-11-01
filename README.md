@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v4.1.0
+# RuffNeck Social Hub v4.2.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, provider-scoped Customer CRM, deterministic inbox routing automation, SLA and team analytics, campaign planning with UTM links, manual performance snapshots and human-triggered official Meta post insights for Facebook Pages and Instagram professional accounts. LinkedIn organization Page connections are available, while LinkedIn analytics collection is not included in this release.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, provider-scoped Customer CRM, deterministic inbox routing automation, SLA and team analytics, campaign planning with UTM links, manual performance snapshots and human-triggered official post insights for Facebook Pages, Instagram professional accounts and LinkedIn organization Pages. LinkedIn analytics is limited to organic organization-post statistics; paid/ad activity, follower/visitor analytics and saves are not included.
 
 ## Core modules
 
@@ -23,13 +23,13 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - AI reply playbooks for direct, empathetic, clarifying, resolution and human-handoff approaches, with customer-language matching or explicit English, Hausa, Nigerian Pidgin, Yoruba, Igbo and French output selection.
 - Manager-triggered inbox routing rules using provider, AI triage, escalation, confidence and keyword conditions; dry-run previews, idempotent internal assignment/priority/Open/Pending updates and safe execution history.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
-- Campaign intelligence: brand-scoped campaign planning, UTM tracking, manually recorded performance and separate provider-verified Meta post snapshots.
+- Campaign intelligence: brand-scoped campaign planning, UTM tracking, manually recorded performance and separate provider-verified Facebook, Instagram and LinkedIn post snapshots.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
 ## Important provider boundaries
 
 - Publishing worker support is limited to supported Instagram and Facebook Page single-image posts. Facebook publishing requires `pages_manage_posts` plus an eligible Page task. Other providers and other media types are not implied to work.
-- LinkedIn organization Pages can be connected after the app has approved `r_organization_admin` and `w_organization_social` access. v2.1.0 adds text-only organization publishing through the existing scheduled worker. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
+- LinkedIn organization Pages can be connected after the app has approved `rw_organization_admin` and `w_organization_social` access. v4.2.0 adds human-triggered organic post statistics for successful campaign-linked organization posts; the endpoint requires `rw_organization_admin` and an organization administrator role; this permission is included in LinkedIn's Community Management API product and avoids requiring the separate Advertising API product for the legacy read-only scope. Existing connections must reconnect to grant this additional scope. Paid/ad activity, saves and Page follower/visitor analytics are not included. v2.1.0 adds text-only organization publishing through the existing scheduled worker. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
 - Instagram messaging is read-only. AI DM reply drafts are never sent. Facebook Messenger replies are limited to human-reviewed text drafts, the standard 24-hour window and the Page Send API MESSAGE task.
 - Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
 - Marking a comment Reviewed or Ignored changes only its RuffNeck internal triage status.
@@ -48,7 +48,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0028` in ascending order. v4.0.0 adds `0027_publishing_campaign_intelligence.sql`; v4.1.0 adds `0028_official_meta_campaign_analytics.sql`. Existing installations apply only migrations that have not already been successfully applied. A database upgraded through v4.0.0 (migrations 0001–0027) applies migration 0028 once. For earlier installations, inspect migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md` and `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md` for feature boundaries and permissions.
+Fresh installations apply migrations `0001` through `0029` in ascending order. v4.0.0 adds `0027_publishing_campaign_intelligence.sql`; v4.1.0 adds `0028_official_meta_campaign_analytics.sql`; v4.2.0 adds `0029_linkedin_organization_post_analytics.sql`. Existing installations apply only migrations that have not already been successfully applied. A database upgraded through v4.1.0 (migrations 0001–0028) applies migration 0029 once. For earlier installations, inspect migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md`, `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md` and `README-v4.2.0-LINKEDIN-ORGANIC-ANALYTICS.md` for feature boundaries and permissions.
 
 ## Environment variables
 
