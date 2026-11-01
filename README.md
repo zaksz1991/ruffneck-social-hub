@@ -1,4 +1,4 @@
-# RuffNeck Social Hub v3.5.0
+# RuffNeck Social Hub v3.6.0
 
 RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
@@ -18,6 +18,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - First-response SLA reporting and team workload analytics for Instagram and Facebook Messenger.
 - Advisory AI intent, sentiment, summary, escalation and suggested-priority triage on both supported inbox channels; priority changes require an explicit team action.
 - Deterministic AI reply safety scans for brand restrictions, risky topics, unsupported commitments and language mismatch, with two-person escalation clearance for high-risk Facebook replies.
+- AI reply playbooks for direct, empathetic, clarifying, resolution and human-handoff approaches, with customer-language matching or explicit English, Hausa, Nigerian Pidgin, Yoruba, Igbo and French output selection.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
@@ -43,7 +44,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0024` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing database upgraded through v3.4.0 (migrations 0001–0023), apply `0024_ai_reply_safety_and_language_guardrails.sql` once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the individual release notes for Meta messaging, brand voice, team workflow, saved replies, SLA analytics and AI triage setup.
+Fresh installations apply migrations `0001` through `0024` in ascending order. v3.6.0 adds prompt-only reply preferences and does not add a database migration. Existing installations apply only migrations that have not already been successfully applied. For an existing database upgraded through v3.4.0 (migrations 0001–0023), apply `0024_ai_reply_safety_and_language_guardrails.sql` once. A database already upgraded through v3.5.0 needs no additional migration for v3.6.0. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the individual release notes for Meta messaging, brand voice, team workflow, saved replies, SLA analytics and AI triage setup.
 
 ## Environment variables
 

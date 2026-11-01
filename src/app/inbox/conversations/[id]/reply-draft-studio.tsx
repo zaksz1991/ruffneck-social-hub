@@ -50,15 +50,39 @@ export default function ReplyDraftStudio({
       {canGenerate ? (
         <form action={formAction} className="reply-generate-form">
           <input type="hidden" name="conversation_id" value={conversationId} />
-          <label>
-            Response tone
-            <select name="tone" defaultValue="professional">
-              <option value="professional">Professional</option>
-              <option value="friendly">Friendly</option>
-              <option value="concise">Concise</option>
-              <option value="empathetic">Empathetic</option>
-            </select>
-          </label>
+          <div className="reply-playbook-grid">
+            <label>
+              Response tone
+              <select name="tone" defaultValue="professional">
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="concise">Concise</option>
+                <option value="empathetic">Empathetic</option>
+              </select>
+            </label>
+            <label>
+              Response approach
+              <select name="approach" defaultValue="direct">
+                <option value="direct">Answer directly</option>
+                <option value="empathetic">Acknowledge and reassure</option>
+                <option value="clarify">Ask a clarifying question</option>
+                <option value="resolution">Suggest safe next steps</option>
+                <option value="handoff">Hand off to a team member</option>
+              </select>
+            </label>
+            <label>
+              Reply language
+              <select name="language" defaultValue="auto">
+                <option value="auto">Match the customer's language</option>
+                <option value="English">English</option>
+                <option value="Hausa">Hausa</option>
+                <option value="Nigerian Pidgin">Nigerian Pidgin</option>
+                <option value="Yoruba">Yoruba</option>
+                <option value="Igbo">Igbo</option>
+                <option value="French">French</option>
+              </select>
+            </label>
+          </div>
           <button type="submit" disabled={pending}>{pending ? 'Generating…' : 'Generate reply draft'}</button>
         </form>
       ) : (

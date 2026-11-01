@@ -145,3 +145,12 @@
 .reply-escalation-clear-form small{font-size:9px;line-height:1.5;color:#8b6b3e}
 .reply-escalation-cleared{margin:10px 0;padding:10px 12px;border:1px solid #cde8d8;border-radius:8px;background:#f2faf5;color:#236849;font-size:9px;line-height:1.55;font-weight:700}
 @media(max-width:600px){.reply-escalation-clear-form button{width:100%}}
+
+
+/* v3.6.0 — AI reply playbook controls */
+.reply-playbook-grid{display:grid;grid-template-columns:repeat(3,minmax(170px,1fr));gap:12px;width:100%;flex:1 1 100%}
+.reply-playbook-grid label{display:grid;align-content:start;gap:7px;color:#64748b;font-size:11px;font-weight:700}
+.reply-playbook-grid select{width:100%;min-width:0;border:1px solid #dce4ee;border-radius:8px;background:#fff;color:#142746;padding:11px 12px;font:inherit}
+.reply-generate-form>.reply-playbook-grid+button{align-self:end}
+@media(max-width:760px){.reply-playbook-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.reply-playbook-grid{grid-template-columns:1fr}.reply-generate-form>.reply-playbook-grid+button{width:100%}}

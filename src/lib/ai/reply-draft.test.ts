@@ -3,6 +3,8 @@ import {
   buildReplyDraftMessages,
   resolveLocalAiEndpoint,
   sanitizeBrandVoice,
+  isReplyApproach,
+  isReplyLanguage,
 } from './reply-draft';
 
 describe('local AI reply drafts', () => {
@@ -53,6 +55,34 @@ describe('local AI reply drafts', () => {
     expect(messages[0].content).toContain('Do not ask the commenter to share private information publicly');
     const dm = buildReplyDraftMessages([], {}, 'concise');
     expect(dm[0].content).toContain('direct-message inbox');
+  });
+
+  it('accepts only the configured reply approaches and language choices', () => {
+    expect(isReplyApproach('resolution')).toBe(true);
+    expect(isReplyApproach('auto')).toBe(false);
+    expect(isReplyLanguage('Nigerian Pidgin')).toBe(true);
+    expect(isReplyLanguage('Arabic')).toBe(false);
+  });
+
+  it('adds a validated response approach to the private prompt', () => {
+    const messages = buildReplyDraftMessages([
+      { direction: 'inbound', message_text: 'My order is delayed', provider_sent_at: '2026-10-31T00:00:00.000Z' },
+    ], {}, 'empathetic', 'dm', { approach: 'handoff', language: 'auto' });
+    expect(messages[0].content).toContain('Response approach: handoff');
+    expect(messages[0].content).toContain('Do not invent response times');
+    expect(messages[0].content).toContain('language used by the latest incoming customer message');
+  });
+
+  it('honours an explicitly selected supported reply language', () => {
+    const messages = buildReplyDraftMessages([], {}, 'professional', 'dm', { approach: 'clarify', language: 'Hausa' });
+    expect(messages[0].content).toContain('Write the reply in Hausa');
+    expect(messages[0].content).toContain('ask at most one focused clarifying question');
+  });
+
+  it('keeps an explicit human handoff factual and non-committal', () => {
+    const messages = buildReplyDraftMessages([], {}, 'professional', 'dm', { approach: 'handoff', language: 'English' });
+    expect(messages[0].content).toContain('Do not invent response times');
+    expect(messages[0].content).toContain('Never claim that you sent, scheduled, or acted on anything');
   });
 
 });

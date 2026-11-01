@@ -237,3 +237,12 @@
 - Added validated profile normalization and an authenticated, workspace-role-checked call to `update_brand_voice_profile`.
 - Included the Brand Voice Studio route, helper, styles, unit tests and migration 0019 in the complete source package.
 - Kept profile writes restricted to workspace owners and admins; the database function remains the authoritative authorization boundary.
+
+
+## 3.6.0 — AI reply playbooks
+
+- Added response approach controls for direct answers, empathetic acknowledgement, clarification, safe next steps and human handoff.
+- Added automatic customer-language matching and explicit English, Hausa, Nigerian Pidgin, Yoruba, Igbo and French output choices.
+- Added server-side preference allowlists and regression checks.
+- Preserved safety scanning, human review, draft-only Instagram behavior and guarded Facebook Messenger send controls.
+- No database migration or additional provider configuration.

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { generateLocalAiReplyDraft, type ReplyHistoryMessage } from '@/lib/ai/reply-draft';
+import { generateLocalAiReplyDraft, isReplyApproach, isReplyLanguage, type ReplyHistoryMessage } from '@/lib/ai/reply-draft';
 import { generateLocalAiConversationTriage, type ConversationTriageMessage } from '@/lib/ai/conversation-triage';
 import { validateSavedReplyInput } from '@/lib/inbox/saved-replies';
 import { assessReplyDraftSafety } from '@/lib/ai/reply-safety';
@@ -29,8 +29,11 @@ export async function generateInstagramReplyDraft(
 ): Promise<GenerateReplyDraftState> {
   const conversationId = formText(formData, 'conversation_id');
   const tone = formText(formData, 'tone');
-  if (!isUuid(conversationId) || !['professional', 'friendly', 'concise', 'empathetic'].includes(tone)) {
-    return { status: 'error', message: 'The conversation or response tone is invalid.' };
+  const approach = formText(formData, 'approach') || 'direct';
+  const language = formText(formData, 'language') || 'auto';
+  if (!isUuid(conversationId) || !['professional', 'friendly', 'concise', 'empathetic'].includes(tone) ||
+      !isReplyApproach(approach) || !isReplyLanguage(language)) {
+    return { status: 'error', message: 'The conversation, response tone, approach or language is invalid.' };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -88,6 +91,8 @@ export async function generateInstagramReplyDraft(
       history,
       brandVoice: brand.voice_profile,
       tone: tone as 'professional' | 'friendly' | 'concise' | 'empathetic',
+      approach,
+      language,
     });
     const draftText = generated.draftText.trim();
     if (!draftText || draftText.length > 6000) return { status: 'error', message: 'The generated reply is empty or exceeds the draft text limit.' };
@@ -350,8 +355,11 @@ export async function generateFacebookReplyDraft(
 ): Promise<GenerateReplyDraftState> {
   const conversationId = formText(formData, 'conversation_id');
   const tone = formText(formData, 'tone');
-  if (!isUuid(conversationId) || !['professional', 'friendly', 'concise', 'empathetic'].includes(tone)) {
-    return { status: 'error', message: 'The Facebook conversation or response tone is invalid.' };
+  const approach = formText(formData, 'approach') || 'direct';
+  const language = formText(formData, 'language') || 'auto';
+  if (!isUuid(conversationId) || !['professional', 'friendly', 'concise', 'empathetic'].includes(tone) ||
+      !isReplyApproach(approach) || !isReplyLanguage(language)) {
+    return { status: 'error', message: 'The Facebook conversation, response tone, approach or language is invalid.' };
   }
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -387,6 +395,8 @@ export async function generateFacebookReplyDraft(
       history,
       brandVoice: brand.voice_profile,
       tone: tone as 'professional' | 'friendly' | 'concise' | 'empathetic',
+      approach,
+      language,
     });
     const draftText = generated.draftText.trim();
     if (!draftText || draftText.length > 6000) return { status: 'error', message: 'The generated reply is empty or exceeds the draft text limit.' };
