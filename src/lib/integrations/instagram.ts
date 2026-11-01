@@ -1,6 +1,7 @@
 export const INSTAGRAM_BASE_SCOPES = [
   'instagram_business_basic',
   'instagram_business_content_publish',
+  'instagram_business_manage_insights',
 ] as const;
 
 export function getInstagramRequestedScopes(enableCommentManagement = false): string[] {

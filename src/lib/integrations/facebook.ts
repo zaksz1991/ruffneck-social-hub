@@ -5,6 +5,7 @@ export const FACEBOOK_REQUESTED_SCOPES = [
   'pages_manage_posts',
   'pages_manage_metadata',
   'pages_messaging',
+  'read_insights',
 ] as const;
 
 export const FACEBOOK_PAGE_SCOPES = [
@@ -13,6 +14,7 @@ export const FACEBOOK_PAGE_SCOPES = [
   'pages_manage_posts',
   'pages_manage_metadata',
   'pages_messaging',
+  'read_insights',
 ] as const;
 
 export type FacebookPage = {

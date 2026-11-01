@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v3.9.0
+# RuffNeck Social Hub v4.1.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, a provider-scoped Customer CRM with interaction history and private notes, deterministic manager-triggered inbox routing automation, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, provider-scoped Customer CRM, deterministic inbox routing automation, SLA and team analytics, campaign planning with UTM links, manual performance snapshots and human-triggered official Meta post insights for Facebook Pages and Instagram professional accounts. LinkedIn organization Page connections are available, while LinkedIn analytics collection is not included in this release.
 
 ## Core modules
 
@@ -23,6 +23,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - AI reply playbooks for direct, empathetic, clarifying, resolution and human-handoff approaches, with customer-language matching or explicit English, Hausa, Nigerian Pidgin, Yoruba, Igbo and French output selection.
 - Manager-triggered inbox routing rules using provider, AI triage, escalation, confidence and keyword conditions; dry-run previews, idempotent internal assignment/priority/Open/Pending updates and safe execution history.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
+- Campaign intelligence: brand-scoped campaign planning, UTM tracking, manually recorded performance and separate provider-verified Meta post snapshots.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
 ## Important provider boundaries
@@ -47,7 +48,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0026` in ascending order. v3.6.0 added prompt-only reply preferences without a migration. v3.7.0 adds `0025_inbox_routing_automation_rules.sql`; v3.9.0 adds `0026_inbox_customer_crm.sql`. Existing installations apply only migrations that have not already been successfully applied. A database already upgraded through v3.8.0 (migrations 0001–0025) applies migration 0026 once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the v3.7.0 and v3.9.0 release notes for routing safeguards and Customer CRM privacy boundaries.
+Fresh installations apply migrations `0001` through `0028` in ascending order. v4.0.0 adds `0027_publishing_campaign_intelligence.sql`; v4.1.0 adds `0028_official_meta_campaign_analytics.sql`. Existing installations apply only migrations that have not already been successfully applied. A database upgraded through v4.0.0 (migrations 0001–0027) applies migration 0028 once. For earlier installations, inspect migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md` and `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md` for feature boundaries and permissions.
 
 ## Environment variables
 
@@ -65,7 +66,7 @@ Server-only variables used by existing modules:
 - `INSTAGRAM_CLIENT_SECRET`
 - `SOCIAL_TOKEN_ENCRYPTION_KEY`
 - `META_WEBHOOK_VERIFY_TOKEN`
-- `META_GRAPH_API_VERSION` (optional Instagram API override; default `v25.0`)
+- `META_GRAPH_API_VERSION` (optional Instagram API override; default `v26.0`)
 - `FACEBOOK_APP_ID` and `FACEBOOK_APP_SECRET` (required for Facebook Pages OAuth)
 - `FACEBOOK_GRAPH_API_VERSION` (optional; default `v26.0`)
 - `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` (required for LinkedIn Organization OAuth)
@@ -176,6 +177,10 @@ Open **Inbox → Routing automation** to configure deterministic rules for Insta
 Run **Preview matches (dry run)** before applying a rule set. A preview logs `would_apply` matches but makes no workflow changes and does not consume idempotency keys. **Apply matching rules** evaluates up to 100 of the most recent conversations whose latest message is inbound. Each applied rule is bound to that exact source message and cannot run twice for the same rule/message pair. A new customer message makes a fresh evaluation possible.
 
 For existing installations through migration 0024, apply `supabase/migrations/0025_inbox_routing_automation_rules.sql` once. This release is intentionally manually triggered; it is not a webhook subscriber or background worker. Routing changes internal workflow metadata only. It never generates, approves or sends customer replies, never resolves conversations and does not call social-provider APIs.
+
+## v4.1.0 — Official Meta campaign analytics
+
+Open Campaigns and select **Sync official insights** to collect post-level metrics from connected Facebook Pages and Instagram professional accounts. The operation is manually triggered and processes no more than five recent published destinations per run. Facebook requires `read_insights` and the Page `ANALYZE` or `MANAGE` task. Instagram Login requires `instagram_business_manage_insights`. Existing accounts must reconnect through Channels and grant the permission; Meta App Review or Advanced Access may be required for client accounts. Provider snapshots are separate from manual snapshots and do not invent website clicks, leads or conversions. See `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md`; apply migration `0028_official_meta_campaign_analytics.sql` after migration 0027.
 
 ## v4.0.0 — Publishing Campaign Intelligence
 

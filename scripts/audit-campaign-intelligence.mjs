@@ -3,7 +3,7 @@ import path from 'node:path';
 
 const root = process.cwd();
 const required = [
-  ['src/app/campaigns/page.tsx', ["createPublishingCampaign", "linkContentToCampaign", "recordCampaignMetricSnapshot", "updatePublishingCampaignStatus", "aggregateSnapshots", "buildTrackedUrl", "manually entered"]],
+  ['src/app/campaigns/page.tsx', ["createPublishingCampaign", "linkContentToCampaign", "recordCampaignMetricSnapshot", "updatePublishingCampaignStatus", "aggregateSnapshots", "buildTrackedUrl", "Manual snapshots are entered by workspace members"]],
   ['src/app/actions/campaigns.ts', ["create_publishing_campaign", "update_publishing_campaign_status", "link_content_to_campaign", "record_campaign_metric_snapshot", "validateCampaignInput", "validateMetricValues"]],
   ['src/lib/campaigns/intelligence.mjs', ["validateCampaignInput", "validateMetricValues", "buildTrackedUrl", "selectLatestSnapshots", "aggregateSnapshots"]],
   ['src/lib/campaigns/intelligence.d.mts', ['CampaignValidation', 'MetricValidation', 'CampaignMetricTotals']],
@@ -34,7 +34,7 @@ for (const [relative, tokens] of required) {
   for (const token of tokens) if (!content.includes(token)) failures.push(`${relative}: missing contract '${token}'`);
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '4.0.0') failures.push(`package.json: expected version 4.0.0, received ${pkg.version}`);
+if (!['4.0.0', '4.1.0'].includes(pkg.version)) failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:campaign-intelligence')) failures.push('package.json: build does not run campaign intelligence audit');
 if (!String(pkg.scripts?.test ?? '').includes('test-campaign-intelligence.mjs')) failures.push('package.json: test does not run campaign intelligence regression guard');
 if (failures.length) {

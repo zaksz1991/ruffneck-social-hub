@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
   let profile: InstagramProfile;
   try {
-    const graphVersion = process.env.META_GRAPH_API_VERSION || 'v25.0';
+    const graphVersion = process.env.META_GRAPH_API_VERSION || 'v26.0';
     if (!/^v\d+\.\d+$/.test(graphVersion)) return finish(request, workspaceId, 'configuration');
     const profileUrl = new URL(`https://graph.instagram.com/${graphVersion}/me`);
     profileUrl.searchParams.set('fields', 'user_id,username');
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     ? shortToken.permissions.filter((scope): scope is string => typeof scope === 'string' && requestedScopes.includes(scope))
     // Preserve the legacy base-scope fallback, but never infer comment-management access
     // when the provider response does not explicitly report that permission.
-    : requestedScopes.filter((scope) => scope !== 'instagram_business_manage_comments');
+    : requestedScopes.filter((scope) => scope === 'instagram_business_basic' || scope === 'instagram_business_content_publish');
   const expiresIn = typeof longToken.expires_in === 'number' && Number.isFinite(longToken.expires_in) && longToken.expires_in > 0
     ? longToken.expires_in
     : 60 * 24 * 60 * 60;

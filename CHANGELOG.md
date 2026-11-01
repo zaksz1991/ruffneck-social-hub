@@ -12,6 +12,17 @@
 
 # Changelog
 
+## 4.1.0 — Official Meta campaign analytics
+
+- Added human-triggered post-level insights collection for connected Facebook Pages and Instagram professional accounts, scoped to successful published destinations already linked to a campaign.
+- Added normalized provider snapshots stored separately from manually entered campaign snapshots; no access tokens or raw provider response bodies are stored in analytics tables.
+- Added explicit permission gates for Facebook `read_insights` plus the Page `ANALYZE`/`MANAGE` task, and Instagram Login `instagram_business_manage_insights`. Existing accounts must reconnect and grant the relevant permission.
+- Added bounded collection (five recent destinations per run), 8-second provider request timeouts, no automatic retries, same-day idempotent upserts and role-checked snapshot persistence.
+- Added platform-specific metric labels: Instagram `views` and Facebook `post_media_view` are displayed as views/media views; Facebook unique media viewers are kept separate as reach. Website leads and conversions are not inferred from social APIs.
+- Added provider-insights unit tests and integration audits to the pre-build and test scripts.
+- Meta API review / App Review, Advanced Access where required, live OAuth permission grants, live provider calls and the complete production build remain deployment acceptance requirements.
+
+
 ## 3.9.0 — Inbox customer CRM
 
 - Added workspace-scoped, provider-account-specific customer records for Instagram and Facebook Messenger conversation participants.
