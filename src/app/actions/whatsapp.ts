@@ -7,9 +7,11 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { decryptProviderSecret, readTokenEncryptionKey } from '@/lib/integrations/token-crypto';
 import { getWhatsAppGraphVersion, buildWhatsAppMessagesUrl, safeWhatsAppErrorCode, isStaticWhatsAppTemplate, classifyWhatsAppSendResponse } from '@/lib/integrations/whatsapp';
 import { generateLocalAiReplyDraft, isReplyApproach, isReplyLanguage, type ReplyApproach, type ReplyLanguage, type ReplyHistoryMessage } from '@/lib/ai/reply-draft';
+import { isExternalWhatsAppOptOutSource, normalizeWhatsAppConsentEvidence } from '@/lib/integrations/whatsapp-consent-evidence';
 
 const DRAFT_ROLES = ['owner','admin','manager','publisher','client_approver'];
 const SEND_ROLES = ['owner','admin','manager','publisher'];
+const CONSENT_MANAGEMENT_ROLES = ['owner','admin','manager'];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
 type Obj = Record<string, unknown>;
 function object(value: unknown): value is Obj { return Boolean(value && typeof value === 'object' && !Array.isArray(value)); }
@@ -29,6 +31,28 @@ async function getAuthorizedConversation(conversationId: string, roles: string[]
   const role = membership?.role ?? '';
   if (!roles.includes(role)) return { supabase, user, conversation, role: '' };
   return { supabase, user, conversation, role };
+}
+
+export async function recordWhatsAppExternalOptOut(formData: FormData): Promise<void> {
+  const conversationId = String(formData.get('conversation_id') ?? '');
+  const sourceChannel = String(formData.get('source_channel') ?? '');
+  const evidenceNote = normalizeWhatsAppConsentEvidence(String(formData.get('evidence_note') ?? ''));
+  if (!UUID.test(conversationId)) resultPath('', 'invalid_conversation');
+  if (!isExternalWhatsAppOptOutSource(sourceChannel) || !evidenceNote) resultPath(conversationId, 'invalid_external_opt_out');
+
+  const ctx = await getAuthorizedConversation(conversationId, CONSENT_MANAGEMENT_ROLES);
+  if (!ctx.conversation || !ctx.role) resultPath(conversationId, 'permission');
+
+  const { data, error } = await ctx.supabase.rpc('record_whatsapp_external_opt_out', {
+    target_conversation_id: conversationId,
+    target_source_channel: sourceChannel,
+    target_evidence_note: evidenceNote,
+  });
+  if (error || data !== true) {
+    const permissionFailure = error?.code === '42501' || error?.message?.toLowerCase().includes('permission');
+    resultPath(conversationId, permissionFailure ? 'external_opt_out_permission' : 'external_opt_out_failed');
+  }
+  resultPath(conversationId, 'external_opt_out_recorded');
 }
 
 export async function createWhatsAppDraft(formData: FormData): Promise<void> {

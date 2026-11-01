@@ -1,0 +1,12 @@
+RUFFNECK SOCIAL HUB v5.2.0 — APPLY NOTES
+
+1. Merge the 5.2.0 patch files into the current repository without replacing unrelated files.
+2. Apply supabase/migrations/0039_whatsapp_external_opt_out_evidence.sql in Supabase SQL Editor after migrations 0033–0038.
+3. Commit and deploy through the existing GitHub/Vercel workflow.
+4. In a test WhatsApp conversation, sign in as a workspace owner/admin/manager and record an external opt-out using a documented source and evidence reference.
+5. Confirm the contact displays OPTED OUT, the event appears in Consent history, and text/template plus media send attempts are rejected by the database guard.
+6. Confirm publisher and client_approver roles do not see the external opt-out form. Confirm an opted-out contact is re-enabled only after the customer sends START or UNSTOP.
+
+No new environment variables are required.
+
+Important: this patch is built against the local v5.1.0 source snapshot available for this task. It has not been reconciled against a newer GitHub main commit, applied to Supabase, or deployed to Vercel. Compare with the current repository before merging if main has advanced.

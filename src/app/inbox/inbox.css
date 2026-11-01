@@ -324,3 +324,26 @@
 /* WhatsApp v4.9.0 — scanned private-media vault */
 .wa-media-list{display:grid;gap:12px}.wa-media-card{display:grid;gap:9px;padding:16px;border:1px solid var(--border,#26374d);border-radius:13px;background:rgba(148,163,184,.045)}.wa-media-card p{margin:0;color:var(--muted,#a9b6ca);font-size:.84rem}.wa-media-card small,.wa-media-footnote{color:var(--muted,#a9b6ca);font-size:.78rem;line-height:1.5}.wa-media-download{display:inline-flex;width:max-content;max-width:100%;padding:10px 15px;border-radius:9px;background:#0b1e3a;border:1px solid rgba(0,180,216,.4);color:#b9f1ff;font-weight:700;text-decoration:none}.wa-media-card .wa-confirm-form{margin-top:3px}.wa-media-card .wa-confirm-form button{width:max-content}.wa-media-footnote{padding-top:10px;border-top:1px solid var(--border,#26374d)}.wa-state-clean{background:rgba(16,185,129,.17);color:#a7f3d0}.wa-state-infected,.wa-state-rejected,.wa-state-expired{background:rgba(248,113,113,.17);color:#fecaca}.wa-state-processing{background:rgba(251,191,36,.16);color:#fde68a}
 @media(max-width:640px){.wa-media-card .wa-confirm-form button,.wa-media-download{width:100%;justify-content:center}}
+
+/* v5.2.0 — evidence-backed WhatsApp external opt-out controls */
+.wa-consent-panel{border-color:rgba(248,113,113,.24)}
+.wa-consent-panel>div:first-child p{max-width:900px;color:var(--muted,#a9b6ca);font-size:.88rem;line-height:1.65}
+.wa-consent-current{display:grid;gap:6px;padding:14px 16px;border:1px solid var(--border,#33465f);border-radius:11px;background:rgba(148,163,184,.06)}
+.wa-consent-current strong{font-size:.88rem;letter-spacing:.05em;color:#9ddfcf}
+.wa-consent-current span,.wa-consent-current time,.wa-consent-current small{font-size:.78rem;color:var(--muted,#a9b6ca);line-height:1.5;overflow-wrap:anywhere}
+.wa-consent-current.is-blocked{border-color:rgba(248,113,113,.45);background:rgba(127,29,29,.13)}
+.wa-consent-current.is-blocked strong{color:#fecaca}
+.wa-consent-form{display:grid;gap:12px;padding:16px;border:1px solid var(--border,#33465f);border-radius:11px;background:rgba(148,163,184,.035)}
+.wa-consent-form label{display:grid;gap:7px;color:var(--text,#eef4ff);font-size:.86rem;font-weight:700}
+.wa-consent-form select,.wa-consent-form textarea{width:100%;min-width:0;border:1px solid var(--border,#33465f);border-radius:9px;padding:11px 12px;background:#0a1c34;color:var(--text,#eef4ff);font:inherit;font-size:.86rem}
+.wa-consent-form textarea{resize:vertical;line-height:1.5}
+.wa-consent-form small{color:var(--muted,#a9b6ca);font-size:.75rem;line-height:1.55}
+.wa-consent-form button{justify-self:start;max-width:100%;border:0;border-radius:9px;padding:11px 16px;background:#a33d49;color:#fff;font-weight:800;cursor:pointer}
+.wa-consent-history{display:grid;gap:9px}
+.wa-consent-history>strong{color:var(--text,#eef4ff);font-size:.88rem}
+.wa-consent-history article{display:grid;gap:6px;padding:12px 14px;border:1px solid var(--border,#33465f);border-radius:9px;background:rgba(148,163,184,.035)}
+.wa-consent-history article>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wa-consent-history article b{font-size:.75rem;color:#fecaca}
+.wa-consent-history article span,.wa-consent-history article time{font-size:.74rem;color:var(--muted,#a9b6ca)}
+.wa-consent-history article p{margin:0;color:var(--text,#eef4ff);font-size:.8rem;line-height:1.55;overflow-wrap:anywhere}
+@media(max-width:640px){.wa-consent-form{padding:13px}.wa-consent-form button{width:100%}.wa-consent-history article>div{display:grid;gap:5px}}

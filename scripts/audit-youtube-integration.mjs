@@ -23,7 +23,7 @@ for (const [relative, tokens] of requirements) {
   for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0'].includes(pkg.version)) failures.push(`package.json: unsupported release version ${pkg.version}`);
+if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0'].includes(pkg.version)) failures.push(`package.json: unsupported release version ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:youtube && npm run audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && npm run audit:whatsapp-media && npm run audit:whatsapp-media-replies && next build')) failures.push('package.json: YouTube, Instagram and WhatsApp audits must gate next build');
 if (!String(pkg.scripts?.test ?? '').includes('npm run test:youtube')) failures.push('package.json: YouTube regression script missing from test command');
 if (failures.length) { console.error(`YouTube integration audit failed: ${failures.length} issue(s).`); for (const failure of failures) console.error(` - ${failure}`); process.exit(1); }
