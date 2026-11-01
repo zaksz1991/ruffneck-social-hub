@@ -29,7 +29,7 @@ export default async function InboxAutomationInsightsPage({ searchParams }: {
   const params = await searchParams;
   const rangeDays = [7, 30, 90].includes(Number(params.range)) ? Number(params.range) : 30;
   const outcomeFilter = ['applied', 'would_apply', 'skipped'].includes(params.outcome ?? '') ? params.outcome as string : 'all';
-  const providerFilter = ['instagram', 'facebook'].includes(params.provider ?? '') ? params.provider as string : 'all';
+  const providerFilter = ['instagram', 'facebook', 'whatsapp'].includes(params.provider ?? '') ? params.provider as string : 'all';
   const requestedPage = Math.max(1, Math.min(1000, Number.parseInt(params.page ?? '1', 10) || 1));
   const pageSize = 25;
 
@@ -99,7 +99,7 @@ export default async function InboxAutomationInsightsPage({ searchParams }: {
         <input type="hidden" name="workspace" value={workspace.id}/>
         <label>Reporting period<select name="range" defaultValue={String(rangeDays)}><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></label>
         <label>Execution outcome<select name="outcome" defaultValue={outcomeFilter}><option value="all">All outcomes</option><option value="applied">Applied</option><option value="would_apply">Dry-run match</option><option value="skipped">Skipped</option></select></label>
-        <label>Provider<select name="provider" defaultValue={providerFilter}><option value="all">Instagram and Facebook</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option></select></label>
+        <label>Provider<select name="provider" defaultValue={providerFilter}><option value="all">All channels</option><option value="instagram">Instagram</option><option value="facebook">Facebook Messenger</option><option value="whatsapp">WhatsApp</option></select></label>
         <button type="submit">Apply filters</button>
         <Link href={`/inbox/automation/insights?workspace=${workspace.id}`}>Reset</Link>
       </form>

@@ -111,3 +111,13 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Migration `0034_whatsapp_crm_and_ai_triage.sql` must be applied after 0033.
 - Full test suite, dependency-backed typecheck, Next.js build, migration execution, and live WhatsApp/AI endpoint acceptance remain unverified here.
 - WhatsApp SLA analytics, routing automation and AI reply playbooks are not included in this release.
+
+## 4.8.0 WhatsApp SLA and routing status
+
+- WhatsApp inbound/outbound timestamps now contribute to the same workspace first-response SLA and current-assignee aggregates as Instagram and Facebook Messenger.
+- WhatsApp is an available scope for deterministic routing rules and run filters; all-channel rules cover all three supported inbox channels.
+- Routing examines only the exact latest inbound WhatsApp message. AI conditions require a saved triage row linked to that exact message and meeting the configured confidence threshold.
+- Preview remains the default. Applying a rule writes an idempotency event before updating internal assignment, priority or Open/Pending status.
+- No WhatsApp API sends, auto-replies, auto-resolution or background routing were added.
+- Migration 0035 must be applied after 0034. Database migration, live role/tenant tests, Vercel build/deployment and real WhatsApp webhook acceptance remain external release gates.
+

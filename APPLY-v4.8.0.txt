@@ -1,0 +1,15 @@
+RUFFNECK SOCIAL HUB v4.8.0 — APPLY INSTRUCTIONS
+
+1. Use this package as the complete project source tree. Preserve existing Vercel and Supabase configuration.
+2. Review the release notes and compare any local changes you made after the v4.7.0 baseline before replacing project files.
+3. In Supabase SQL Editor, verify migrations 0033 and 0034 have both succeeded.
+4. Apply supabase/migrations/0035_whatsapp_sla_and_routing.sql once.
+5. Do not change or expose any server-only secrets. This upgrade adds no environment variables.
+6. Run the package test and build checks in your normal deployment workflow.
+7. Deploy only after the database migration and project checks succeed.
+8. In a controlled workspace, verify WhatsApp SLA totals against stored inbound/outbound echoes, then create a WhatsApp-only rule. Preview it first. Verify that preview does not change workflow state. Only then use Apply with an authorised manager account.
+
+LIMITS
+- Routing updates internal assignment, priority and Open/Pending status only.
+- No automatic replies, WhatsApp sends, customer-facing actions, auto-resolution or background execution are added.
+- Live database, provider and production deployment acceptance is not claimed by this source package.

@@ -15,7 +15,7 @@ const requirements = [
 const failures = [];
 for (const [relative, tokens] of requirements) { const file = path.join(root, relative); if (!fs.existsSync(file)) { failures.push(`${relative}: missing file`); continue; } const source = fs.readFileSync(file, 'utf8'); for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing contract ${JSON.stringify(token)}`); }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.1.0', '4.2.0', '4.3.0', '4.4.0', '4.4.1', '4.5.0', '4.6.0', '4.7.0'].includes(pkg.version)) failures.push(`package.json: unsupported provider analytics base version ${pkg.version}`);
+if (!['4.1.0', '4.2.0', '4.3.0', '4.4.0', '4.4.1', '4.5.0', '4.6.0', '4.7.0', '4.8.0'].includes(pkg.version)) failures.push(`package.json: unsupported provider analytics base version ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:provider-analytics &&')) failures.push('package.json: provider analytics audit must run before next build');
 if (!String(pkg.scripts?.test ?? '').includes('test-provider-analytics.mjs')) failures.push('package.json: provider analytics regression guard missing from test script');
 if (failures.length) { console.error(`Provider analytics integration audit failed: ${failures.length} issue(s).`); for (const failure of failures) console.error(` - ${failure}`); process.exit(1); }

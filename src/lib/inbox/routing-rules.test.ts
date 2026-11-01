@@ -36,6 +36,8 @@ describe('inbox routing rules', () => {
   it('matches provider, AI classification, escalation and confidence conditions', () => {
     expect(doesRoutingRuleMatch(base, candidate)).toBe(true);
     expect(doesRoutingRuleMatch({ ...base, providerScope: 'facebook' }, candidate)).toBe(false);
+    expect(doesRoutingRuleMatch({ ...base, providerScope: 'whatsapp' }, { ...candidate, provider: 'whatsapp' })).toBe(true);
+    expect(doesRoutingRuleMatch({ ...base, providerScope: 'whatsapp' }, candidate)).toBe(false);
     expect(doesRoutingRuleMatch(base, { ...candidate, confidence: 0.4 })).toBe(false);
     expect(doesRoutingRuleMatch(base, { ...candidate, escalationRequired: false })).toBe(false);
   });

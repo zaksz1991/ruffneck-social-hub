@@ -50,7 +50,7 @@ const checks = [
   ['automation page provides explicit preview, apply controls and configurable evaluation order',
     /name="rule_order"/.test(page) && /Preview matches \(dry run\)/.test(page) && /Apply matching rules/.test(page) && /name="dry_run" value="true"/.test(page) && /name="dry_run" value="false"/.test(page)],
   ['automation page explains manual trigger and no background execution',
-    /manually triggered in this release; they are not subscribed to webhook events/.test(page)],
+    /manually triggered in this release(?: for Instagram, Facebook Messenger and WhatsApp)?; they are not subscribed to webhook events/.test(page)],
   ['build and test scripts include the automation audit and regression guard',
     packageJson.scripts.build.includes('audit:automation') && packageJson.scripts.test.includes('test-inbox-automation.mjs')],
 ];

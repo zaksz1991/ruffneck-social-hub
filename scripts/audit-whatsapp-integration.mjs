@@ -54,7 +54,7 @@ assert.match(migration, /grant execute .* to service_role/i);
 assert.match(page, /human_review_confirmed/);
 assert.match(page, /send_consent/);
 assert.match(page, /draft.status==='reviewed' && canSend && !attempt/);
-assert.equal(pkg.version, '4.7.0');
+assert.ok(['4.7.0', '4.8.0'].includes(pkg.version));
 assert.match(pkg.scripts.build, /audit:whatsapp/);
 assert.match(pkg.scripts.test, /test:whatsapp/);
 assert.doesNotMatch(migration, /whatsapp_webhook_event_raw|media_url|access_token text/i);

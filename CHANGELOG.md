@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.8.0 — WhatsApp SLA and deterministic routing
+
+- Included WhatsApp Business conversations in workspace first-response SLA reports and current-assignee workload aggregates.
+- Extended manager-defined deterministic routing rules to WhatsApp, including provider-specific and all-channel scopes.
+- Added WhatsApp candidate selection using the exact latest inbound message and matching current-message AI triage only.
+- Preserved dry-run preview, bounded batches, role checks, current workspace-assignee validation and per-rule/message idempotency.
+- Kept routing strictly internal: assignment, priority and Open/Pending status only; no provider sends, auto-resolve or background execution.
+- Added migration 0035 plus focused provider-scope and SQL-contract regression checks.
+
 ## 4.7.0 — WhatsApp CRM and conversation intelligence
 
 - Extended workspace-scoped Customer CRM enrolment, relationship stages, tags, interaction history and private team notes to WhatsApp Business conversations.

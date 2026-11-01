@@ -1,4 +1,4 @@
-export const ROUTING_PROVIDERS = ['all', 'instagram', 'facebook'] as const;
+export const ROUTING_PROVIDERS = ['all', 'instagram', 'facebook', 'whatsapp'] as const;
 export const ROUTING_INTENTS = [
   'general_inquiry', 'pricing', 'product_or_service_question', 'order_or_delivery_status',
   'technical_support', 'complaint', 'refund_or_cancellation', 'partnership', 'spam_or_unqualified', 'other',
@@ -79,7 +79,7 @@ export function validateRoutingRuleInput(input: Record<string, unknown>): Routin
 }
 
 export type RoutingCandidate = {
-  provider: 'instagram' | 'facebook';
+  provider: 'instagram' | 'facebook' | 'whatsapp';
   messageText: string;
   intent: string | null;
   sentiment: string | null;

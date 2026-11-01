@@ -32,5 +32,5 @@ assert.match(triage, /'instagram' \| 'facebook' \| 'whatsapp'/);
 assert.match(waPage, /ConversationAiTriage provider="whatsapp"/);
 assert.match(waPage, /saveInboxCustomerProfile/);
 assert.match(waPage, /inbox_ai_triage/);
-assert.equal(pkg.version, '4.7.0');
+assert.ok(['4.7.0', '4.8.0'].includes(pkg.version));
 console.log('WhatsApp operations tests: 21 contracts passed, 0 failed.');

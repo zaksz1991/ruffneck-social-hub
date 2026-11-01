@@ -31,8 +31,9 @@ A registry entry is not a working integration. A connected account is not proof 
 Code presence does not complete the provider-approval, production-deployment or end-to-end acceptance gates.
 
 
-## WhatsApp operations expansion (4.6.0–4.7.0)
+## WhatsApp operations expansion (4.6.0–4.8.0)
 
 - 4.6.0: official Cloud API Embedded Signup, signed webhook ingestion, reviewed text/template sends, delivery status tracking and 24-hour policy enforcement. Operational gate: Meta app review/access, WABA setup, migration 0033, webhook subscription and live test messages.
 - 4.7.0: workspace-scoped WhatsApp CRM and advisory AI conversation triage. Operational gate: migration 0034, account/workspace isolation tests, local AI endpoint testing and an authorised WhatsApp customer conversation.
-- Next WhatsApp operations gates: add WhatsApp to SLA reports and deterministic routing; add approved media retrieval/storage and reviewed media sends only after storage policy and file-safety controls are verified.
+- 4.8.0: WhatsApp included in first-response SLA aggregates and manager-triggered deterministic routing. Operational gate: migration 0035, regression checks, live workspace-role tests and an authorised WhatsApp conversation with inbound and outbound webhook echoes.
+- Next WhatsApp operations gate: approved media retrieval/storage and reviewed media sends only after storage policy, malware/file validation, access control, retention and provider media download controls are verified.

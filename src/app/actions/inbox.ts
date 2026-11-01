@@ -990,7 +990,7 @@ export async function runInboxRoutingRules(formData: FormData): Promise<void> {
   const rawLimit = formText(formData, 'max_conversations') || '50';
   const maxConversations = /^\d+$/.test(rawLimit) ? Number(rawLimit) : 0;
   const page = isUuid(workspaceId) ? `/inbox/automation?workspace=${workspaceId}` : '/inbox/automation';
-  if (!isUuid(workspaceId) || !['all', 'instagram', 'facebook'].includes(providerScope) ||
+  if (!isUuid(workspaceId) || !['all', 'instagram', 'facebook', 'whatsapp'].includes(providerScope) ||
       !Number.isSafeInteger(maxConversations) || maxConversations < 1 || maxConversations > 100) {
     redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=invalid`);
   }
