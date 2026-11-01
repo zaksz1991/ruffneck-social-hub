@@ -26,6 +26,16 @@
 
 A queue record means only that a schedule has been stored. It is not proof of dispatch or delivery. Do not mark an account `connected` unless a real provider authorisation and account verification flow has succeeded.
 
+
+## 5.0.0 WhatsApp reviewed outbound media status
+
+- Added media reply drafts sourced exclusively from already-clean, unexpired inbound WhatsApp media in the private `whatsapp-media` bucket.
+- Outbound media is re-read server-side, its expected storage path, size, SHA-256, MIME and file signature are revalidated, and the file is uploaded to Meta's Cloud API before the single customer-send attempt is opened.
+- Added image, video, audio and document sends within the existing 24-hour customer-service window. WebP sticker and OGG audio formats are intentionally excluded because their stricter provider/codec requirements are not established by the current scanner.
+- Review and send are separate role-checked actions. Database RPCs bind the draft to the exact latest inbound message, verify current media retention/scanning state, and create a unique irreversible send attempt. An uncertain send outcome is locked and not automatically retried.
+- Migration `0037_whatsapp_reviewed_media_replies.sql` must be applied after 0036. No new environment variables are required.
+- Source-level type checks, targeted media type tests and integration-contract audits are included in the release package. Full Next.js production build, full Vitest suite, SQL execution against Supabase, Meta media upload, live message delivery and Vercel deployment remain external acceptance checks.
+
 ## Verification status for this package
 - All TypeScript/TSX source files passed TypeScript transpilation syntax checks.
 - A project-wide structural TypeScript check passed using temporary ambient stubs for dependencies that could not be installed. This is not a substitute for the actual dependency-backed `npm run typecheck`.

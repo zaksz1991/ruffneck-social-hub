@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.0.0 — Human-reviewed WhatsApp media replies
+
+- Added media reply drafts that can reuse only clean, unexpired inbound WhatsApp attachments already stored in the private media vault.
+- Added workspace-scoped SQL review and send gates bound to the exact latest inbound message, clean-source hash, retained object, active WhatsApp account and 24-hour service window.
+- Added official Meta media upload followed by one human-confirmed image, video, audio or document send. The application uses a unique one-attempt ledger; ambiguous final send outcomes are locked and never retried automatically.
+- Added post-send message history rows so existing WhatsApp delivery/read/failure webhooks update the media message normally.
+- Restricted outbound formats to JPEG/PNG images (5 MiB), MP4/3GPP video, AAC/MP4/MPEG/AMR audio and PDF/plain-text documents (16 MiB app ceiling). WebP stickers and OGG audio remain excluded because their special format requirements are not validated by the current scanner.
+- Added migration 0037, media-reply integration audits and regression checks. The previous v4.9.0 media-retrieval route is included with the `tokenExpiresAt` naming repair for the Vercel duplicate-declaration error; its retention timer remains unchanged. No user file upload, media templates, automatic messages, broadcast or out-of-window media sends are included.
+
+
 ## 4.9.0 — WhatsApp secure inbound media
 
 - Recorded safe WhatsApp media IDs, MIME metadata, provider SHA-256 digests and sanitized document names from signed inbound webhooks. Temporary media download URLs are never persisted.

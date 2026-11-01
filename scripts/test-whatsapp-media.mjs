@@ -66,5 +66,5 @@ if (previousToken === undefined) delete process.env.WHATSAPP_MEDIA_SCANNER_TOKEN
 
 const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const pkg = JSON.parse(read('package.json'));
-assert.equal(pkg.version, '4.9.0');
+assert.ok(['4.9.0', '5.0.0'].includes(pkg.version));
 console.log('WhatsApp media unit contracts: 28 passed, 0 failed.');

@@ -1,0 +1,22 @@
+RUFFNECK SOCIAL HUB v5.0.0 — APPLY NOTES
+
+THIS IS AN INCREMENTAL FEATURE PATCH, NOT A COMPLETE REPOSITORY ZIP.
+It contains only the files listed in RELEASE-MANIFEST-v5.0.0.md. Keep all other current repository files.
+
+1. Copy each file in the package to the matching path in the existing GitHub repository, replacing files with the same path and adding new files.
+2. Confirm migration 0036_whatsapp_secure_media_storage.sql is already applied successfully.
+3. The replacement route file also contains the prior Vercel compile repair: the token-expiry variable is named `tokenExpiresAt`, while the media-retention `expiresAt` remains unchanged.
+4. In Supabase SQL Editor, apply exactly once:
+   supabase/migrations/0037_whatsapp_reviewed_media_replies.sql
+5. No new Vercel environment variables are required. The existing WhatsApp connection, token encryption and ClamAV scanner settings are reused.
+6. Commit the changes to a branch or main as per the repository's normal workflow. Vercel will run the updated build audits and Next.js build.
+7. Run a controlled Meta test send using one clean, retained inbound attachment and verify the status webhook.
+
+FEATURE BOUNDARIES
+- Only previously received, clean, unexpired media can be used.
+- Image, video, audio and document messages only.
+- 24-hour customer-service window required.
+- Human review and a separate explicit send confirmation required.
+- One send attempt per draft. Unknown send outcomes are never retried.
+- No local file upload, public storage URL, automated reply, broadcast, template media header or out-of-window media send.
+- WebP sticker and OGG audio are deliberately excluded.

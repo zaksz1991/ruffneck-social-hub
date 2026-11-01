@@ -37,3 +37,10 @@ Code presence does not complete the provider-approval, production-deployment or 
 - 4.7.0: workspace-scoped WhatsApp CRM and advisory AI conversation triage. Operational gate: migration 0034, account/workspace isolation tests, local AI endpoint testing and an authorised WhatsApp customer conversation.
 - 4.8.0: WhatsApp included in first-response SLA aggregates and manager-triggered deterministic routing. Operational gate: migration 0035, regression checks, live workspace-role tests and an authorised WhatsApp conversation with inbound and outbound webhook echoes.
 - Next WhatsApp operations gate: approved media retrieval/storage and reviewed media sends only after storage policy, malware/file validation, access control, retention and provider media download controls are verified.
+
+
+## 5.0.0 WhatsApp reviewed outbound media
+
+- Added one-at-a-time outbound image, video, audio and document replies that re-use clean, retained inbound media; no arbitrary file upload is exposed.
+- Operational gate: apply migration 0037, configure the existing ClamAV scanner, confirm Meta's WhatsApp messaging permission and complete an authorised test send for each supported format inside the 24-hour window. Verify webhook delivery/read/failure echoes and ensure ambiguous outcomes remain non-retryable.
+- Excluded WebP stickers, OGG/Opus audio, template media headers, broadcasts and automatic replies until format-specific validation and separate provider-policy tests are implemented.

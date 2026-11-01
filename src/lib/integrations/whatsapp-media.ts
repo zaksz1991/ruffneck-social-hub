@@ -121,3 +121,23 @@ export async function scanWhatsAppMedia(bytes: Uint8Array, mimeType: string): Pr
     return { status: 'unavailable' };
   }
 }
+
+export type WhatsAppOutboundMediaType = 'image' | 'video' | 'audio' | 'document';
+
+/** Maps a previously quarantined, malware-scanned inbound asset to a Cloud API outbound type.
+ * Deliberately excludes WebP stickers and OGG audio because this scanner does not verify
+ * sticker constraints or the required mono Opus codec.
+ */
+export function getWhatsAppOutboundMediaType(
+  mediaKind: unknown,
+  mimeValue: unknown,
+  fileSize: unknown,
+): WhatsAppOutboundMediaType | null {
+  const mime = normalizeWhatsAppMimeType(mimeValue);
+  if (!mime || typeof fileSize !== 'number' || !Number.isSafeInteger(fileSize) || fileSize < 1 || fileSize > WHATSAPP_MEDIA_MAX_BYTES) return null;
+  if (mediaKind === 'image' && ['image/jpeg', 'image/png'].includes(mime) && fileSize <= 5 * 1024 * 1024) return 'image';
+  if (mediaKind === 'video' && ['video/mp4', 'video/3gpp'].includes(mime)) return 'video';
+  if (mediaKind === 'audio' && ['audio/aac', 'audio/mp4', 'audio/mpeg', 'audio/amr'].includes(mime)) return 'audio';
+  if (mediaKind === 'document' && ['application/pdf', 'text/plain'].includes(mime)) return 'document';
+  return null;
+}
