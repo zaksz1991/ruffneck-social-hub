@@ -100,3 +100,14 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Migration 0026 adds workspace RLS, revokes direct client writes and exposes authenticated security-definer mutation functions with independent role and source-conversation validation.
 - CRM UI masks provider participant IDs, lists at most 200 recently updated profiles and shows up to 12 recent conversation candidates for enrolment.
 - Static internal-source audit and all CRM-specific integration/regression checks passed in this package workspace. Full dependency-based Vitest, `npm run typecheck`, Next.js production build, migration execution against Supabase and Vercel deployment remain unverified because package installation did not complete in this environment.
+
+
+## 4.7.0 WhatsApp CRM and AI conversation intelligence
+
+- CRM profiles now accept WhatsApp contacts and validate their source conversation against the same workspace, connected account and provider.
+- Customer CRM listing, filtering, relationship-stage editing, notes and the interaction timeline now include WhatsApp.
+- WhatsApp conversation pages expose advisory local-AI triage using the existing intent/sentiment/summary model contract.
+- Triage persistence checks the source inbound message is still the newest message; priority application is a separate role-checked action.
+- Migration `0034_whatsapp_crm_and_ai_triage.sql` must be applied after 0033.
+- Full test suite, dependency-backed typecheck, Next.js build, migration execution, and live WhatsApp/AI endpoint acceptance remain unverified here.
+- WhatsApp SLA analytics, routing automation and AI reply playbooks are not included in this release.

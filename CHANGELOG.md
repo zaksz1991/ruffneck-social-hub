@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.7.0 — WhatsApp CRM and conversation intelligence
+
+- Extended workspace-scoped Customer CRM enrolment, relationship stages, tags, interaction history and private team notes to WhatsApp Business conversations.
+- Extended private AI conversation triage to WhatsApp: intent, sentiment, summary, escalation and suggested priority.
+- Added exact latest-inbound-message freshness validation and role-checked priority application for WhatsApp threads.
+- Added WhatsApp CRM and AI triage surfaces to the WhatsApp conversation detail page.
+- Added migration 0034; existing Instagram and Facebook behaviour remains supported.
+- WhatsApp SLA analytics, routing automation and AI playbook generation remain excluded.
+
 ## v4.6.0 — WhatsApp Business Cloud API
 
 - Added official Meta WhatsApp Embedded Signup v4, server-side token validation, six-digit phone registration and WABA webhook subscription.
@@ -111,6 +120,15 @@
 
 # Changelog
 
+## 4.7.0 — WhatsApp CRM and conversation intelligence
+
+- Extended workspace-scoped Customer CRM enrolment, relationship stages, tags, interaction history and private team notes to WhatsApp Business conversations.
+- Extended private AI conversation triage to WhatsApp: intent, sentiment, summary, escalation and suggested priority.
+- Added exact latest-inbound-message freshness validation and role-checked priority application for WhatsApp threads.
+- Added WhatsApp CRM and AI triage surfaces to the WhatsApp conversation detail page.
+- Added migration 0034; existing Instagram and Facebook behaviour remains supported.
+- WhatsApp SLA analytics, routing automation and AI playbook generation remain excluded.
+
 ## v4.6.0 — WhatsApp Business Cloud API
 
 - Added official Meta WhatsApp Embedded Signup v4, server-side token validation, six-digit phone registration and WABA webhook subscription.
@@ -170,6 +188,15 @@
 - No database migration or new environment variable is required.
 
 # Changelog
+
+## 4.7.0 — WhatsApp CRM and conversation intelligence
+
+- Extended workspace-scoped Customer CRM enrolment, relationship stages, tags, interaction history and private team notes to WhatsApp Business conversations.
+- Extended private AI conversation triage to WhatsApp: intent, sentiment, summary, escalation and suggested priority.
+- Added exact latest-inbound-message freshness validation and role-checked priority application for WhatsApp threads.
+- Added WhatsApp CRM and AI triage surfaces to the WhatsApp conversation detail page.
+- Added migration 0034; existing Instagram and Facebook behaviour remains supported.
+- WhatsApp SLA analytics, routing automation and AI playbook generation remain excluded.
 
 ## v4.6.0 — WhatsApp Business Cloud API
 
@@ -385,3 +412,13 @@
 - Added exact verified-host media retrieval, a 64 MiB cap, upload-outcome ambiguity protection and duplicate upload controls.
 - Added YouTube channel analytics to the cross-platform Analytics screen and private upload history to Publishing.
 - Scheduled/public YouTube dispatch remains disabled.
+
+
+## 4.7.0 — WhatsApp CRM and conversation intelligence
+
+- Extended workspace-scoped Customer CRM enrolment, relationship stages, tags, interaction history and private team notes to WhatsApp Business conversations.
+- Extended private AI conversation triage to WhatsApp: intent, sentiment, summary, escalation and suggested priority.
+- Added exact latest-inbound-message freshness validation and role-checked priority application for WhatsApp threads.
+- Added WhatsApp CRM and AI triage surfaces to the WhatsApp conversation detail page.
+- Added migration 0034; existing Instagram and Facebook behaviour remains supported.
+- WhatsApp SLA analytics, routing automation and AI playbook generation remain excluded.

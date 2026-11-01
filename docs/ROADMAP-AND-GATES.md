@@ -29,3 +29,10 @@ A registry entry is not a working integration. A connected account is not proof 
 16. Human-reviewed Facebook text replies: implementation added with an atomic database send gate, latest-inbound check, one-attempt ledger and 24-hour policy boundary. Gate: verify a real authorised test Page, exact production Graph API version, Page task, 2,000-character text cap and delivery reconciliation in a controlled environment. Historical-message backfill is a separate follow-up milestone. No auto-send or bulk messaging.
 
 Code presence does not complete the provider-approval, production-deployment or end-to-end acceptance gates.
+
+
+## WhatsApp operations expansion (4.6.0–4.7.0)
+
+- 4.6.0: official Cloud API Embedded Signup, signed webhook ingestion, reviewed text/template sends, delivery status tracking and 24-hour policy enforcement. Operational gate: Meta app review/access, WABA setup, migration 0033, webhook subscription and live test messages.
+- 4.7.0: workspace-scoped WhatsApp CRM and advisory AI conversation triage. Operational gate: migration 0034, account/workspace isolation tests, local AI endpoint testing and an authorised WhatsApp customer conversation.
+- Next WhatsApp operations gates: add WhatsApp to SLA reports and deterministic routing; add approved media retrieval/storage and reviewed media sends only after storage policy and file-safety controls are verified.

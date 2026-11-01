@@ -763,7 +763,7 @@ export async function generateInboxConversationTriage(
 ): Promise<GenerateInboxTriageState> {
   const provider = formText(formData, 'provider');
   const conversationId = formText(formData, 'conversation_id');
-  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId)) {
+  if (!['instagram', 'facebook', 'whatsapp'].includes(provider) || !isUuid(conversationId)) {
     return { status: 'error', message: 'The provider or conversation reference is invalid.' };
   }
 
@@ -771,8 +771,8 @@ export async function generateInboxConversationTriage(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { status: 'error', message: 'Sign in to analyse this conversation.' };
 
-  const conversationTable = provider === 'instagram' ? 'instagram_conversations' : 'facebook_conversations';
-  const messageTable = provider === 'instagram' ? 'instagram_messages' : 'facebook_messages';
+  const conversationTable = provider === 'instagram' ? 'instagram_conversations' : provider === 'facebook' ? 'facebook_conversations' : 'whatsapp_conversations';
+  const messageTable = provider === 'instagram' ? 'instagram_messages' : provider === 'facebook' ? 'facebook_messages' : 'whatsapp_messages';
   const { data: conversation, error: conversationError } = await supabase.from(conversationTable)
     .select('id,workspace_id,social_account_id').eq('id', conversationId).maybeSingle();
   if (conversationError || !conversation) return { status: 'error', message: 'This conversation is unavailable in your workspace.' };
@@ -825,9 +825,11 @@ export async function generateInboxConversationTriage(
     if (saveError || !triageId) {
       return { status: 'error', message: saveError?.message?.includes('conversation changed')
         ? 'A new message arrived while triage was running. Refresh the conversation and retry.'
-        : 'The AI assessment could not be saved. Apply migration 0023 and retry.' };
+        : provider === 'whatsapp'
+          ? 'The AI assessment could not be saved. Confirm migrations 0023 and 0034 have succeeded, then retry.'
+          : 'The AI assessment could not be saved. Confirm migration 0023 has succeeded, then retry.' };
     }
-    revalidatePath(`/inbox/${provider === 'facebook' ? 'facebook' : 'conversations'}/${conversationId}`);
+    revalidatePath(provider === 'whatsapp' ? `/inbox/whatsapp/${conversationId}` : `/inbox/${provider === 'facebook' ? 'facebook' : 'conversations'}/${conversationId}`);
     return { status: 'success', message: 'AI assessment saved. No conversation priority, status or customer message was changed.' };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'The local AI triage request failed.';
@@ -840,8 +842,8 @@ export async function applyInboxAiTriagePriority(formData: FormData): Promise<vo
   const provider = formText(formData, 'provider');
   const conversationId = formText(formData, 'conversation_id');
   const triageId = formText(formData, 'triage_id');
-  const page = provider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`;
-  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId) || !isUuid(triageId)) {
+  const page = provider === 'whatsapp' ? `/inbox/whatsapp/${conversationId}` : provider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`;
+  if (!['instagram', 'facebook', 'whatsapp'].includes(provider) || !isUuid(conversationId) || !isUuid(triageId)) {
     redirect('/inbox/conversations?triage_action=invalid');
   }
 
@@ -859,7 +861,7 @@ export async function applyInboxAiTriagePriority(formData: FormData): Promise<vo
     redirect(`${page}?triage_action=forbidden`);
   }
 
-  const messageTable = provider === 'instagram' ? 'instagram_messages' : 'facebook_messages';
+  const messageTable = provider === 'instagram' ? 'instagram_messages' : provider === 'facebook' ? 'facebook_messages' : 'whatsapp_messages';
   const { data: newestRows, error: newestError } = await supabase.from(messageTable)
     .select('id,direction').eq('conversation_id', conversationId)
     .order('provider_sent_at', { ascending: false }).order('received_at', { ascending: false }).limit(1);

@@ -13,7 +13,7 @@ const required = [
 const failures = [];
 for (const [relative, tokens] of required) { const file = path.join(root, relative); if (!fs.existsSync(file)) { failures.push(`${relative}: missing file`); continue; } const content = fs.readFileSync(file, 'utf8'); for (const token of tokens) if (!content.includes(token)) failures.push(`${relative}: missing contract '${token}'`); }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.0.0', '4.1.0', '4.2.0', '4.3.0', '4.4.0', '4.4.1', '4.5.0', '4.6.0'].includes(pkg.version)) failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
+if (!['4.0.0', '4.1.0', '4.2.0', '4.3.0', '4.4.0', '4.4.1', '4.5.0', '4.6.0', '4.7.0'].includes(pkg.version)) failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:campaign-intelligence')) failures.push('package.json: build does not run campaign intelligence audit');
 if (!String(pkg.scripts?.test ?? '').includes('test-campaign-intelligence.mjs')) failures.push('package.json: test does not run campaign intelligence regression guard');
 if (failures.length) { console.error(`Campaign intelligence audit failed: ${failures.length} issue(s).`); for (const failure of failures) console.error(` - ${failure}`); process.exit(1); }

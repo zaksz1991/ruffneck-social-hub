@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+const migration = read('supabase/migrations/0034_whatsapp_crm_and_ai_triage.sql');
+const action = read('src/app/actions/inbox.ts');
+const crmAction = read('src/app/actions/inbox-customers.ts');
+const crmPage = read('src/app/inbox/customers/page.tsx');
+const triage = read('src/app/inbox/conversation-ai-triage.tsx');
+const waPage = read('src/app/inbox/whatsapp/[id]/page.tsx');
+const pkg = JSON.parse(read('package.json'));
+
+assert.match(migration, /inbox_customer_profiles_provider_check[\s\S]*whatsapp/);
+assert.match(migration, /inbox_ai_triage_provider_check[\s\S]*whatsapp/);
+assert.match(migration, /from public\.whatsapp_conversations/);
+assert.match(migration, /from public\.whatsapp_messages/);
+assert.match(migration, /conversation changed while triage was running/);
+assert.match(migration, /actor_role not in \('owner', 'admin', 'manager', 'publisher'\)/);
+assert.match(migration, /comment on function public\.save_inbox_ai_triage[\s\S]*never sends replies or mutates workflow automatically/);
+assert.match(action, /provider === 'whatsapp'[\s\S]*Confirm migrations 0023 and 0034 have succeeded/);
+assert.match(migration, /security definer[\s\S]*set search_path = ''/i);
+assert.match(migration, /grant execute on function public\.save_inbox_customer_profile[\s\S]*to authenticated/i);
+assert.match(migration, /grant execute on function public\.save_inbox_ai_triage[\s\S]*to authenticated/i);
+assert.match(crmAction, /'instagram', 'facebook', 'whatsapp'/);
+assert.match(crmPage, /whatsapp_conversations/);
+assert.match(crmPage, /whatsapp_messages/);
+assert.match(crmPage, /WhatsApp Business/);
+assert.match(action, /conversationTable = provider === 'instagram'.*'whatsapp_conversations'/s);
+assert.match(action, /messageTable = provider === 'instagram'.*'whatsapp_messages'/s);
+assert.match(action, /target_provider: provider/);
+assert.match(triage, /'instagram' \| 'facebook' \| 'whatsapp'/);
+assert.match(waPage, /ConversationAiTriage provider="whatsapp"/);
+assert.match(waPage, /saveInboxCustomerProfile/);
+assert.match(waPage, /inbox_ai_triage/);
+assert.equal(pkg.version, '4.7.0');
+console.log('WhatsApp operations tests: 21 contracts passed, 0 failed.');

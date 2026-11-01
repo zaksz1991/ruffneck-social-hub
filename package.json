@@ -1,13 +1,13 @@
 {
   "name": "ruffneck-social-hub",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/remove-known-stale-content-component.mjs && npm run audit:imports && npm run audit:workflow && npm run audit:saved-replies && npm run audit:sla && npm run audit:ai-triage && npm run audit:reply-safety && npm run audit:reply-playbooks && npm run audit:automation && npm run audit:automation-insights && npm run audit:customer-crm && npm run audit:campaign-intelligence && npm run audit:provider-analytics && npm run audit:linkedin-analytics && npm run audit:tiktok && npm run audit:youtube && npm run audit:instagram-comments && npm run audit:whatsapp && next build",
+    "build": "node scripts/remove-known-stale-content-component.mjs && npm run audit:imports && npm run audit:workflow && npm run audit:saved-replies && npm run audit:sla && npm run audit:ai-triage && npm run audit:reply-safety && npm run audit:reply-playbooks && npm run audit:automation && npm run audit:automation-insights && npm run audit:customer-crm && npm run audit:campaign-intelligence && npm run audit:provider-analytics && npm run audit:linkedin-analytics && npm run audit:tiktok && npm run audit:youtube && npm run audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-inbox-workflow.mjs && node scripts/test-saved-replies.mjs && node scripts/test-inbox-sla.mjs && node scripts/test-ai-triage.mjs && node scripts/audit-reply-safety.mjs && node scripts/test-reply-safety.mjs && node scripts/audit-reply-playbooks.mjs && node scripts/test-reply-playbooks.mjs && node scripts/test-inbox-automation.mjs && node scripts/test-inbox-automation-insights.mjs && node scripts/test-inbox-customer-crm.mjs && node scripts/test-campaign-intelligence.mjs && node scripts/test-provider-analytics.mjs && node scripts/test-linkedin-analytics.mjs && node --experimental-strip-types scripts/test-tiktok-integration.mjs && npm run test:youtube && npm run test:instagram-comments && npm run test:whatsapp && vitest run",
+    "test": "node scripts/test-inbox-workflow.mjs && node scripts/test-saved-replies.mjs && node scripts/test-inbox-sla.mjs && node scripts/test-ai-triage.mjs && node scripts/audit-reply-safety.mjs && node scripts/test-reply-safety.mjs && node scripts/audit-reply-playbooks.mjs && node scripts/test-reply-playbooks.mjs && node scripts/test-inbox-automation.mjs && node scripts/test-inbox-automation-insights.mjs && node scripts/test-inbox-customer-crm.mjs && node scripts/test-campaign-intelligence.mjs && node scripts/test-provider-analytics.mjs && node scripts/test-linkedin-analytics.mjs && node --experimental-strip-types scripts/test-tiktok-integration.mjs && npm run test:youtube && npm run test:instagram-comments && npm run test:whatsapp && npm run test:whatsapp-operations && vitest run",
     "audit:imports": "node scripts/audit-internal-imports.mjs",
     "audit:workflow": "node scripts/audit-inbox-workflow.mjs",
     "audit:saved-replies": "node scripts/audit-saved-replies.mjs",
@@ -27,7 +27,9 @@
     "test:youtube": "node --experimental-strip-types scripts/test-youtube-integration.mjs",
     "test:instagram-comments": "node --experimental-strip-types scripts/test-instagram-comments.mjs",
     "audit:whatsapp": "node scripts/audit-whatsapp-integration.mjs",
-    "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp-integration.mjs"
+    "test:whatsapp": "node --experimental-strip-types scripts/test-whatsapp-integration.mjs",
+    "test:whatsapp-operations": "node scripts/test-whatsapp-operations.mjs",
+    "audit:whatsapp-operations": "node scripts/audit-whatsapp-operations.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

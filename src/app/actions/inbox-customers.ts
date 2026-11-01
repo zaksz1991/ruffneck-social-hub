@@ -23,7 +23,7 @@ export async function saveInboxCustomerProfile(formData: FormData): Promise<void
     relationshipStage: text(formData, 'relationship_stage') || 'lead',
     tags: text(formData, 'tags'),
   });
-  if (!isUuid(workspaceId) || !isUuid(conversationId) || !['instagram', 'facebook'].includes(provider) || !input.ok) {
+  if (!isUuid(workspaceId) || !isUuid(conversationId) || !['instagram', 'facebook', 'whatsapp'].includes(provider) || !input.ok) {
     redirect('/inbox/customers?action=invalid');
   }
 
