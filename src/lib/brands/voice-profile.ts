@@ -11,7 +11,6 @@ export type BrandVoiceField = 'approved_facts' | 'forbidden_claims' | 'escalatio
 export type BrandVoiceValidation =
   | { ok: true; value: BrandVoiceProfile }
   | { ok: false; reason: string };
-
 const MAX_LIST_ITEMS = 12;
 const MAX_LIST_ITEM_LENGTH = 240;
 const CONTROL_CHARACTERS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
@@ -20,7 +19,6 @@ function cleanSingleLine(value: unknown, maximum: number): string {
   if (typeof value !== 'string') return '';
   return value.replace(CONTROL_CHARACTERS, '').replace(/\s+/g, ' ').trim().slice(0, maximum);
 }
-
 function lines(value: unknown): string[] | null {
   if (typeof value !== 'string') return null;
   const rows = value.replace(CONTROL_CHARACTERS, '').split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
@@ -36,7 +34,6 @@ function lines(value: unknown): string[] | null {
   }
   return unique;
 }
-
 export function validateBrandVoiceProfile(input: {
   tone: unknown;
   languages: unknown;
@@ -48,7 +45,7 @@ export function validateBrandVoiceProfile(input: {
     return { ok: false, reason: 'Enter the brand tone and supported languages as text.' };
   }
   if (input.tone.length > 240 || input.languages.length > 240) {
-    return { ok: false, reason: 'Tone and language guidance must each be 240 characters or fewer.' };
+    return { ok: false, reason: 'Tone and language guidance must be 240 characters or fewer.' };
   }
   const approvedFacts = lines(input.approvedFacts);
   const forbiddenClaims = lines(input.forbiddenClaims);
@@ -67,7 +64,6 @@ export function validateBrandVoiceProfile(input: {
     },
   };
 }
-
 export function readBrandVoiceProfile(value: unknown): BrandVoiceProfile {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return { tone: '', languages: '', approved_facts: [], forbidden_claims: [], escalation_triggers: [] };
@@ -84,7 +80,6 @@ export function readBrandVoiceProfile(value: unknown): BrandVoiceProfile {
     escalation_triggers: readList(record.escalation_triggers),
   };
 }
-
 export function formatBrandVoiceList(value: unknown): string {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').join('\n') : '';
 }

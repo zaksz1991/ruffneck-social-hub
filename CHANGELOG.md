@@ -160,3 +160,10 @@
 - Added paginated access to complete workspace publishing history, with 25 records per page and exact total count.
 - Kept the latest-100 operational snapshot for the calendar and queue-health panel distinct from the full history browser.
 - Added responsive previous/next navigation and preserved active filters between pages.
+
+## 3.0.1 — 2026-11-01
+
+- Fixed the production TypeScript error by exporting the missing `saveBrandVoiceProfile` server action consumed by the Brands & clients route.
+- Added validated profile normalization and an authenticated, workspace-role-checked call to `update_brand_voice_profile`.
+- Included the Brand Voice Studio route, helper, styles, unit tests and migration 0019 in the complete source package.
+- Kept profile writes restricted to workspace owners and admins; the database function remains the authoritative authorization boundary.

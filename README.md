@@ -1,4 +1,4 @@
-# RuffNeck Social Hub v3.0.0
+# RuffNeck Social Hub v3.0.1
 
 RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
@@ -115,3 +115,12 @@ The Publishing Calendar can export the selected month as an iCalendar `.ics` fil
 This release adds inbound Facebook Messenger webhook capture, unified conversation threads, local/private AI reply drafts and human-reviewed text replies. New messages are captured after the Page webhook is enabled; historical conversations are not backfilled. Sending is limited to 2,000 characters and the standard 24-hour window, with a one-attempt ledger and no automatic retries.
 
 For an existing v2.9.0 database, apply only `supabase/migrations/0018_facebook_messenger_inbox_and_replies.sql`. Then reconnect eligible Facebook Pages after granting the approved Meta messaging scopes and configure the Page `messages` webhook callback at `/api/webhooks/facebook`. See `RELEASE-NOTES-v3.0.0.md` for setup and safeguards.
+
+
+## Brand Voice Studio (v3.0.1 repair)
+
+The Brands & clients area supports workspace-scoped brand voice settings: tone, supported languages, approved facts, forbidden claims and escalation triggers. Values are supplied to supported AI drafting and reply-assistance flows as guidance; they do not bypass provider rules or human approval.
+
+The save action is restricted by the database to workspace owners and admins. For databases that have applied migrations through 0018 but not 0019, apply `supabase/migrations/0019_brand_voice_profiles.sql` once. Do not reapply a migration already recorded as applied.
+
+See `RELEASE-NOTES-v3.0.1.md` for the Vercel build repair and verification boundaries.
