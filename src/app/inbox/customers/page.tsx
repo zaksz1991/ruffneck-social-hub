@@ -8,7 +8,7 @@ import '../inbox.css';
 type Workspace = { id: string; name: string };
 type Membership = { workspace_id: string; role: string };
 type CustomerProfile = {
-  id: string; workspace_id: string; provider: 'instagram' | 'facebook'; conversation_id: string;
+  id: string; workspace_id: string; provider: 'instagram' | 'facebook' | 'whatsapp'; conversation_id: string;
   social_account_id: string; participant_provider_id: string; display_label: string | null;
   relationship_stage: string; tags: string[]; created_at: string; updated_at: string;
 };
@@ -25,7 +25,7 @@ function dateTime(value: string): string {
 }
 
 function providerLabel(provider: string): string {
-  return provider === 'facebook' ? 'Facebook Messenger' : 'Instagram';
+  return provider === 'facebook' ? 'Facebook Messenger' : provider === 'whatsapp' ? 'WhatsApp Business' : 'Instagram';
 }
 
 function actionMessage(action: string | undefined): { text: string; error?: boolean } | null {
@@ -35,7 +35,7 @@ function actionMessage(action: string | undefined): { text: string; error?: bool
     invalid: { text: 'The customer record details are invalid.', error: true },
     invalid_note: { text: 'Enter an internal note of no more than 2,000 characters.', error: true },
     forbidden: { text: 'Your workspace role cannot perform this CRM action.', error: true },
-    save_failed: { text: 'The customer record could not be saved. Confirm migration 0026 and workspace membership.', error: true },
+    save_failed: { text: 'The customer record could not be saved. Confirm migrations 0026 and 0034 and workspace membership.', error: true },
     note_failed: { text: 'The internal note could not be saved. Confirm migration 0026 and your operational role.', error: true },
   };
   return action ? messages[action] ?? null : null;
@@ -92,11 +92,15 @@ export default async function InboxCustomersPage({
   if (selectedProfile) {
     const conversationResult = selectedProfile.provider === 'instagram'
       ? await supabase.from('instagram_conversations').select('last_message_at').eq('id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).maybeSingle()
-      : await supabase.from('facebook_conversations').select('last_message_at').eq('id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).maybeSingle();
+      : selectedProfile.provider === 'facebook'
+        ? await supabase.from('facebook_conversations').select('last_message_at').eq('id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).maybeSingle()
+        : await supabase.from('whatsapp_conversations').select('last_message_at').eq('id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).maybeSingle();
     conversationLastMessageAt = conversationResult.data?.last_message_at ?? null;
     const messageResult = selectedProfile.provider === 'instagram'
       ? await supabase.from('instagram_messages').select('id,direction,message_text,provider_sent_at', { count: 'exact' }).eq('conversation_id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).order('provider_sent_at', { ascending: false }).limit(30)
-      : await supabase.from('facebook_messages').select('id,direction,message_text,provider_sent_at', { count: 'exact' }).eq('conversation_id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).order('provider_sent_at', { ascending: false }).limit(30);
+      : selectedProfile.provider === 'facebook'
+        ? await supabase.from('facebook_messages').select('id,direction,message_text,provider_sent_at', { count: 'exact' }).eq('conversation_id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).order('provider_sent_at', { ascending: false }).limit(30)
+        : await supabase.from('whatsapp_messages').select('id,direction,message_text,provider_sent_at', { count: 'exact' }).eq('conversation_id', selectedProfile.conversation_id).eq('workspace_id', workspace.id).order('provider_sent_at', { ascending: false }).limit(30);
     timeline = ((messageResult.data ?? []) as Message[]).reverse();
     messageCount = messageResult.count ?? timeline.length;
     if (canOperate) {
@@ -106,16 +110,18 @@ export default async function InboxCustomersPage({
     }
   }
 
-  let unprofiled: Array<Conversation & { provider: 'instagram' | 'facebook' }> = [];
+  let unprofiled: Array<Conversation & { provider: 'instagram' | 'facebook' | 'whatsapp' }> = [];
   if (!migrationUnavailable) {
-    const [instagramResult, facebookResult] = await Promise.all([
+    const [instagramResult, facebookResult, whatsappResult] = await Promise.all([
       supabase.from('instagram_conversations').select('id,social_account_id,participant_provider_id,last_message_at').eq('workspace_id', workspace.id).order('last_message_at', { ascending: false }).limit(40),
       supabase.from('facebook_conversations').select('id,social_account_id,participant_provider_id,last_message_at').eq('workspace_id', workspace.id).order('last_message_at', { ascending: false }).limit(40),
+      supabase.from('whatsapp_conversations').select('id,social_account_id,participant_provider_id,last_message_at').eq('workspace_id', workspace.id).order('last_message_at', { ascending: false }).limit(40),
     ]);
     const known = new Set(profiles.map((profile) => `${profile.provider}:${profile.social_account_id}:${profile.participant_provider_id}`));
     unprofiled = [
       ...((instagramResult.data ?? []) as Conversation[]).map((row) => ({ ...row, provider: 'instagram' as const })),
       ...((facebookResult.data ?? []) as Conversation[]).map((row) => ({ ...row, provider: 'facebook' as const })),
+      ...((whatsappResult.data ?? []) as Conversation[]).map((row) => ({ ...row, provider: 'whatsapp' as const })),
     ].filter((row) => !known.has(`${row.provider}:${row.social_account_id}:${row.participant_provider_id}`))
       .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime())
       .slice(0, 12);
@@ -131,9 +137,9 @@ export default async function InboxCustomersPage({
     <header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link><nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/sla">Inbox SLA</Link><Link href="/inbox/automation">Automation</Link><span>Customer CRM</span></nav><Link href="/inbox/conversations" className="inbox-back">Back to inbox</Link></header>
     <section className="inbox-main inbox-customer-crm-main">
       <div className="inbox-heading"><div><span className="eyebrow">CUSTOMER RELATIONSHIP MANAGEMENT</span><h1>Customer CRM</h1><p>Organise inbox relationships, track interaction history and keep internal service notes alongside supported social conversations.</p></div><div className="inbox-workspace"><small>ACTIVE WORKSPACE</small><strong>{workspace.name}</strong>{workspaces.length > 1 && <div>{workspaces.map((item) => <Link key={item.id} href={`/inbox/customers?workspace=${item.id}`} className={item.id === workspace.id ? 'selected' : ''}>{item.name}</Link>)}</div>}</div></div>
-      <div className="inbox-notice"><strong>Provider-scoped customer records</strong><p>Each CRM record belongs to one connected account and one provider participant. RuffNeck does not automatically merge identities across Facebook, Instagram or separate Pages. Provider identifiers are masked in the interface; contact details are not inferred or imported.</p></div>
+      <div className="inbox-notice"><strong>Provider-scoped customer records</strong><p>Each CRM record belongs to one connected account and one provider participant. RuffNeck does not automatically merge identities across Facebook, Instagram, WhatsApp or separate connected accounts. Provider identifiers are masked in the interface; contact details are not inferred or imported.</p></div>
       {notice && <div className={`reply-action-message${notice.error ? ' is-error' : ''}`} role="status">{notice.text}</div>}
-      {migrationUnavailable ? <div className="inbox-inline-note"><strong>Customer CRM is not installed.</strong> Apply Supabase migration <code>0026_inbox_customer_crm.sql</code> after migration 0025. No inbox data has been changed.</div> : <>
+      {migrationUnavailable ? <div className="inbox-inline-note"><strong>Customer CRM is not installed.</strong> Apply migrations <code>0026_inbox_customer_crm.sql</code> and <code>0034_whatsapp_crm_and_ai_triage.sql</code> after their prerequisites. No inbox data has been changed.</div> : <>
         <div className="inbox-customer-metrics"><article><span>CRM records shown</span><strong>{profiles.length}</strong><small>Latest 200 records maximum</small></article><article><span>Customers</span><strong>{stageCounts.customer ?? 0}</strong><small>Customer-stage records in this sample</small></article><article><span>VIP</span><strong>{stageCounts.vip ?? 0}</strong><small>VIP-stage records in this sample</small></article><article><span>At risk</span><strong>{stageCounts.at_risk ?? 0}</strong><small>At-risk records in this sample</small></article></div>
         <form className="inbox-customer-filters" method="get"><input type="hidden" name="workspace" value={workspace.id}/><label>Search CRM<input name="q" defaultValue={query} placeholder="Name, tag, account or masked ID" maxLength={80}/></label><label>Relationship stage<select name="stage" defaultValue={selectedStage}><option value="all">All stages</option><option value="lead">Lead</option><option value="prospect">Prospect</option><option value="customer">Customer</option><option value="vip">VIP</option><option value="at_risk">At risk</option><option value="former_customer">Former customer</option></select></label><button type="submit">Filter records</button><Link href={`/inbox/customers?workspace=${workspace.id}`}>Clear</Link></form>
         <div className="inbox-customer-layout">
@@ -158,7 +164,7 @@ export default async function InboxCustomersPage({
           {unprofiled.length ? <div className="inbox-customer-unprofiled-grid">{unprofiled.map((conversation) => { const account = accountMap.get(conversation.social_account_id); return <article key={`${conversation.provider}:${conversation.id}`}><div><strong>{maskProviderParticipantId(conversation.participant_provider_id)}</strong><span>{providerLabel(conversation.provider)} · {account?.display_name || 'Connected account'}</span><small>Last interaction {dateTime(conversation.last_message_at)}</small></div><form action={saveInboxCustomerProfile}><input type="hidden" name="workspace_id" value={workspace.id}/><input type="hidden" name="provider" value={conversation.provider}/><input type="hidden" name="conversation_id" value={conversation.id}/><input type="hidden" name="relationship_stage" value="lead"/><input type="hidden" name="display_label" value=""/><input type="hidden" name="tags" value=""/><button type="submit">Add / refresh CRM</button></form></article>; })}</div> : <div className="inbox-empty"><p>No recent conversation candidates are currently available.</p></div>}
         </section>}
       </>}
-      <footer className="inbox-footer">RUFFNECK SOCIAL HUB · WORKSPACE-ISOLATED CUSTOMER CRM</footer>
+      <footer className="inbox-footer">RUFFNECK SOCIAL HUB · WORKSPACE-ISOLATED CUSTOMER CRM · INSTAGRAM / FACEBOOK / WHATSAPP</footer>
     </section>
   </main>;
 }

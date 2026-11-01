@@ -22,7 +22,7 @@ const label = (value: string) => value.replaceAll('_', ' ');
 export default function ConversationAiTriage({
   provider, conversationId, triage, canGenerate, canApplyPriority, hasLatestInbound, disabledReason,
 }: {
-  provider: 'instagram' | 'facebook';
+  provider: 'instagram' | 'facebook' | 'whatsapp';
   conversationId: string;
   triage: Triage | null;
   canGenerate: boolean;
