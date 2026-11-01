@@ -126,3 +126,22 @@
 .inbox-ai-triage-result{padding:18px 20px;border-top:1px solid #edf1f6}.inbox-ai-triage-tags{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}.inbox-ai-triage-tags span{display:inline-flex;padding:6px 9px;border-radius:6px;background:#edf3fa;color:#3e5874;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.25px}.inbox-ai-triage-tags .sentiment-positive{background:#eaf7ef;color:#16764f}.inbox-ai-triage-tags .sentiment-negative{background:#fff0f0;color:#a43c45}.inbox-ai-triage-tags .sentiment-mixed{background:#fff6e8;color:#9a6417}.inbox-ai-triage-tags .priority-high{background:#fff2e5;color:#a65a0d}.inbox-ai-triage-tags .priority-urgent,.inbox-ai-triage-tags .triage-escalation{background:#fff0f0;color:#a12c37}.inbox-ai-triage-summary{display:grid;gap:5px;margin:12px 0}.inbox-ai-triage-summary strong{font-size:11px;color:#294663}.inbox-ai-triage-summary p{margin:0;color:#586b80;font-size:11px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
 .inbox-ai-triage-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px;padding-top:13px;border-top:1px solid #edf1f6}.inbox-ai-triage-footer small{font-size:9px;color:#8794a6}.inbox-ai-triage-footnote{margin:12px 0 0;color:#8996a7;font-size:9px;line-height:1.5}.inbox-ai-triage-footer form{margin:0}
 @media(max-width:650px){.inbox-ai-triage-heading{display:grid;padding:16px}.inbox-ai-triage-badge{justify-self:start}.inbox-ai-triage-privacy{margin:12px}.inbox-ai-triage-run,.inbox-ai-triage-result{padding:14px}.inbox-ai-triage-run button,.inbox-ai-triage-footer button{width:100%}.inbox-ai-triage-footer{display:grid}.inbox-ai-triage-footer form{width:100%}}
+
+/* v3.5.0: reply policy scan, language confidence and human escalation signals */
+.reply-safety-assessment{display:grid;gap:9px;margin:12px 0 15px;padding:13px 14px;border:1px solid #dfe7f0;border-radius:10px;background:#f8fafc}
+.reply-safety-assessment.risk-low{border-color:#cfe9dc;background:#f5fbf7}
+.reply-safety-assessment.risk-review{border-color:#f0dfba;background:#fffaf0}
+.reply-safety-assessment.risk-escalate{border-color:#f1cccc;background:#fff6f6}
+.reply-safety-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.reply-safety-heading strong{font-size:10px;color:#294663}.reply-safety-heading span{padding:5px 7px;border-radius:5px;background:#e8eef5;color:#50647d;font-size:8px;font-weight:900;letter-spacing:.4px}
+.reply-safety-assessment.risk-low .reply-safety-heading span{background:#e1f4e9;color:#18734e}.reply-safety-assessment.risk-review .reply-safety-heading span{background:#fff0cf;color:#946014}.reply-safety-assessment.risk-escalate .reply-safety-heading span{background:#ffe1e1;color:#a12c37}
+.reply-safety-languages{display:flex;gap:8px 14px;flex-wrap:wrap}.reply-safety-languages span,.reply-safety-assessment>small{font-size:9px;color:#718096}.reply-safety-languages b{color:#344e69;text-transform:capitalize}
+.reply-safety-assessment>p{margin:0;font-size:10px;line-height:1.6;color:#5e6f83}.reply-safety-escalation,.reply-safety-stale{font-size:9px;line-height:1.5;color:#a12c37}.reply-safety-flags{display:flex;gap:6px;flex-wrap:wrap}.reply-safety-flags span{padding:5px 7px;border-radius:5px;background:#fff0e6;color:#9b531c;font-size:8px;font-weight:800}
+@media(max-width:600px){.reply-safety-assessment{padding:11px}.reply-safety-languages{display:grid;gap:6px}.reply-safety-heading{align-items:flex-start}}
+
+.reply-escalation-required{margin:10px 0;padding:10px 12px;border:1px solid #efcccc;border-radius:8px;background:#fff7f7;color:#93424a;font-size:9px;line-height:1.55}
+.reply-escalation-clear-form{display:grid;gap:7px;margin:10px 0;padding:11px 12px;border:1px solid #e6d5b0;border-radius:8px;background:#fffaf0}
+.reply-escalation-clear-form button{justify-self:start;border:0;border-radius:7px;background:#7d4c11;color:#fff;padding:9px 12px;font-size:9px;font-weight:900;cursor:pointer}
+.reply-escalation-clear-form small{font-size:9px;line-height:1.5;color:#8b6b3e}
+.reply-escalation-cleared{margin:10px 0;padding:10px 12px;border:1px solid #cde8d8;border-radius:8px;background:#f2faf5;color:#236849;font-size:9px;line-height:1.55;font-weight:700}
+@media(max-width:600px){.reply-escalation-clear-form button{width:100%}}

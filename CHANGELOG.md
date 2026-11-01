@@ -1,3 +1,14 @@
+## v3.5.0 — 2026-11-01
+
+- Added deterministic AI reply safety scans for Instagram and Facebook Messenger drafts: brand restrictions, escalation triggers, high-risk customer topics, possible unsupported commitments and language mismatch signals.
+- Added heuristic language hints for English, Hausa, Yoruba, Igbo, Nigerian Pidgin and French; unknown or low-confidence text remains explicitly inconclusive.
+- Persisted each scan against the exact locked draft text and latest inbound message with a SHA-256 draft fingerprint; the database checks the draft text under row lock before accepting the assessment. The UI flags newer inbound messages and edited Messenger drafts as stale.
+- Added a two-person clearance step for high-risk Facebook Messenger replies: a different owner/admin/manager must clear an already reviewed draft.
+- Required a successfully stored scan before sending new Messenger drafts, including saved-reply drafts; editing or refreshing text resets scan and human review state, requiring a fresh scan and review.
+- Added send-time database re-evaluation of the current brand policy; a later brand voice change cannot rely on an old low-risk scan.
+- Added a database trigger preventing Messenger send attempts for unscanned drafts and high-risk drafts with stale scans or uncleared escalation. Existing Messenger drafts are grandfathered to preserve prior review decisions.
+- Preserved mandatory human review, Instagram read-only replies, existing Facebook Messenger send policy and provider permission boundaries. No AI auto-send was introduced.
+
 ## v3.4.0 — 2026-11-01
 
 - Added local-model AI conversation intent, sentiment, summary, escalation and suggested-priority triage to Instagram and Facebook Messenger threads.

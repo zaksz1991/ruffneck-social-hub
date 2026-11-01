@@ -3,6 +3,8 @@
 import { useActionState } from 'react';
 import { generateInstagramReplyDraft, updateInstagramReplyDraft, type GenerateReplyDraftState } from '@/app/actions/inbox';
 
+type Assessment = { id: string; draft_id: string; risk_level: 'low'|'review'|'escalate'; customer_language: string; draft_language: string; language_match: boolean | null; escalation_required: boolean; flags: string[]; guidance: string; created_at: string; is_current: boolean };
+
 type Draft = {
   id: string;
   draft_text: string;
@@ -17,15 +19,18 @@ const initialState: GenerateReplyDraftState = { status: 'idle' };
 export default function ReplyDraftStudio({
   conversationId,
   drafts,
+  assessments,
   canGenerate,
   disabledReason,
 }: {
   conversationId: string;
   drafts: Draft[];
+  assessments: Assessment[];
   canGenerate: boolean;
   disabledReason: string;
 }) {
   const [state, formAction, pending] = useActionState(generateInstagramReplyDraft, initialState);
+  const assessmentMap = new Map(assessments.map((assessment) => [assessment.draft_id, assessment]));
 
   return (
     <section className="inbox-events reply-draft-studio">
@@ -88,6 +93,26 @@ export default function ReplyDraftStudio({
                 aria-label="Reply draft text"
               />
               <div className="reply-draft-meta"><span>Model: {draft.model}</span>{draft.reviewed_at && <span>Reviewed {new Date(draft.reviewed_at).toLocaleString()}</span>}</div>
+              {assessmentMap.get(draft.id) && (() => {
+                const assessment = assessmentMap.get(draft.id)!;
+                const flagLabels: Record<string, string> = {
+                  brand_forbidden_claim: 'Brand-forbidden claim',
+                  brand_escalation_trigger: 'Brand escalation trigger',
+                  high_risk_customer_topic: 'High-risk customer topic',
+                  possible_unverified_commitment: 'Possible unverified commitment',
+                  possible_sensitive_or_internal_content: 'Possible sensitive or internal content',
+                  possible_language_mismatch: 'Possible language mismatch',
+                };
+                return <aside className={`reply-safety-assessment risk-${assessment.risk_level}`}>
+                  <div className="reply-safety-heading"><strong>AI response policy scan</strong><span>{assessment.risk_level.toUpperCase()}</span></div>
+                  <div className="reply-safety-languages"><span>Customer language: <b>{assessment.customer_language}</b></span><span>Draft language: <b>{assessment.draft_language}</b></span><span>Language match: <b>{assessment.language_match === null ? 'Not confident' : assessment.language_match ? 'Likely match' : 'Possible mismatch'}</b></span></div>
+                  {assessment.escalation_required && <strong className="reply-safety-escalation">Human escalation recommended</strong>}
+                  {assessment.flags.length > 0 && <div className="reply-safety-flags">{assessment.flags.map((flag) => <span key={flag}>{flagLabels[flag] ?? flag}</span>)}</div>}
+                  <p>{assessment.guidance}</p>
+                  {!assessment.is_current && <strong className="reply-safety-stale">This scan no longer matches the edited draft. Recheck every claim and language choice before approval.</strong>}
+                  {assessment.is_current && <small>Fingerprint matches the current draft · {new Date(assessment.created_at).toLocaleString()}</small>}
+                </aside>;
+              })()}
               {draft.status === 'draft' ? (
                 <div className="reply-draft-actions">
                   <button type="submit" name="decision" value="draft" className="reply-secondary">Save edits</button>

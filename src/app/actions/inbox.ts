@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { generateLocalAiReplyDraft, type ReplyHistoryMessage } from '@/lib/ai/reply-draft';
 import { generateLocalAiConversationTriage, type ConversationTriageMessage } from '@/lib/ai/conversation-triage';
 import { validateSavedReplyInput } from '@/lib/inbox/saved-replies';
+import { assessReplyDraftSafety } from '@/lib/ai/reply-safety';
 
 export type GenerateReplyDraftState = {
   status: 'idle' | 'success' | 'error';
@@ -88,17 +89,43 @@ export async function generateInstagramReplyDraft(
       brandVoice: brand.voice_profile,
       tone: tone as 'professional' | 'friendly' | 'concise' | 'empathetic',
     });
+    const draftText = generated.draftText.trim();
+    if (!draftText || draftText.length > 6000) return { status: 'error', message: 'The generated reply is empty or exceeds the draft text limit.' };
 
     const { data: draftId, error: saveError } = await supabase.rpc('create_instagram_reply_draft', {
       target_conversation_id: conversationId,
       target_source_last_message_id: latest.id,
-      target_draft_text: generated.draftText,
+      target_draft_text: draftText,
       target_model: generated.model,
     });
     if (saveError || !draftId) return { status: 'error', message: 'The generated draft could not be saved. Apply migration 0011 and retry.' };
 
+    const safety = assessReplyDraftSafety({ customerMessage: latest.message_text, draftText, brandVoice: brand.voice_profile });
+    const { error: safetyError } = await supabase.rpc('save_inbox_reply_safety_assessment', {
+      target_provider: 'instagram',
+      target_conversation_id: conversationId,
+      target_draft_id: String(draftId),
+      target_source_last_message_id: latest.id,
+      target_draft_text: draftText,
+      target_risk_level: safety.risk_level,
+      target_customer_language: safety.customer_language,
+      target_draft_language: safety.draft_language,
+      target_language_match: safety.language_match,
+      target_escalation_required: safety.escalation_required,
+      target_flags: safety.flags,
+      target_guidance: safety.guidance,
+      target_draft_fingerprint: safety.draft_fingerprint,
+    });
+
     revalidatePath(`/inbox/conversations/${conversationId}`);
-    return { status: 'success', message: 'Draft generated and saved for human review. It has not been sent.', draftId: String(draftId) };
+    const assessmentNotice = safetyError
+      ? ' The draft was saved, but its safety assessment could not be stored; review it manually and confirm migration 0024.'
+      : safety.escalation_required
+        ? ' The policy scan recommends human escalation before any response is approved.'
+        : safety.risk_level === 'review'
+          ? ' The policy scan found items requiring additional review.'
+          : ' The policy scan found no configured rule triggers; human review is still required.';
+    return { status: 'success', message: `Draft generated and saved for human review. It has not been sent.${assessmentNotice}`, draftId: String(draftId) };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'The local AI draft request failed.';
     return { status: 'error', message: message.slice(0, 220) };
@@ -249,6 +276,73 @@ export async function bulkUpdateInstagramCommentTriage(formData: FormData): Prom
 }
 
 
+/** Run or rerun the deterministic policy scan for an edited or saved-template Messenger draft. */
+export async function assessFacebookReplyDraftSafety(formData: FormData): Promise<void> {
+  const conversationId = formText(formData, 'conversation_id');
+  const draftId = formText(formData, 'draft_id');
+  const page = isUuid(conversationId) ? `/inbox/facebook/${conversationId}` : '/inbox/conversations';
+  if (!isUuid(conversationId) || !isUuid(draftId)) redirect(`${page}?escalation_action=invalid`);
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { data: draft, error: draftError } = await supabase.from('facebook_reply_drafts')
+    .select('id,workspace_id,conversation_id,source_last_message_id,draft_text,status')
+    .eq('id', draftId).eq('conversation_id', conversationId).maybeSingle();
+  if (draftError || !draft || !['draft','reviewed'].includes(draft.status)) redirect(`${page}?escalation_action=scan_failed`);
+  const { data: membership } = await supabase.from('workspace_members').select('role')
+    .eq('workspace_id', draft.workspace_id).eq('user_id', user.id).maybeSingle();
+  if (!membership || !['owner','admin','manager','publisher','client_approver'].includes(membership.role)) {
+    redirect(`${page}?escalation_action=blocked`);
+  }
+  const { data: latestRows, error: latestError } = await supabase.from('facebook_messages')
+    .select('id,direction,message_text').eq('conversation_id', conversationId)
+    .order('provider_sent_at', { ascending: false }).order('received_at', { ascending: false }).limit(1);
+  const latest = latestRows?.[0];
+  if (latestError || !latest || latest.direction !== 'inbound' || latest.id !== draft.source_last_message_id) {
+    redirect(`${page}?escalation_action=scan_stale`);
+  }
+  const { data: conversation } = await supabase.from('facebook_conversations')
+    .select('workspace_id,social_account_id').eq('id', conversationId).maybeSingle();
+  if (!conversation || conversation.workspace_id !== draft.workspace_id) redirect(`${page}?escalation_action=scan_failed`);
+  const { data: account } = await supabase.from('social_accounts').select('brand_id')
+    .eq('id', conversation.social_account_id).eq('workspace_id', draft.workspace_id).maybeSingle();
+  if (!account) redirect(`${page}?escalation_action=scan_failed`);
+  const { data: brand } = await supabase.from('brands').select('voice_profile')
+    .eq('id', account.brand_id).eq('workspace_id', draft.workspace_id).maybeSingle();
+  if (!brand) redirect(`${page}?escalation_action=scan_failed`);
+
+  const safety = assessReplyDraftSafety({ customerMessage: latest.message_text, draftText: draft.draft_text, brandVoice: brand.voice_profile });
+  const { error: assessmentError } = await supabase.rpc('save_inbox_reply_safety_assessment', {
+    target_provider: 'facebook', target_conversation_id: conversationId, target_draft_id: draftId,
+    target_source_last_message_id: latest.id, target_draft_text: draft.draft_text, target_risk_level: safety.risk_level,
+    target_customer_language: safety.customer_language, target_draft_language: safety.draft_language,
+    target_language_match: safety.language_match, target_escalation_required: safety.escalation_required,
+    target_flags: safety.flags, target_guidance: safety.guidance, target_draft_fingerprint: safety.draft_fingerprint,
+  });
+  if (assessmentError) redirect(`${page}?escalation_action=scan_failed`);
+  revalidatePath(page);
+  redirect(`${page}?escalation_action=scanned`);
+}
+
+/** High-risk Messenger reply clearance: requires a different owner/admin/manager from the draft reviewer. */
+export async function clearInboxReplyEscalation(formData: FormData): Promise<void> {
+  const conversationId = formText(formData, 'conversation_id');
+  const draftId = formText(formData, 'draft_id');
+  const page = isUuid(conversationId) ? `/inbox/facebook/${conversationId}` : '/inbox/conversations';
+  if (!isUuid(conversationId) || !isUuid(draftId)) redirect(`${page}?escalation_action=invalid`);
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { error } = await supabase.rpc('clear_inbox_reply_escalation', {
+    target_conversation_id: conversationId,
+    target_draft_id: draftId,
+  });
+  if (error) redirect(`${page}?escalation_action=blocked`);
+  revalidatePath(page);
+  redirect(`${page}?escalation_action=cleared`);
+}
+
 /** Facebook Messenger: local AI draft generation. No provider message is sent. */
 export async function generateFacebookReplyDraft(
   _previousState: GenerateReplyDraftState,
@@ -294,15 +388,40 @@ export async function generateFacebookReplyDraft(
       brandVoice: brand.voice_profile,
       tone: tone as 'professional' | 'friendly' | 'concise' | 'empathetic',
     });
+    const draftText = generated.draftText.trim();
+    if (!draftText || draftText.length > 6000) return { status: 'error', message: 'The generated reply is empty or exceeds the draft text limit.' };
     const { data: draftId, error: saveError } = await supabase.rpc('create_facebook_reply_draft', {
       target_conversation_id: conversationId,
       target_source_last_message_id: latest.id,
-      target_draft_text: generated.draftText,
+      target_draft_text: draftText,
       target_model: generated.model,
     });
     if (saveError || !draftId) return { status: 'error', message: 'The Facebook reply draft could not be saved. Confirm migration 0018.' };
+    const safety = assessReplyDraftSafety({ customerMessage: latest.message_text, draftText, brandVoice: brand.voice_profile });
+    const { error: safetyError } = await supabase.rpc('save_inbox_reply_safety_assessment', {
+      target_provider: 'facebook',
+      target_conversation_id: conversationId,
+      target_draft_id: String(draftId),
+      target_source_last_message_id: latest.id,
+      target_draft_text: draftText,
+      target_risk_level: safety.risk_level,
+      target_customer_language: safety.customer_language,
+      target_draft_language: safety.draft_language,
+      target_language_match: safety.language_match,
+      target_escalation_required: safety.escalation_required,
+      target_flags: safety.flags,
+      target_guidance: safety.guidance,
+      target_draft_fingerprint: safety.draft_fingerprint,
+    });
     revalidatePath(`/inbox/facebook/${conversationId}`);
-    return { status: 'success', message: 'Draft saved for human review. It has not been sent.', draftId: String(draftId) };
+    const assessmentNotice = safetyError
+      ? ' The draft was saved, but its safety assessment could not be stored; review it manually and confirm migration 0024.'
+      : safety.escalation_required
+        ? ' The policy scan recommends human escalation before any response is approved.'
+        : safety.risk_level === 'review'
+          ? ' The policy scan found items requiring additional review.'
+          : ' The policy scan found no configured rule triggers; human review is still required.';
+    return { status: 'success', message: `Draft saved for human review. It has not been sent.${assessmentNotice}`, draftId: String(draftId) };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'The local AI draft request failed.';
     return { status: 'error', message: message.slice(0, 220) };
@@ -320,12 +439,18 @@ export async function updateFacebookReplyDraft(formData: FormData): Promise<void
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+  const { data: existingDraft, error: existingError } = await supabase.from('facebook_reply_drafts')
+    .select('draft_text').eq('id', draftId).eq('conversation_id', conversationId).maybeSingle();
+  if (existingError || !existingDraft) redirect(`${page}?draft_action=failed`);
+  const textChanged = existingDraft.draft_text !== draftText;
   const { error } = await supabase.rpc('update_facebook_reply_draft', {
     target_draft_id: draftId, target_draft_text: draftText, target_status: decision,
   });
   if (error) redirect(`${page}?draft_action=failed`);
   revalidatePath(page);
-  redirect(`${page}?draft_action=${decision === 'reviewed' ? 'reviewed' : decision === 'discarded' ? 'discarded' : 'saved'}`);
+  const action = textChanged && decision === 'reviewed' ? 'rescan_required'
+    : decision === 'reviewed' ? 'reviewed' : decision === 'discarded' ? 'discarded' : 'saved';
+  redirect(`${page}?draft_action=${action}`);
 }
 
 /** Sends exactly one human-reviewed text reply, only inside Meta's 24-hour window. */

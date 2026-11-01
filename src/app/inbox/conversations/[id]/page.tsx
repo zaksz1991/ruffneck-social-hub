@@ -5,12 +5,14 @@ import ReplyDraftStudio from './reply-draft-studio';
 import SavedReplyPicker, { type InboxSavedReply } from '@/app/inbox/saved-reply-picker';
 import InboxConversationWorkflowPanel, { type InboxWorkflow, type InboxInternalNote, type InboxTeammate } from '@/app/inbox/conversation-workflow-panel';
 import ConversationAiTriage from '@/app/inbox/conversation-ai-triage';
+import { fingerprintReplyDraft } from '@/lib/ai/reply-safety';
 import '../../inbox.css';
 
 type Conversation = { id: string; workspace_id: string; participant_provider_id: string; social_account_id: string; last_message_at: string };
 type Message = { id: string; direction: 'inbound'|'outbound'; message_text: string; provider_sent_at: string; received_at: string };
 type Draft = { id: string; draft_text: string; model: string; status: 'draft'|'reviewed'|'discarded'; created_at: string; reviewed_at: string | null };
 type Triage = { id: string; source_last_message_id: string; intent: string; sentiment: string; suggested_priority: 'low'|'normal'|'high'|'urgent'; escalation_required: boolean; confidence: number; summary: string; reason: string; model: string; created_at: string };
+type ReplyAssessment = { id: string; draft_id: string; source_last_message_id: string; risk_level: 'low'|'review'|'escalate'; customer_language: string; draft_language: string; language_match: boolean | null; escalation_required: boolean; flags: string[]; guidance: string; draft_fingerprint: string; created_at: string; is_current: boolean };
 
 export default async function ConversationDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ draft_action?: string; workflow_action?: string; note_action?: string; triage_action?: string }> }) {
   const { id } = await params;
@@ -40,7 +42,16 @@ export default async function ConversationDetail({ params, searchParams }: { par
   const savedReplies = (savedReplyRows ?? []) as InboxSavedReply[];
   const messages = ((messageResult.data ?? []) as Message[]).reverse();
   const drafts = (draftResult.data ?? []) as Draft[];
+  const assessmentResult = drafts.length ? await supabase.from('inbox_reply_safety_assessments')
+    .select('id,draft_id,source_last_message_id,risk_level,customer_language,draft_language,language_match,escalation_required,flags,guidance,draft_fingerprint,is_current,created_at')
+    .eq('provider', 'instagram').eq('conversation_id', id).in('draft_id', drafts.map((draft) => draft.id)) : { data: [], error: null };
+  const assessmentRows = (assessmentResult.data ?? []) as ReplyAssessment[];
   const latestMessage = messages[messages.length - 1];
+  const draftById = new Map(drafts.map((draft) => [draft.id, draft]));
+  const replyAssessments: ReplyAssessment[] = assessmentRows.map((assessment) => ({
+    ...assessment,
+    is_current: assessment.is_current && assessment.source_last_message_id === latestMessage?.id && fingerprintReplyDraft(draftById.get(assessment.draft_id)?.draft_text ?? '') === assessment.draft_fingerprint,
+  }));
   const triage = ((triageResult.data ?? []) as Triage[]).find((item) => item.source_last_message_id === latestMessage?.id) ?? null;
   const { data: membership } = await supabase.from('workspace_members').select('role')
     .eq('workspace_id', c.workspace_id).eq('user_id', user.id).maybeSingle();
@@ -85,7 +96,7 @@ export default async function ConversationDetail({ params, searchParams }: { par
         {!messages.length ? <div className="inbox-empty"><p>No text messages stored.</p></div> : <div className="inbox-event-list">{messages.map(m => <article className="inbox-event" key={m.id}><div className="event-symbol">{m.direction === 'inbound' ? 'IN' : 'OUT'}</div><div className="event-copy"><div className="event-title"><strong>{m.direction === 'inbound' ? 'Incoming message' : 'Outgoing message'}</strong></div><p style={{ whiteSpace:'pre-wrap' }}>{m.message_text}</p><small>{new Date(m.provider_sent_at).toLocaleString()}</small></div></article>)}</div>}
       </section>
       <SavedReplyPicker provider="instagram" conversationId={id} replies={savedReplies} canUse={canDraft} hasLatestInbound={latestMessage?.direction === 'inbound'} />
-      <ReplyDraftStudio conversationId={id} drafts={drafts} canGenerate={canDraft && latestMessage?.direction === 'inbound'} disabledReason={draftDisabledReason} />
+      <ReplyDraftStudio conversationId={id} drafts={drafts} assessments={replyAssessments} canGenerate={canDraft && latestMessage?.direction === 'inbound'} disabledReason={draftDisabledReason} />
     </section>
   </main>;
 }
