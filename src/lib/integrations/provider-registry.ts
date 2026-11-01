@@ -26,9 +26,10 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     notes: 'Some inbox and moderation operations remain permission-gated and are not sent automatically.',
   },
   {
-    id: 'tiktok', name: 'TikTok', accountLabel: 'TikTok account', availability: 'planned',
-    connectionMethod: 'Official TikTok OAuth', supportedSurfaces: [],
-    notes: 'Not connectable in this release. No unofficial scraping or browser automation is used.',
+    id: 'tiktok', name: 'TikTok', accountLabel: 'TikTok account', availability: 'available',
+    connectionMethod: 'TikTok Login Kit / OAuth v2',
+    supportedSurfaces: ['Official account authorization and encrypted token storage', 'Public video list analytics: views, likes, comments and shares', 'Consent-based transfer of approved videos into the creator TikTok app inbox', 'Refresh-token rotation and manual sync'],
+    notes: 'TikTok API access depends on approved app products and user-granted scopes. Inbox upload transfers a video draft for the creator to finish in TikTok; this integration does not directly publish, schedule or choose public privacy settings. No scraping or browser automation is used.',
   },
   {
     id: 'youtube', name: 'YouTube', accountLabel: 'YouTube channel', availability: 'planned',

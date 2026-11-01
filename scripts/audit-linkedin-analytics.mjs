@@ -62,8 +62,8 @@ for (const [relative, tokens] of requirements) {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '4.2.0') failures.push(`package.json: expected 4.2.0, got ${pkg.version}`);
-if (!String(pkg.scripts?.build ?? '').includes('audit:linkedin-analytics && next build')) failures.push('package.json: LinkedIn analytics audit must gate next build');
+if (pkg.version !== '4.3.0') failures.push(`package.json: expected 4.3.0, got ${pkg.version}`);
+if (!String(pkg.scripts?.build ?? '').includes('audit:linkedin-analytics && npm run audit:tiktok && next build')) failures.push('package.json: LinkedIn and TikTok audits must gate next build');
 if (!String(pkg.scripts?.test ?? '').includes('test-linkedin-analytics.mjs')) failures.push('package.json: LinkedIn analytics regression guard missing from test script');
 
 if (failures.length) {

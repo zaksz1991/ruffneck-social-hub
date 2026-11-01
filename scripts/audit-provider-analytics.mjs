@@ -55,7 +55,7 @@ for (const [relative, tokens] of requirements) {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.1.0', '4.2.0'].includes(pkg.version)) failures.push(`package.json: unsupported provider analytics base version ${pkg.version}`);
+if (!['4.1.0', '4.2.0', '4.3.0'].includes(pkg.version)) failures.push(`package.json: unsupported provider analytics base version ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:provider-analytics &&')) {
   failures.push('package.json: provider analytics audit must run before next build');
 }

@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v4.2.0
+# RuffNeck Social Hub v4.3.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, provider-scoped Customer CRM, deterministic inbox routing automation, SLA and team analytics, campaign planning with UTM links, manual performance snapshots and human-triggered official post insights for Facebook Pages, Instagram professional accounts and LinkedIn organization Pages. LinkedIn analytics is limited to organic organization-post statistics; paid/ad activity, follower/visitor analytics and saves are not included.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, provider-scoped Customer CRM, deterministic inbox routing automation, SLA and team analytics, campaign planning with UTM links, manual performance snapshots and human-triggered official post insights for Facebook Pages, Instagram professional accounts and LinkedIn organization Pages; and TikTok creator OAuth, public-video analytics and consent-based video transfer to the TikTok creator inbox. TikTok direct/public publishing and scheduled TikTok dispatch remain disabled. LinkedIn analytics is limited to organic organization-post statistics; paid/ad activity, follower/visitor analytics and saves are not included. TikTok video counters are account-scoped public video statistics, not reach, campaign attribution, clicks or conversion analytics.
 
 ## Core modules
 
@@ -24,11 +24,13 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Manager-triggered inbox routing rules using provider, AI triage, escalation, confidence and keyword conditions; dry-run previews, idempotent internal assignment/priority/Open/Pending updates and safe execution history.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
 - Campaign intelligence: brand-scoped campaign planning, UTM tracking, manually recorded performance and separate provider-verified Facebook, Instagram and LinkedIn post snapshots.
+- TikTok: Login Kit OAuth v2 with encrypted/rotating credentials, manual Display API video-list analytics, and a user-consented PULL_FROM_URL transfer of one approved video to the creator’s TikTok inbox. The creator finishes the draft and publishes inside TikTok; no direct posting or scheduled TikTok worker exists.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
 ## Important provider boundaries
 
 - Publishing worker support is limited to supported Instagram and Facebook Page single-image posts. Facebook publishing requires `pages_manage_posts` plus an eligible Page task. Other providers and other media types are not implied to work.
+- TikTok accounts can be connected with `user.info.basic`, `video.list` and `video.upload` scopes when the TikTok app has the required product/scope access. v4.3.0 reads recent public video counters through the Display API and can transfer one approved video to the creator inbox with `PULL_FROM_URL` after explicit consent. TikTok must verify each exact media hostname for URL pull. The creator must review, select privacy and complete final publishing in the TikTok app. RuffNeck does not implement TikTok Direct Post, scheduled TikTok dispatch, comments, messaging or inbox automation. Provider app approval and media-host verification are external requirements.
 - LinkedIn organization Pages can be connected after the app has approved `rw_organization_admin` and `w_organization_social` access. v4.2.0 adds human-triggered organic post statistics for successful campaign-linked organization posts; the endpoint requires `rw_organization_admin` and an organization administrator role; this permission is included in LinkedIn's Community Management API product and avoids requiring the separate Advertising API product for the legacy read-only scope. Existing connections must reconnect to grant this additional scope. Paid/ad activity, saves and Page follower/visitor analytics are not included. v2.1.0 adds text-only organization publishing through the existing scheduled worker. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
 - Instagram messaging is read-only. AI DM reply drafts are never sent. Facebook Messenger replies are limited to human-reviewed text drafts, the standard 24-hour window and the Page Send API MESSAGE task.
 - Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
@@ -48,7 +50,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0029` in ascending order. v4.0.0 adds `0027_publishing_campaign_intelligence.sql`; v4.1.0 adds `0028_official_meta_campaign_analytics.sql`; v4.2.0 adds `0029_linkedin_organization_post_analytics.sql`. Existing installations apply only migrations that have not already been successfully applied. A database upgraded through v4.1.0 (migrations 0001–0028) applies migration 0029 once. For earlier installations, inspect migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md`, `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md` and `README-v4.2.0-LINKEDIN-ORGANIC-ANALYTICS.md` for feature boundaries and permissions.
+Fresh installations apply migrations `0001` through `0030` in ascending order. v4.0.0 adds `0027_publishing_campaign_intelligence.sql`; v4.1.0 adds `0028_official_meta_campaign_analytics.sql`; v4.2.0 adds `0029_linkedin_organization_post_analytics.sql`; v4.3.0 adds `0030_tiktok_video_analytics_and_inbox_uploads.sql`. Existing installations apply only migrations that have not already been successfully applied. A database upgraded through v4.2.0 (migrations 0001–0029) applies migration 0030 once. For earlier installations, inspect migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md`, `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md`, `README-v4.2.0-LINKEDIN-ORGANIC-ANALYTICS.md` and `README-v4.3.0-TIKTOK-INTEGRATION.md` for feature boundaries and permissions.
 
 ## Environment variables
 
@@ -71,6 +73,8 @@ Server-only variables used by existing modules:
 - `FACEBOOK_GRAPH_API_VERSION` (optional; default `v26.0`)
 - `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` (required for LinkedIn Organization OAuth)
 - `LINKEDIN_API_VERSION` (optional; default `202610`)
+- `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET` (required for TikTok Login Kit OAuth)
+- `TIKTOK_VERIFIED_MEDIA_HOSTS` (optional exact host allowlist; required for TikTok PULL_FROM_URL video transfer)
 - `LOCAL_AI_BASE_URL` and `LOCAL_AI_MODEL` (optional); `LOCAL_AI_API_KEY` is optional
 
 New optional variable:

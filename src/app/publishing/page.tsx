@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { cancelScheduledJob, scheduleApprovedContent } from '@/app/actions/publishing';
+import { refreshTikTokInboxUploadStatus, resolveUnknownTikTokInboxUpload, uploadApprovedVideoToTikTokInbox } from '@/app/actions/tiktok';
+import { validateTikTokVideoSourceUrl } from '@/lib/integrations/tiktok';
+import './tiktok-publishing.css';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { summarizeQueueHealth } from '@/lib/publishing/queue-health';
 
 type Workspace = { id: string; name: string };
 type Brand = { id: string; name: string; timezone: string };
-type ContentItem = { id: string; brand_id: string; title: string; status: string; updated_at: string };
+type ContentItem = { id: string; brand_id: string; title: string; status: string; updated_at: string; media_refs: unknown };
 type SocialAccount = {
   id: string;
   brand_id: string;
@@ -14,7 +17,9 @@ type SocialAccount = {
   display_name: string | null;
   connection_state: string;
   capabilities: Record<string, unknown> | null;
+  granted_scopes: string[] | null;
 };
+type TikTokInboxUpload = { id: string; content_id: string; social_account_id: string; status: string; safe_error_code: string | null; publish_id: string | null; provider_video_id: string | null; created_at: string; updated_at: string };
 type PublishingJob = {
   id: string;
   brand_id: string;
@@ -62,7 +67,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>; 
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string; tiktok_upload?: string; tiktok_error?: string }>; 
 }) {
   const params = await searchParams;
   const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
@@ -93,6 +98,8 @@ export default async function PublishingQueuePage({
   const queuePageSize = 25;
   let historyJobs: PublishingJob[] = [];
   let historyCount = 0;
+  let tiktokUploads: TikTokInboxUpload[] = [];
+  let tiktokUploadReadError = false;
 
   if (activeWorkspace) {
     const { data: member } = await supabase
@@ -105,8 +112,8 @@ export default async function PublishingQueuePage({
 
     const [brandResult, contentResult, accountResult, jobResult] = await Promise.all([
       supabase.from('brands').select('id,name,timezone').eq('workspace_id', activeWorkspace.id).order('name'),
-      supabase.from('content_items').select('id,brand_id,title,status,updated_at').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(100),
-      supabase.from('social_accounts').select('id,brand_id,provider,display_name,connection_state,capabilities').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }),
+      supabase.from('content_items').select('id,brand_id,title,status,updated_at,media_refs').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(100),
+      supabase.from('social_accounts').select('id,brand_id,provider,display_name,connection_state,capabilities,granted_scopes').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }),
       supabase.from('publishing_jobs').select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe').eq('workspace_id', activeWorkspace.id).order('scheduled_at', { ascending: true }).limit(100),
     ]);
 
@@ -124,12 +131,21 @@ export default async function PublishingQueuePage({
     historyJobs = (historyResult.data ?? []) as PublishingJob[];
     historyCount = historyResult.count ?? 0;
     if (historyResult.error) queueReadFailed = true;
+    const uploadResult = await supabase.from('tiktok_inbox_uploads').select('id,content_id,social_account_id,status,safe_error_code,publish_id,provider_video_id,created_at,updated_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }).limit(15);
+    tiktokUploads = (uploadResult.data ?? []) as TikTokInboxUpload[];
+    tiktokUploadReadError = Boolean(uploadResult.error);
   }
 
   const brandById = new Map(brands.map((brand) => [brand.id, brand]));
   const contentById = new Map(approvedContent.map((item) => [item.id, item]));
   const accountById = new Map(accounts.map((account) => [account.id, account]));
   const connectedAccounts = accounts.filter((account) => account.connection_state === 'connected' && account.capabilities?.content_publish === true);
+  const tiktokInboxAccounts = accounts.filter((account) => account.connection_state === 'connected' && account.provider === 'tiktok' && account.capabilities?.content_upload === true && account.granted_scopes?.includes('video.upload') === true);
+  const verifiedTikTokHosts = (process.env.TIKTOK_VERIFIED_MEDIA_HOSTS ?? '').split(',').map((host) => host.trim()).filter(Boolean);
+  const approvedTikTokVideos = approvedContent.filter((item) => {
+    const refs = Array.isArray(item.media_refs) ? item.media_refs : [];
+    return refs.length === 1 && validateTikTokVideoSourceUrl(refs[0], verifiedTikTokHosts).ok;
+  });
   const canSchedule = roleCanSchedule(role);
   const allowedStates = ['all', 'queued', 'claimed', 'dispatching', 'succeeded', 'retryable', 'failed', 'needs_review', 'cancelled'];
   const selectedState = allowedStates.includes(params.state ?? '') ? (params.state ?? 'all') : 'all';
@@ -159,10 +175,29 @@ export default async function PublishingQueuePage({
     migration: 'The publishing queue database upgrade has not been applied yet. Apply migration 0005.',
     schedule: 'The schedule could not be created. Confirm the content is approved and the channel is connected to the same brand.',
     cancel: 'The queue item could not be cancelled. It may already be processing.',
+    tiktok_input: 'Select a valid approved video and TikTok destination.',
   };
   const successMessages: Record<string, string> = {
     scheduled: 'Added to the publishing queue. No post has been sent to a social network.',
     cancelled: 'The queued item has been cancelled.',
+  };
+  const tiktokErrorMessages: Record<string, string> = {
+    permission: 'Your workspace role cannot transfer approved videos to TikTok.',
+    consent: 'Confirm that you have rights to transfer this approved video.',
+    content: 'Only approved content with one video media URL can be transferred.',
+    account: 'Choose a connected TikTok account belonging to the approved content brand.',
+    upload_scope: 'Reconnect TikTok and grant video.upload to enable native inbox video transfer.',
+    url_invalid: 'The media URL must be a public HTTPS link without credentials, ports or fragments.',
+    video_format: 'TikTok inbox transfer currently accepts one .mp4 or .mov file.',
+    domain_unverified: 'The media hostname is not in TIKTOK_VERIFIED_MEDIA_HOSTS. Verify the domain with TikTok and add its exact hostname in Vercel.',
+    duplicate: 'A transfer for this video is already pending or has an uncertain provider outcome. Check its status before trying again.',
+    token: 'TikTok access could not be refreshed. Reconnect the account and retry after checking its status.',
+    provider: 'TikTok rejected the video transfer. Check API product access, video URL accessibility and account scopes.',
+    outcome_unknown: 'TikTok transfer outcome is unknown. Automatic retry is blocked. An owner, administrator or manager must verify TikTok and choose a manual reconciliation outcome before another transfer can be started.',
+    status_unavailable: 'This transfer does not have a status that can be refreshed yet.',
+    status_check: 'TikTok status could not be checked. Try again later; the original upload was not repeated.',
+    upload_record: 'A secure upload record could not be created. Check migration 0030 and workspace permissions.',
+    reconciliation: 'The manual reconciliation was not accepted. Confirm you are an owner, administrator or manager and refresh the transfer record.',
   };
 
   return (
@@ -185,6 +220,10 @@ export default async function PublishingQueuePage({
 
         {params.error && <p className="notice error">{errorMessages[params.error] ?? 'The requested publishing action failed.'}</p>}
         {params.saved === 'bulk' ? <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Created {Number(params.created ?? 0)} schedule(s); {Number(params.failed ?? 0)} destination(s) failed. {Number(params.duplicates ?? 0) > 0 ? `${Number(params.duplicates)} duplicate schedule(s) were skipped. ` : ''}{params.denied === '1' ? 'At least one destination was rejected by workspace permissions. ' : ''}Each successful destination is queued separately; nothing is published immediately.</p> : params.saved && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
+        {params.tiktok_upload === 'sent' && <p className="notice success">The video file was transferred to the TikTok creator inbox. Open TikTok to finish the caption, privacy choices and final publishing action.</p>}
+        {params.tiktok_upload === 'checked' && <p className="notice success">TikTok upload status refreshed. Check the transfer history below for the latest state.</p>}
+        {params.tiktok_upload === 'reconciled' && <p className="notice success">The unknown TikTok transfer has been manually reconciled and its history updated.</p>}
+        {params.tiktok_error && <p className="notice error" role="alert">{tiktokErrorMessages[params.tiktok_error] ?? 'The TikTok video transfer could not be completed. No direct public post was created.'}</p>}
 
         {!activeWorkspace ? (
           <section className="publishing-empty"><h2>No workspace available</h2><p>Create or join a workspace before scheduling content.</p><Link href="/" className="publishing-primary">Return to workspace setup</Link></section>
@@ -229,9 +268,24 @@ export default async function PublishingQueuePage({
 
             <section className="publishing-safety-banner">
               <span className="publishing-safety-icon">✓</span>
-              <div><strong>Human-approved multi-network publishing</strong><p>Approved image posts can be dispatched to Instagram Business accounts and Facebook Pages. Approved text-only posts can be dispatched to LinkedIn organization Pages when the required LinkedIn permission is granted. Other networks remain unavailable until their provider workers are implemented.</p></div>
-              <span className="publishing-gate">INSTAGRAM + FACEBOOK + LINKEDIN</span>
+              <div><strong>Human-approved multi-network publishing</strong><p>Approved image posts can be dispatched to Instagram Business accounts and Facebook Pages. Approved text-only posts can be dispatched to LinkedIn organization Pages when the required LinkedIn permission is granted. TikTok videos use a separate consent-based transfer into the creator inbox; final publication happens in TikTok.</p></div>
+              <span className="publishing-gate">INSTAGRAM + FACEBOOK + LINKEDIN + TIKTOK INBOX</span>
             </section>
+
+            {canSchedule && <section className="tiktok-inbox-transfer-card">
+              <div className="publishing-section-heading"><div><span className="eyebrow">OFFICIAL TIKTOK CONTENT API</span><h2>Send an approved video to TikTok</h2><p>Transfer one approved video into the connected creator&apos;s TikTok inbox. This is not an automatic public post or scheduled publication.</p></div><span className="publishing-tag">HUMAN FINAL PUBLISH</span></div>
+              {tiktokInboxAccounts.length === 0 ? <p className="tiktok-transfer-muted">Connect a TikTok account with the video.upload permission to enable creator-inbox transfer.</p> : approvedTikTokVideos.length === 0 ? <p className="tiktok-transfer-muted">No approved content has exactly one .mp4 or .mov media URL on a TikTok-verified host. Add a public video URL to an approved content item and configure TIKTOK_VERIFIED_MEDIA_HOSTS.</p> : <form action={uploadApprovedVideoToTikTokInbox} className="tiktok-transfer-form">
+                <input type="hidden" name="workspace_id" value={activeWorkspace.id}/>
+                <label>Approved video<select name="content_id" required defaultValue=""><option value="" disabled>Select approved video</option>{approvedTikTokVideos.map((item) => <option key={item.id} value={item.id}>{item.title || 'Untitled approved video'} · {brandById.get(item.brand_id)?.name ?? 'Brand'}</option>)}</select></label>
+                <label>TikTok destination<select name="social_account_id" required defaultValue=""><option value="" disabled>Select connected TikTok account</option>{tiktokInboxAccounts.map((account) => <option key={account.id} value={account.id}>{account.display_name ?? 'TikTok account'} · {brandById.get(account.brand_id)?.name ?? 'Brand'}</option>)}</select></label>
+                <label className="tiktok-transfer-consent"><input type="checkbox" name="transfer_consent" value="yes" required/><span>I confirm that this workspace has the rights and authorization to transfer this video file to the selected TikTok account. I understand that TikTok will place it in the creator&apos;s inbox and the creator must finish editing, choose privacy and publish inside TikTok.</span></label>
+                <button type="submit" className="publishing-primary">Transfer video to TikTok inbox</button>
+              </form>}
+              <div className="tiktok-transfer-history"><div className="tiktok-transfer-history-heading"><strong>Recent TikTok transfers</strong><span>Latest 15 records</span></div>
+                {tiktokUploadReadError ? <p className="tiktok-transfer-muted">Transfer history is unavailable. Confirm migration 0030 is applied.</p> : tiktokUploads.length === 0 ? <p className="tiktok-transfer-muted">No TikTok video transfers yet.</p> : tiktokUploads.map((upload) => <div className="tiktok-transfer-row" key={upload.id}><div><strong>{contentById.get(upload.content_id)?.title ?? 'Approved video'}</strong><span>{accountById.get(upload.social_account_id)?.display_name ?? 'TikTok account'} · {new Date(upload.updated_at).toLocaleString()}</span>{upload.safe_error_code && <small>{upload.safe_error_code}</small>}{upload.provider_video_id && <small>Published video ID: {upload.provider_video_id}</small>}</div><span className={`tiktok-transfer-state tiktok-transfer-${upload.status}`}>{upload.status.replaceAll('_', ' ')}</span>{upload.publish_id && ['send_to_user_inbox','processing_download'].includes(upload.status) && <form action={refreshTikTokInboxUploadStatus}><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><input type="hidden" name="upload_id" value={upload.id}/><button type="submit">Refresh status</button></form>}{upload.status === 'unknown' && ['owner','admin','manager'].includes(role) && <div className="tiktok-reconcile-actions"><form action={resolveUnknownTikTokInboxUpload}><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><input type="hidden" name="upload_id" value={upload.id}/><button type="submit" name="resolution" value="confirmed_not_uploaded">Verified not uploaded — allow a new transfer</button></form><form action={resolveUnknownTikTokInboxUpload}><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><input type="hidden" name="upload_id" value={upload.id}/><button type="submit" name="resolution" value="confirmed_in_tiktok_inbox">Verified in creator inbox</button></form><form action={resolveUnknownTikTokInboxUpload}><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><input type="hidden" name="upload_id" value={upload.id}/><button type="submit" name="resolution" value="confirmed_published">Verified already published</button></form></div>}</div>)}
+              </div>
+              <p className="tiktok-transfer-footnote">Security: the server permits only one .mp4/.mov media URL hosted on an exact hostname listed in TIKTOK_VERIFIED_MEDIA_HOSTS. TikTok must have verified that URL domain/prefix. The app does not set a caption, privacy level or publish schedule and never auto-publishes the draft. Ambiguous network outcomes are marked unknown and cannot be blindly retried.</p>
+            </section>}
 
             {canSchedule && approvedContent.length > 0 && connectedAccounts.length > 0 && (
               <section className="publishing-compose-card">
@@ -307,7 +361,7 @@ export default async function PublishingQueuePage({
               )}
               {historyCount > queuePageSize && <nav className="publishing-history-pagination" aria-label="Publishing history pages"><span>Page {queuePage} of {Math.ceil(historyCount / queuePageSize).toLocaleString()}</span><div>{queuePage > 1 && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage - 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Previous</Link>}{queuePage * queuePageSize < historyCount && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage + 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Next</Link>}</div></nav>}
             </section>
-            <p className="publishing-footnote">Supported dispatch: one public HTTPS image with caption to Instagram Business or Facebook Pages. Video, carousels, other networks and automatic retry after an uncertain provider response are not supported.</p>
+            <p className="publishing-footnote">Scheduled queue dispatch currently supports one public HTTPS image with caption to Instagram Business or Facebook Pages and text-only LinkedIn organization posts. TikTok is a separate creator-inbox video transfer that requires explicit consent, a verified media hostname and a final manual publish action inside TikTok. It is not a scheduled queue destination.</p>
           </>
         )}
       </div>

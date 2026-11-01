@@ -1,3 +1,16 @@
+# Changelog
+
+## 4.3.0 — TikTok official connection, video analytics and creator-inbox transfer
+
+- Added TikTok Login Kit OAuth v2 with signed, cookie-bound state, server-side code exchange, encrypted token storage and refresh-token rotation.
+- Added manually triggered TikTok Display API retrieval for public video views, likes, comments and shares, stored separately from campaign-linked platform snapshots.
+- Added a dedicated TikTok public-video analytics panel.
+- Added an explicitly consented PULL_FROM_URL transfer for exactly one approved video to the creator's TikTok app inbox, with exact verified-host validation, duplicate protection and manual status reconciliation.
+- Direct/public TikTok publishing and scheduled TikTok dispatch remain disabled. Creators must review the transferred video, choose privacy and publish inside TikTok.
+- Restricted TikTok metric snapshot persistence to the server-side service-role path after provider API collection; authenticated browser roles cannot submit arbitrary metric values.
+- Added manager-only manual reconciliation for ambiguous inbox uploads, with explicit outcome selection and audit events.
+- Added migration `0030_tiktok_video_analytics_and_inbox_uploads.sql`, source integration audits and regression checks.
+
 
 ## 4.0.0 — Publishing Campaign Intelligence
 
@@ -9,8 +22,6 @@
 - Added database-enforced tenant isolation, role-checked RPC writes and safe audit metadata.
 - Added campaign portfolio navigation, integration audits and regression guards.
 - Provider analytics API ingestion is not included; reported metrics are explicitly labelled manual.
-
-# Changelog
 
 ## 4.2.0 — LinkedIn organic organization-post analytics
 
