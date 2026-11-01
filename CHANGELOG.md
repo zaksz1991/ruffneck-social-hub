@@ -1,3 +1,15 @@
+
+## 4.0.0 — Publishing Campaign Intelligence
+
+- Added workspace-scoped campaign planning with brand, objective, status and date-range controls.
+- Added content-to-campaign association with same-brand database validation.
+- Added UTM-tagged organic social landing-page links.
+- Added manually recorded platform-performance snapshots for provider-confirmed published destinations.
+- Campaign rollups use the latest snapshot per destination to avoid double-counting historical updates.
+- Added database-enforced tenant isolation, role-checked RPC writes and safe audit metadata.
+- Added campaign portfolio navigation, integration audits and regression guards.
+- Provider analytics API ingestion is not included; reported metrics are explicitly labelled manual.
+
 # Changelog
 
 ## 3.9.0 — Inbox customer CRM

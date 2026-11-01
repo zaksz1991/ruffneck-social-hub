@@ -176,3 +176,7 @@ Open **Inbox → Routing automation** to configure deterministic rules for Insta
 Run **Preview matches (dry run)** before applying a rule set. A preview logs `would_apply` matches but makes no workflow changes and does not consume idempotency keys. **Apply matching rules** evaluates up to 100 of the most recent conversations whose latest message is inbound. Each applied rule is bound to that exact source message and cannot run twice for the same rule/message pair. A new customer message makes a fresh evaluation possible.
 
 For existing installations through migration 0024, apply `supabase/migrations/0025_inbox_routing_automation_rules.sql` once. This release is intentionally manually triggered; it is not a webhook subscriber or background worker. Routing changes internal workflow metadata only. It never generates, approves or sends customer replies, never resolves conversations and does not call social-provider APIs.
+
+## v4.0.0 — Publishing Campaign Intelligence
+
+The current upgrade adds workspace campaign planning, brand-scoped content association, UTM-tagged organic social links and manually recorded performance snapshots for successfully published destinations. Metric rollups use the latest snapshot per destination. Provider analytics API ingestion is not included; see `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md` and `VERIFICATION-v4.0.0.md` for scope and verification boundaries. Apply migration `0027_publishing_campaign_intelligence.sql` after migration 0026.
