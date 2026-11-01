@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isScheduleUuid, validateScheduleInput } from '@/lib/publishing/validation';
 import { preflightScheduleTargets, type PreflightDestination } from '@/lib/publishing/preflight';
+import { isCancellableJobState, parseBulkCancelSelection } from '@/lib/publishing/bulk-actions';
 
 function field(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -122,4 +123,71 @@ export async function cancelScheduledJob(formData: FormData) {
   revalidatePath('/publishing');
   revalidatePath('/');
   returnToQueue(workspaceId, 'saved=cancelled');
+}
+
+
+export async function bulkCancelScheduledJobs(formData: FormData) {
+  const workspaceId = field(formData, 'workspace_id');
+  const selection = parseBulkCancelSelection(formData.getAll('job_ids'));
+  if (!isScheduleUuid(workspaceId)) redirect('/publishing?error=input');
+  if (!selection.ok) returnToQueue(workspaceId, `error=bulk-${selection.reason}`);
+
+  const { supabase, user } = await authenticatedClient();
+  const { data: membership, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (membershipError) returnToQueue(workspaceId, 'error=bulk-lookup');
+  if (!membership || !['owner', 'admin', 'manager', 'publisher'].includes(membership.role)) {
+    returnToQueue(workspaceId, 'error=permission');
+  }
+
+  // Resolve every submitted ID inside the selected workspace before invoking
+  // the database cancellation RPC. The RPC locks and rechecks each job state.
+  const selectedJobs = await supabase
+    .from('publishing_jobs')
+    .select('id,state')
+    .eq('workspace_id', workspaceId)
+    .in('id', selection.ids);
+  if (selectedJobs.error || (selectedJobs.data ?? []).length !== selection.ids.length) {
+    returnToQueue(workspaceId, 'error=bulk-lookup');
+  }
+
+  let cancelled = 0;
+  let failed = 0;
+  let skipped = 0;
+  for (const job of selectedJobs.data ?? []) {
+    if (!isCancellableJobState(job.state)) {
+      skipped += 1;
+      continue;
+    }
+    const result = await supabase.rpc('cancel_scheduled_job', { target_job_id: job.id });
+    if (result.error) failed += 1;
+    else cancelled += 1;
+  }
+
+  revalidatePath('/publishing');
+  revalidatePath('/');
+
+  const month = field(formData, 'month');
+  const page = Math.max(1, Math.min(10000, Number.parseInt(field(formData, 'page') || '1', 10) || 1));
+  const state = field(formData, 'state').slice(0, 24) || 'all';
+  const provider = field(formData, 'provider').slice(0, 40) || 'all';
+  const brand = field(formData, 'brand');
+  const search = field(formData, 'q').slice(0, 100);
+  const query = new URLSearchParams({
+    saved: 'bulk-cancel',
+    cancelled: String(cancelled),
+    failed: String(failed),
+    skipped: String(skipped),
+    page: String(page),
+  });
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) query.set('month', month);
+  if (['all', 'queued', 'claimed', 'dispatching', 'succeeded', 'retryable', 'failed', 'needs_review', 'cancelled'].includes(state)) query.set('state', state);
+  if (provider === 'all' || /^[a-z0-9_-]{1,40}$/i.test(provider)) query.set('provider', provider);
+  if (brand) query.set('brand', brand);
+  if (search) query.set('q', search);
+  returnToQueue(workspaceId, query.toString());
 }

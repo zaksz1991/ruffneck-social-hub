@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { cancelScheduledJob } from '@/app/actions/publishing';
+import { bulkCancelScheduledJobs, cancelScheduledJob } from '@/app/actions/publishing';
 import { PublishingScheduleForm } from '@/app/components/publishing-schedule-form';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { summarizeQueueHealth } from '@/lib/publishing/queue-health';
@@ -63,7 +63,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; month?: string; error?: string; reason?: string; blocked?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>;  
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; reason?: string; blocked?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; cancelled?: string; skipped?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>;  
 }) {
   const params = await searchParams;
   const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
@@ -176,6 +176,7 @@ export default async function PublishingQueuePage({
   const filteredJobs = historyJobs.filter((job) => {
     return true;
   });
+  const pageCancellableCount = filteredJobs.filter((job) => ['queued', 'retryable', 'needs_review'].includes(job.state)).length;
   const activeJobs = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable', 'needs_review'].includes(job.state));
   const queueHealth = summarizeQueueHealth(jobs);
   const errorMessages: Record<string, string> = {
@@ -189,6 +190,10 @@ export default async function PublishingQueuePage({
     migration: 'The publishing queue database upgrade has not been applied yet. Apply migration 0005.',
     schedule: 'The schedule could not be created. Confirm the content is approved and the channel is connected to the same brand.',
     cancel: 'The queue item could not be cancelled. It may already be processing.',
+    'bulk-empty': 'Select at least one eligible publishing item before using bulk cancellation.',
+    'bulk-too_many': 'Bulk cancellation is limited to 25 selected items per operation.',
+    'bulk-invalid': 'One or more selected publishing item IDs were invalid.',
+    'bulk-lookup': 'The selected publishing items could not be verified within this workspace. No items were cancelled.',
   };
   const preflightReasonMessages: Record<string, string> = {
     lookup: 'The selected content or one of the accounts could not be verified in this workspace.',
@@ -226,7 +231,7 @@ export default async function PublishingQueuePage({
         </div>
 
         {params.error && <p className="notice error">{params.error === 'preflight' ? `Scheduling stopped during server preflight. ${preflightReasonMessages[params.reason ?? ''] ?? 'Review the selected content and destinations.'} ${Math.max(1, Math.min(10, Number.parseInt(params.blocked ?? '1', 10) || 1))} destination(s) need attention. No schedules were created.` : errorMessages[params.error] ?? 'The requested publishing action failed.'}</p>}
-        {params.saved === 'bulk' ? <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Created {Number(params.created ?? 0)} schedule(s); {Number(params.failed ?? 0)} destination(s) failed. {Number(params.duplicates ?? 0) > 0 ? `${Number(params.duplicates)} duplicate schedule(s) were skipped. ` : ''}{params.denied === '1' ? 'At least one destination was rejected by workspace permissions. ' : ''}Each successful destination is queued separately; nothing is published immediately.</p> : params.saved && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
+        {params.saved === 'bulk' ? <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Created {Number(params.created ?? 0)} schedule(s); {Number(params.failed ?? 0)} destination(s) failed. {Number(params.duplicates ?? 0) > 0 ? `${Number(params.duplicates)} duplicate schedule(s) were skipped. ` : ''}{params.denied === '1' ? 'At least one destination was rejected by workspace permissions. ' : ''}Each successful destination is queued separately; nothing is published immediately.</p> : params.saved && params.saved !== 'bulk-cancel' && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
 
         {!activeWorkspace ? (
           <section className="publishing-empty"><h2>No workspace available</h2><p>Create or join a workspace before scheduling content.</p><Link href="/" className="publishing-primary">Return to workspace setup</Link></section>
@@ -322,6 +327,7 @@ export default async function PublishingQueuePage({
                 <label>Brand<select name="brand" defaultValue={selectedBrand}><option value="all">All brands</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
                 <div className="publishing-filter-actions"><button type="submit">Apply filters</button><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}`}>Clear</Link><a href={`/api/publishing/export?workspace=${encodeURIComponent(activeWorkspace.id)}&state=${encodeURIComponent(selectedState)}&provider=${encodeURIComponent(selectedProvider)}&brand=${encodeURIComponent(selectedBrand)}&q=${encodeURIComponent(searchTerm)}`}>Export filtered CSV</a></div>
               </form>
+              {params.saved === 'bulk-cancel' && <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Bulk cancellation: {Number(params.cancelled ?? 0)} cancelled, {Number(params.failed ?? 0)} failed, {Number(params.skipped ?? 0)} skipped because their status no longer allows cancellation. Each item was checked and processed separately.</p>}
               {queueReadFailed ? (
                 <div className="publishing-empty"><h3>Publishing queue migration required</h3><p>Apply migration 0005_publishing_calendar_queue.sql after migration 0004, then refresh this page.</p></div>
               ) : historyCount === 0 ? (
@@ -329,6 +335,18 @@ export default async function PublishingQueuePage({
               ) : filteredJobs.length === 0 ? (
                 <div className="publishing-empty"><h3>No matching queue records</h3><p>Change or clear the filters to see other scheduled operations.</p></div>
               ) : (
+                <>
+                {canSchedule && pageCancellableCount > 0 && <form action={bulkCancelScheduledJobs} id="bulk-cancel-form" className="publishing-bulk-cancel-toolbar">
+                  <input type="hidden" name="workspace_id" value={activeWorkspace.id}/>
+                  <input type="hidden" name="month" value={monthMatch}/>
+                  <input type="hidden" name="page" value={queuePage}/>
+                  <input type="hidden" name="state" value={selectedState}/>
+                  <input type="hidden" name="provider" value={selectedProvider}/>
+                  <input type="hidden" name="brand" value={selectedBrand}/>
+                  <input type="hidden" name="q" value={searchTerm}/>
+                  <div><strong>Bulk queue management</strong><span>Select eligible records on this page. Maximum 25 per operation; published or processing items cannot be cancelled.</span></div>
+                  <button type="submit">Cancel selected</button>
+                </form>}
                 <div className="publishing-job-list">
                   {filteredJobs.map((job) => {
                     const content = contentById.get(job.content_id);
@@ -337,13 +355,14 @@ export default async function PublishingQueuePage({
                     const canCancel = canSchedule && ['queued', 'retryable', 'needs_review'].includes(job.state);
                     return (
                       <article className="publishing-job-card" key={job.id}>
-                        <div className="publishing-job-date"><strong>{displayDate(job.scheduled_at, brand?.timezone ?? 'UTC')}</strong><span>{brand?.timezone ?? 'UTC'}</span></div>
+                        <div className="publishing-job-date">{canSchedule && ['queued', 'retryable', 'needs_review'].includes(job.state) && <label className="publishing-bulk-select"><input type="checkbox" form="bulk-cancel-form" name="job_ids" value={job.id}/><span>Select for bulk cancel</span></label>}<strong>{displayDate(job.scheduled_at, brand?.timezone ?? 'UTC')}</strong><span>{brand?.timezone ?? 'UTC'}</span></div>
                         <div className="publishing-job-copy"><span className="publishing-job-brand">{brand?.name ?? 'Brand'} · {account?.provider ?? 'Unknown provider'}</span><h3>{content?.title ?? 'Content record'}</h3><p>{account?.display_name ?? account?.provider ?? 'Destination unavailable'} · {job.attempts} dispatch attempts</p>{job.last_error_safe && <small className="publishing-safe-error">{job.last_error_safe}</small>}</div>
                         <div className="publishing-job-actions"><span className={`publishing-state publishing-state-${job.state}`}>{stateLabel[job.state] ?? job.state}</span>{canCancel && <form action={cancelScheduledJob}><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><input type="hidden" name="job_id" value={job.id}/><button type="submit" className="publishing-cancel">Cancel</button></form>}</div>
                       </article>
                     );
                   })}
                 </div>
+                </>
               )}
               {historyCount > queuePageSize && <nav className="publishing-history-pagination" aria-label="Publishing history pages"><span>Page {queuePage} of {Math.ceil(historyCount / queuePageSize).toLocaleString()}</span><div>{queuePage > 1 && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage - 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Previous</Link>}{queuePage * queuePageSize < historyCount && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage + 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Next</Link>}</div></nav>}
             </section>

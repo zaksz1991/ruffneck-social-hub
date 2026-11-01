@@ -168,3 +168,12 @@
 - Added a second authenticated server-side preflight before creating any queue records; if any selected destination fails, the batch is stopped before any schedule is created.
 - The preflight does not claim to verify remote image reachability, provider-side permissions or actual publication. The existing database RPC and provider worker remain authoritative.
 - No database migration or new environment variable is required.
+
+
+## 2.13.0 — Workspace-scoped bulk queue cancellation
+- Added checkboxes for cancellable queue items on the current publishing-history page.
+- Added one bulk action to cancel up to 25 selected queued, retryable or needs-review items.
+- The server verifies the user's workspace role, resolves every submitted ID inside that workspace, and calls the existing database cancellation RPC per item.
+- Each RPC re-locks and rechecks the job state, preserving the existing audit event and preventing cancellation of jobs that have begun processing or have already been published.
+- Results report cancelled, failed and skipped items; existing single-item cancellation remains available.
+- No migration or environment variable changes.
