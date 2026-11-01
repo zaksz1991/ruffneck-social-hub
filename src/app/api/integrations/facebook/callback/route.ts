@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { verifyProviderOAuthState } from '@/lib/integrations/provider-oauth-state';
 import {
-  getFacebookGraphVersion, getGrantedFacebookPageScopes, normalizeFacebookPages, safeFacebookErrorCode,
+  canManageFacebookMessages, getFacebookGraphVersion, getGrantedFacebookPageScopes, normalizeFacebookPages, safeFacebookErrorCode,
   type FacebookPage,
 } from '@/lib/integrations/facebook';
 import { encryptProviderSecret, readTokenEncryptionKey } from '@/lib/integrations/token-crypto';
@@ -197,6 +197,45 @@ export async function GET(request: NextRequest) {
   if (capabilityError) {
     console.error('[integrations.facebook] Page publishing capability gate rejected:', { code: capabilityError.code });
     return finish(request, workspaceId, capabilityError.code === 'PGRST202' || capabilityError.code === '42883' ? 'facebook_migration' : 'facebook_capability');
+  }
+
+  // Messenger is optional: page publishing remains connected even when Meta has
+  // not approved the messaging scopes. Subscription state is persisted per Page.
+  const { error: messagingGateError } = await supabase.rpc('enable_facebook_page_messaging', {
+    target_workspace_id: workspaceId,
+    target_brand_id: brandId,
+  });
+  if (messagingGateError && messagingGateError.code !== 'PGRST202' && messagingGateError.code !== '42883') {
+    console.error('[integrations.facebook] Messenger capability gate rejected:', { code: messagingGateError.code });
+  }
+
+  for (const page of pages) {
+    let subscribed = false;
+    if (canManageFacebookMessages(scopes, page.tasks)) {
+      try {
+        const subscriptionUrl = new URL(`https://graph.facebook.com/${graphVersion}/${encodeURIComponent(page.id)}/subscribed_apps`);
+        subscriptionUrl.searchParams.set('subscribed_fields', 'messages');
+        const subscriptionResponse = await fetch(subscriptionUrl, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${page.access_token}` },
+          cache: 'no-store',
+          signal: AbortSignal.timeout(12_000),
+        });
+        const subscriptionBody = await readJson(subscriptionResponse);
+        subscribed = subscriptionResponse.ok && subscriptionBody.success !== false;
+      } catch {
+        subscribed = false;
+      }
+    }
+    const { error: subscriptionRecordError } = await supabase.rpc('record_facebook_page_messaging_subscription', {
+      target_workspace_id: workspaceId,
+      target_brand_id: brandId,
+      target_page_id: page.id,
+      target_subscribed: subscribed,
+    });
+    if (subscriptionRecordError) {
+      console.error('[integrations.facebook] Messenger subscription state was not saved:', { code: subscriptionRecordError.code });
+    }
   }
 
   return finish(request, workspaceId, 'connected');

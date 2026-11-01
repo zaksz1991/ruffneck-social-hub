@@ -40,12 +40,3 @@ Apply `supabase/migrations/0003_multi_workspace_brand_management.sql` after migr
 7. Confirm a non-admin member cannot insert or rename a brand.
 
 These checks require a configured Supabase project and at least two test users. They have not been executed against the user's live database.
-
-
-## Brand voice profiles (migration 0019)
-
-- Open **Brands & clients** from the workspace dashboard.
-- Workspace owners and admins can edit a brand's tone, supported languages, approved facts, forbidden claims and escalation triggers. Other roles have read-only access.
-- Saved values use the existing `brands.voice_profile` JSONB column and are consumed by optional AI drafting/adaptation/reply assistance through the existing sanitizer.
-- Migration `0019_brand_voice_profiles.sql` adds a role-checked update function and audit event. Apply it once after migration 0018.
-- Tone and languages are each limited to 120 characters; each list supports at most 12 entries of up to 240 characters.

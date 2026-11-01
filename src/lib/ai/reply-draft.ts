@@ -81,7 +81,7 @@ export function buildReplyDraftMessages(
   const voice = sanitizeBrandVoice(brandVoice);
   const surfaceInstruction = surface === 'comment'
     ? 'You prepare a proposed public reply to a comment on a business Instagram post. Keep it concise and suitable for a public audience. Do not ask the commenter to share private information publicly.'
-    : 'You prepare a proposed customer-service reply for a business Instagram direct-message inbox.';
+    : 'You prepare a proposed customer-service reply for a business direct-message inbox.';
   const system = [
     surfaceInstruction,
     'Return only the reply text. Do not add a heading, analysis, quotation marks, or markdown fences.',

@@ -1,39 +1,10 @@
 # Changelog
 
-## 2.19.0 — Production hardening
+## 3.0.0 — 2026-11-01
 
-- Fixed the request boundary so middleware no longer redirects API calls to the browser login page. Route handlers retain explicit authentication: user session checks for user APIs, OAuth state/session checks for callbacks, Meta HMAC verification for webhooks, and bearer-secret verification for the publishing worker.
-- Added a public, minimal `/api/health` liveness endpoint that does not expose environment configuration or secret state.
-- Added baseline browser security headers, production-only HSTS and private/no-store API caching headers.
-- Changed Instagram webhook ingestion to enforce a 1 MiB streaming request-body limit before buffering/parsing, including requests without a usable Content-Length header.
-- Added focused policy, bounded-body and security-header tests.
-- No database migration, new dependency or environment variable.
-
-## [2.18.0] - Brand Voice Studio
-
-- Added a workspace-scoped Brand Voice Studio for editing tone, supported languages, approved facts, forbidden claims and escalation triggers for each brand.
-- Reuses the existing `brands.voice_profile` JSONB field and existing AI sanitization path; AI drafting and reply assistance receive the saved profile without a schema redesign.
-- Restricted profile changes to workspace owners and admins in both the server action and a security-definer database function.
-- Added migration 0019 with input validation, role enforcement and audit events that record configuration counts without storing profile text in audit metadata.
-- Added helper tests for normalization, bounds, safe reads and textarea formatting.
-- No new dependencies or environment variables.
-
-## [2.17.0] - AI platform-specific content adaptation
-
-- Added an optional AI adaptation assistant to each approved master post in Content Studio.
-- Generates separate Instagram, Facebook and LinkedIn copy using platform-specific editorial guidance while preserving the master post's language and factual claims.
-- Provides editable previews and saves selected outputs as provider-specific draft variants through the existing role-checked RPC.
-- Checks workspace membership, content approval and brand/workspace relationship before generation; rechecks membership and master approval before saving.
-- Generated variants are never automatically submitted for review, approved, scheduled or published.
-- Reuses the existing local/OpenAI-compatible AI endpoint configuration; no new environment variables, dependency or migration.
-- Added parser and prompt-safety tests for all three provider outputs.
-
-## [2.14.0] - Workspace audit activity
-
-- Added an owner/admin activity log backed by the existing workspace audit table and RLS policy.
-- Added full-history category, outcome, date and text filters with exact counts and pagination.
-- Added allowlisted metadata display to keep invitation email addresses, credentials and arbitrary metadata out of the UI.
-- No database migration or environment changes.
+- Added Facebook Messenger inbox ingestion, unified conversation listing, local AI reply drafts and a human-reviewed send action with server-side 24-hour-window enforcement.
+- Added Meta Page messaging scope/task checks, webhook subscription tracking, signed webhook verification, attachment URL redaction and a one-attempt send ledger.
+- Instagram direct messages remain read-only; no AI auto-send or broadcast capability was added.
 
 ## [2.5.0] - Calendar interoperability
 
@@ -49,7 +20,6 @@
 - Added migration 0009, signature tests, and setup/capability documentation.
 - Messaging and comments remain disabled pending Meta permission approval and further implementation.
 
-# Changelog
 
 ## 0.4.0 — Visual identity and dashboard refresh
 - Replaced the dark prototype dashboard with a responsive enterprise SaaS visual system.
@@ -190,47 +160,3 @@
 - Added paginated access to complete workspace publishing history, with 25 records per page and exact total count.
 - Kept the latest-100 operational snapshot for the calendar and queue-health panel distinct from the full history browser.
 - Added responsive previous/next navigation and preserved active filters between pages.
-
-## 2.10.0 - 2026-11-01
-- Moved publishing-history status, platform and brand filters into the workspace-scoped database query, before pagination.
-- Exact result counts and page navigation now reflect the selected structured filters across the full history, not just the current 25-record page.
-- Text search remains limited to the currently loaded page and is labelled accordingly.
-- No database migration or environment variable is required.
-
-
-## 2.12.0 — Cross-platform publishing preflight
-- Added live, destination-by-destination compatibility checks before a schedule can be submitted.
-- Checks same-brand ownership, approved status, connection state, verified publishing capability, supported provider worker, media requirements and current worker caption limits.
-- Instagram and Facebook require one public HTTPS image; LinkedIn rejects attached media and accepts text-only scheduling.
-- Added a second authenticated server-side preflight before creating any queue records; if any selected destination fails, the batch is stopped before any schedule is created.
-- The preflight does not claim to verify remote image reachability, provider-side permissions or actual publication. The existing database RPC and provider worker remain authoritative.
-- No database migration or new environment variable is required.
-
-
-## 2.13.0 — Workspace-scoped bulk queue cancellation
-- Added checkboxes for cancellable queue items on the current publishing-history page.
-- Added one bulk action to cancel up to 25 selected queued, retryable or needs-review items.
-- The server verifies the user's workspace role, resolves every submitted ID inside that workspace, and calls the existing database cancellation RPC per item.
-- Each RPC re-locks and rechecks the job state, preserving the existing audit event and preventing cancellation of jobs that have begun processing or have already been published.
-- Results report cancelled, failed and skipped items; existing single-item cancellation remains available.
-- No migration or environment variable changes.
-
-## 2.15.0 — Provider-specific content variants
-
-- Added named copy and optional single-image variants for the active Instagram, Facebook and LinkedIn publishing workers.
-- Added a separate draft, review, approval and change-request lifecycle for provider variants.
-- Made approved variants immutable through the application workflow.
-- Added per-provider variant selection to multi-destination scheduling.
-- Rechecked provider, workspace, master-content and variant approval on the server before queue insertion.
-- Updated the server-only publishing claim RPC to return the exact approved variant copy and media bound to each job.
-- Added migration 0018; no environment variables or package dependencies changed.
-
-
-## 2.16.0 — Local-AI campaign draft assistant
-
-- Added an optional Content Studio assistant that generates editable master-post title and copy from a bounded campaign brief, target audience, brand voice, objective, tone and language.
-- Reuses the existing server-side local/OpenAI-compatible AI endpoint settings; no new provider, package dependency or environment variable was added.
-- Verifies authenticated workspace membership, content-creation role and selected brand/workspace relationship before calling the configured model endpoint.
-- Sanitizes the brand voice profile, bounds prompts and output, applies a timeout and rejects malformed/oversized model responses.
-- Generated text is only a preview until a user edits and explicitly saves it through the existing content-draft RPC. No automatic approval, variant creation, scheduling or publishing was added.
-- No database migration is required.

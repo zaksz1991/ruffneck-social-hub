@@ -6,9 +6,10 @@
 **Credential exposure:** revoke token, rotate secrets, disable adapter, inspect audit records and follow incident notification obligations.
 
 
-## v2.19.0 smoke checks
-- `GET /api/health` should return 200 with `status: "ok"`; this is process liveness only.
-- Meta webhook verification and signed POST deliveries must reach the route handler and pass signature verification.
-- GitHub Actions publishing-worker invocation must reach `/api/cron/publishing` and pass its bearer-secret check; an HTML login redirect is a failure.
-- Signed-out browser access to protected pages should redirect to `/login`; signed-out API requests should receive the route handler's JSON 401 where the route requires a user session.
-- Inspect production responses for `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, production HSTS and private/no-store API caching.
+## Facebook Messenger send outcomes (3.0.0)
+
+- `sent`: Meta returned a message ID, the outbound message was ingested and the send ledger was completed.
+- `failed`: Meta returned a definite rejected response. Inspect Page permissions and provider error category before creating a fresh draft.
+- `needs_review`: the request timed out, Meta returned a 429/5xx, the provider response lacked a message ID, or local persistence failed after a provider success. Do not retry. Check Meta Business Suite and reconcile the conversation first.
+- A draft can have only one send attempt. Create a new draft only after the thread and actual provider outcome are reconciled.
+- If Messenger is shown as not enabled, verify Meta app approval, Page tasks, the `messages` webhook subscription, migration 0018, then reconnect the Facebook Page.

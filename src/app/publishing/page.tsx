@@ -1,14 +1,12 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { bulkCancelScheduledJobs, cancelScheduledJob } from '@/app/actions/publishing';
-import { PublishingScheduleForm } from '@/app/components/publishing-schedule-form';
+import { cancelScheduledJob, scheduleApprovedContent } from '@/app/actions/publishing';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { summarizeQueueHealth } from '@/lib/publishing/queue-health';
 
 type Workspace = { id: string; name: string };
 type Brand = { id: string; name: string; timezone: string };
-type ContentItem = { id: string; brand_id: string; title: string; body: string; media_refs: unknown; status: string; updated_at: string };
-type PublishingVariant = { id: string; content_id: string; provider: string; variant_name: string; body: string; media_refs: unknown; status: string };
+type ContentItem = { id: string; brand_id: string; title: string; status: string; updated_at: string };
 type SocialAccount = {
   id: string;
   brand_id: string;
@@ -21,7 +19,6 @@ type PublishingJob = {
   id: string;
   brand_id: string;
   content_id: string;
-  variant_id: string | null;
   social_account_id: string;
   scheduled_at: string;
   state: string;
@@ -65,7 +62,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; month?: string; error?: string; reason?: string; blocked?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; cancelled?: string; skipped?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>;  
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>; 
 }) {
   const params = await searchParams;
   const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
@@ -89,8 +86,6 @@ export default async function PublishingQueuePage({
   let role = 'member';
   let brands: Brand[] = [];
   let approvedContent: ContentItem[] = [];
-  let approvedVariants: PublishingVariant[] = [];
-  let variantsUnavailable = false;
   let accounts: SocialAccount[] = [];
   let jobs: PublishingJob[] = [];
   let queueReadFailed = false;
@@ -108,61 +103,22 @@ export default async function PublishingQueuePage({
       .maybeSingle();
     role = member?.role ?? 'member';
 
-    const [brandResult, contentResult, accountResult, jobResult, variantResult] = await Promise.all([
+    const [brandResult, contentResult, accountResult, jobResult] = await Promise.all([
       supabase.from('brands').select('id,name,timezone').eq('workspace_id', activeWorkspace.id).order('name'),
-      supabase.from('content_items').select('id,brand_id,title,body,media_refs,status,updated_at').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(100),
+      supabase.from('content_items').select('id,brand_id,title,status,updated_at').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(100),
       supabase.from('social_accounts').select('id,brand_id,provider,display_name,connection_state,capabilities').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }),
-      supabase.from('publishing_jobs').select('id,brand_id,content_id,variant_id,social_account_id,scheduled_at,state,attempts,last_error_safe').eq('workspace_id', activeWorkspace.id).order('scheduled_at', { ascending: true }).limit(100),
-      supabase.from('content_variants').select('id,content_id,provider,variant_name,body,media_refs,status').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(250),
+      supabase.from('publishing_jobs').select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe').eq('workspace_id', activeWorkspace.id).order('scheduled_at', { ascending: true }).limit(100),
     ]);
 
     brands = (brandResult.data ?? []) as Brand[];
     approvedContent = (contentResult.data ?? []) as ContentItem[];
-    approvedVariants = (variantResult.data ?? []) as PublishingVariant[];
-    variantsUnavailable = Boolean(variantResult.error);
     accounts = (accountResult.data ?? []) as SocialAccount[];
     jobs = (jobResult.data ?? []) as PublishingJob[];
     queueReadFailed = Boolean(jobResult.error);
-    const allowedStates = ['all', 'queued', 'claimed', 'dispatching', 'succeeded', 'retryable', 'failed', 'needs_review', 'cancelled'];
-    const selectedState = allowedStates.includes(params.state ?? '') ? (params.state ?? 'all') : 'all';
-    const selectedProvider = accounts.some((account) => account.provider === params.provider) ? (params.provider ?? 'all') : 'all';
-    const selectedBrand = brands.some((brand) => brand.id === params.brand) ? (params.brand ?? 'all') : 'all';
-    const searchTerm = (params.q ?? '').trim().slice(0, 100);
-    const searchNeedle = searchTerm.replace(/[,%()_*]/g, ' ').replace(/\s+/g, ' ').trim();
-    let historyQuery = supabase
+    const historyResult = await supabase
       .from('publishing_jobs')
-      .select('id,brand_id,content_id,variant_id,social_account_id,scheduled_at,state,attempts,last_error_safe', { count: 'exact' })
-      .eq('workspace_id', activeWorkspace.id);
-    if (selectedState !== 'all') historyQuery = historyQuery.eq('state', selectedState);
-    if (selectedBrand !== 'all') historyQuery = historyQuery.eq('brand_id', selectedBrand);
-    if (selectedProvider !== 'all') {
-      const matchingAccountIds = accounts.filter((account) => account.provider === selectedProvider).map((account) => account.id);
-      historyQuery = matchingAccountIds.length ? historyQuery.in('social_account_id', matchingAccountIds) : historyQuery.eq('social_account_id', '00000000-0000-0000-0000-000000000000');
-    }
-    if (searchNeedle.length >= 2) {
-      const pattern = `%${searchNeedle}%`;
-      const [contentMatches, accountMatches, brandMatches] = await Promise.all([
-        supabase.from('content_items').select('id').eq('workspace_id', activeWorkspace.id).ilike('title', pattern).limit(5000),
-        supabase.from('social_accounts').select('id').eq('workspace_id', activeWorkspace.id).or(`display_name.ilike.${pattern},provider.ilike.${pattern}`).limit(5000),
-        supabase.from('brands').select('id').eq('workspace_id', activeWorkspace.id).ilike('name', pattern).limit(5000),
-      ]);
-      if (contentMatches.error || accountMatches.error || brandMatches.error) {
-        queueReadFailed = true;
-      } else {
-        const branches: string[] = [];
-        const contentIds = (contentMatches.data ?? []).map((row) => row.id);
-        const accountIds = (accountMatches.data ?? []).map((row) => row.id);
-        const brandIds = (brandMatches.data ?? []).map((row) => row.id);
-        if (contentIds.length) branches.push(`content_id.in.(${contentIds.join(',')})`);
-        if (accountIds.length) branches.push(`social_account_id.in.(${accountIds.join(',')})`);
-        if (brandIds.length) branches.push(`brand_id.in.(${brandIds.join(',')})`);
-        branches.push(`last_error_safe.ilike.${pattern}`);
-        historyQuery = historyQuery.or(branches.join(','));
-      }
-    } else if (searchTerm.length > 0) {
-      historyQuery = historyQuery.eq('id', '00000000-0000-0000-0000-000000000000');
-    }
-    const historyResult = await historyQuery
+      .select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe', { count: 'exact' })
+      .eq('workspace_id', activeWorkspace.id)
       .order('scheduled_at', { ascending: false })
       .range((queuePage - 1) * queuePageSize, queuePage * queuePageSize - 1);
     historyJobs = (historyResult.data ?? []) as PublishingJob[];
@@ -172,7 +128,6 @@ export default async function PublishingQueuePage({
 
   const brandById = new Map(brands.map((brand) => [brand.id, brand]));
   const contentById = new Map(approvedContent.map((item) => [item.id, item]));
-  const variantById = new Map(approvedVariants.map((item) => [item.id, item]));
   const accountById = new Map(accounts.map((account) => [account.id, account]));
   const connectedAccounts = accounts.filter((account) => account.connection_state === 'connected' && account.capabilities?.content_publish === true);
   const canSchedule = roleCanSchedule(role);
@@ -182,15 +137,20 @@ export default async function PublishingQueuePage({
   const selectedBrand = brands.some((brand) => brand.id === params.brand) ? (params.brand ?? 'all') : 'all';
   const searchTerm = (params.q ?? '').trim().slice(0, 100);
   const filteredJobs = historyJobs.filter((job) => {
-    return true;
+    const account = accounts.find((item) => item.id === job.social_account_id);
+    const brand = brands.find((item) => item.id === job.brand_id);
+    const content = approvedContent.find((item) => item.id === job.content_id);
+    const matchesState = selectedState === 'all' || job.state === selectedState;
+    const matchesProvider = selectedProvider === 'all' || account?.provider === selectedProvider;
+    const matchesBrand = selectedBrand === 'all' || job.brand_id === selectedBrand;
+    const haystack = [content?.title, account?.display_name, account?.provider, brand?.name, job.last_error_safe].filter(Boolean).join(' ').toLowerCase();
+    return matchesState && matchesProvider && matchesBrand && (!searchTerm || haystack.includes(searchTerm.toLowerCase()));
   });
-  const pageCancellableCount = filteredJobs.filter((job) => ['queued', 'retryable', 'needs_review'].includes(job.state)).length;
   const activeJobs = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable', 'needs_review'].includes(job.state));
   const queueHealth = summarizeQueueHealth(jobs);
   const errorMessages: Record<string, string> = {
     input: 'The submitted schedule details were invalid.',
     content: 'Choose an approved content item.',
-    variant: 'The selected provider variant could not be verified. Confirm migration 0018 is applied and select an approved variant for the matching platform.',
     account: 'Choose a valid destination account.',
     accounts: 'Select between one and ten connected publishing destinations.',
     datetime: 'Enter a valid date and time using the selected brand timezone.',
@@ -199,23 +159,6 @@ export default async function PublishingQueuePage({
     migration: 'The publishing queue database upgrade has not been applied yet. Apply migration 0005.',
     schedule: 'The schedule could not be created. Confirm the content is approved and the channel is connected to the same brand.',
     cancel: 'The queue item could not be cancelled. It may already be processing.',
-    'bulk-empty': 'Select at least one eligible publishing item before using bulk cancellation.',
-    'bulk-too_many': 'Bulk cancellation is limited to 25 selected items per operation.',
-    'bulk-invalid': 'One or more selected publishing item IDs were invalid.',
-    'bulk-lookup': 'The selected publishing items could not be verified within this workspace. No items were cancelled.',
-  };
-  const preflightReasonMessages: Record<string, string> = {
-    lookup: 'The selected content or one of the accounts could not be verified in this workspace.',
-    variant_invalid: 'The selected provider variant is not approved for this master post and destination. Review and approve the matching variant first.',
-    content_not_approved: 'The content is no longer approved.',
-    brand_mismatch: 'Every selected destination must belong to the content’s brand.',
-    not_connected: 'Reconnect the affected social account.',
-    publishing_disabled: 'The affected account does not have verified publishing permission.',
-    provider_unsupported: 'The selected provider does not have an active publishing worker.',
-    image_required: 'Instagram and Facebook require exactly one image.',
-    invalid_image_url: 'Use a publicly reachable HTTPS image URL without embedded credentials.',
-    linkedin_text_only: 'Remove media before scheduling to LinkedIn.',
-    caption_too_long: 'Shorten the post copy to fit the selected provider’s current worker limit.',
   };
   const successMessages: Record<string, string> = {
     scheduled: 'Added to the publishing queue. No post has been sent to a social network.',
@@ -240,9 +183,8 @@ export default async function PublishingQueuePage({
           <div className="publishing-workspace-chip"><span>WORKSPACE</span><strong>{activeWorkspace?.name ?? 'No workspace available'}</strong><small>{role.toUpperCase()}</small>{workspaces.length > 1 && <div className="publishing-workspace-options" aria-label="Switch workspace">{workspaces.map((workspace) => <Link key={workspace.id} href={`/publishing?workspace=${workspace.id}`} className={workspace.id === activeWorkspace?.id ? 'selected' : ''}>{workspace.name}</Link>)}</div>}</div>
         </div>
 
-        {variantsUnavailable && <p className="notice error">Provider-specific scheduling storage is unavailable. Apply migration 0018_provider_content_variants.sql after migration 0017 before using this scheduler.</p>}
-        {params.error && <p className="notice error">{params.error === 'preflight' ? `Scheduling stopped during server preflight. ${preflightReasonMessages[params.reason ?? ''] ?? 'Review the selected content and destinations.'} ${Math.max(1, Math.min(10, Number.parseInt(params.blocked ?? '1', 10) || 1))} destination(s) need attention. No schedules were created.` : errorMessages[params.error] ?? 'The requested publishing action failed.'}</p>}
-        {params.saved === 'bulk' ? <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Created {Number(params.created ?? 0)} schedule(s); {Number(params.failed ?? 0)} destination(s) failed. {Number(params.duplicates ?? 0) > 0 ? `${Number(params.duplicates)} duplicate schedule(s) were skipped. ` : ''}{params.denied === '1' ? 'At least one destination was rejected by workspace permissions. ' : ''}Each successful destination is queued separately; nothing is published immediately.</p> : params.saved && params.saved !== 'bulk-cancel' && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
+        {params.error && <p className="notice error">{errorMessages[params.error] ?? 'The requested publishing action failed.'}</p>}
+        {params.saved === 'bulk' ? <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Created {Number(params.created ?? 0)} schedule(s); {Number(params.failed ?? 0)} destination(s) failed. {Number(params.duplicates ?? 0) > 0 ? `${Number(params.duplicates)} duplicate schedule(s) were skipped. ` : ''}{params.denied === '1' ? 'At least one destination was rejected by workspace permissions. ' : ''}Each successful destination is queued separately; nothing is published immediately.</p> : params.saved && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
 
         {!activeWorkspace ? (
           <section className="publishing-empty"><h2>No workspace available</h2><p>Create or join a workspace before scheduling content.</p><Link href="/" className="publishing-primary">Return to workspace setup</Link></section>
@@ -291,92 +233,77 @@ export default async function PublishingQueuePage({
               <span className="publishing-gate">INSTAGRAM + FACEBOOK + LINKEDIN</span>
             </section>
 
-            {canSchedule && approvedContent.length > 0 && accounts.length > 0 && !variantsUnavailable && (
+            {canSchedule && approvedContent.length > 0 && connectedAccounts.length > 0 && (
               <section className="publishing-compose-card">
                 <div className="publishing-section-heading"><div><span className="eyebrow">NEW SCHEDULE</span><h2>Add approved content to the queue</h2><p>Create matching schedule entries for up to ten connected destinations in one operation.</p></div><span className="publishing-tag">APPROVED CONTENT ONLY</span></div>
-                <PublishingScheduleForm
-                  workspaceId={activeWorkspace.id}
-                  contents={approvedContent.map((item) => ({
-                    id: item.id,
-                    title: item.title,
-                    brandId: item.brand_id,
-                    brandName: brandById.get(item.brand_id)?.name ?? 'Brand',
-                    timezone: brandById.get(item.brand_id)?.timezone ?? 'UTC',
-                    status: item.status,
-                    body: item.body,
-                    mediaRefs: item.media_refs,
-                  }))}
-                  variants={approvedVariants.map((variant) => ({ id: variant.id, contentId: variant.content_id, provider: variant.provider, name: variant.variant_name, body: variant.body, mediaRefs: variant.media_refs, status: variant.status }))}
-                  destinations={accounts.map((account) => ({
-                    id: account.id,
-                    brandId: account.brand_id,
-                    provider: account.provider,
-                    displayName: account.display_name,
-                    connectionState: account.connection_state,
-                    canPublish: account.capabilities?.content_publish === true,
-                  }))}
-                />
+                <form action={scheduleApprovedContent} className="publishing-form">
+                  <input type="hidden" name="workspace_id" value={activeWorkspace.id} />
+                  <label>Approved content
+                    <select name="content_id" required defaultValue="">
+                      <option value="" disabled>Select approved content</option>
+                      {approvedContent.map((item) => {
+                        const brand = brandById.get(item.brand_id);
+                        return <option value={item.id} key={item.id}>{item.title} · {brand?.name ?? 'Brand'} ({brand?.timezone ?? 'UTC'})</option>;
+                      })}
+                    </select>
+                  </label>
+                  <label>Connected destinations (select up to 10)
+                    <select name="social_account_ids" required multiple size={Math.min(Math.max(connectedAccounts.length, 3), 7)} aria-describedby="publishing-destinations-help">
+                      {connectedAccounts.map((account) => <option value={account.id} key={account.id}>{account.display_name || account.provider} · {account.provider} · {brandById.get(account.brand_id)?.name ?? 'Brand'}</option>)}
+                    </select>
+                    <small id="publishing-destinations-help">Use Ctrl (Windows) or Command (Mac) to select multiple destinations. The database checks that every destination belongs to the selected content brand.</small>
+                  </label>
+                  <label>Publish date and time
+                    <input type="datetime-local" name="scheduled_local" required />
+                    <small>Enter the wall-clock time in the selected content brand&apos;s saved timezone. The server validates the actual UTC schedule.</small>
+                  </label>
+                  <div className="publishing-form-footer"><span>Instagram and Facebook support single-image posts; LinkedIn supports text-only organization posts. Match the content format to each selected destination.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
+                </form>
               </section>
             )}
 
-            {canSchedule && approvedContent.length > 0 && variantsUnavailable && <section className="publishing-prerequisite"><strong>Provider variant migration required.</strong><p>Apply migration 0018_provider_content_variants.sql after the existing 0017 migration, then refresh the page. This migration preserves existing schedules.</p></section>}
             {canSchedule && approvedContent.length === 0 && (
               <section className="publishing-prerequisite"><strong>No approved content is available.</strong><p>Create a draft in Content Studio, submit it for review and approve it before scheduling.</p><Link href="/content">Open Content Studio</Link></section>
             )}
-            {canSchedule && approvedContent.length > 0 && accounts.length === 0 && (
+            {canSchedule && approvedContent.length > 0 && connectedAccounts.length === 0 && (
               <section className="publishing-prerequisite"><strong>No publishing-enabled social destinations.</strong><p>Connect a supported Instagram Business account, Facebook Page or LinkedIn organization Page and grant the required publishing permissions. A connected account without a verified publishing capability cannot enter the queue.</p><Link href="/#channels">View connected-channel setup</Link></section>
             )}
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}
 
             <section className="publishing-queue-section">
-              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Complete workspace history, loaded 25 records per page. Search, status, platform and brand filters apply across the workspace history before pagination.</p></div><span className="publishing-count">{historyCount.toLocaleString()} MATCHING RECORDS</span></div>
+              <div className="publishing-section-heading"><div><span className="eyebrow">SCHEDULED OPERATIONS</span><h2>Queue and schedule history</h2><p>Complete workspace history, loaded 25 records per page. Search and filters apply to the current page.</p></div><span className="publishing-count">{historyCount.toLocaleString()} TOTAL RECORDS</span></div>
               <form method="get" action="/publishing" className="publishing-queue-filters" aria-label="Filter publishing queue">
                 <input type="hidden" name="workspace" value={activeWorkspace.id} />
                 <input type="hidden" name="month" value={monthMatch} />
                 <input type="hidden" name="page" value="1" />
-                <label>Search<input type="search" name="q" maxLength={100} minLength={2} defaultValue={searchTerm} placeholder="Search all history: post, brand, account or error" /></label>
+                <label>Search<input type="search" name="q" maxLength={100} defaultValue={searchTerm} placeholder="Post, brand, account or error" /></label>
                 <label>Status<select name="state" defaultValue={selectedState}>{allowedStates.map((state) => <option key={state} value={state}>{state === 'all' ? 'All statuses' : stateLabel[state] ?? state}</option>)}</select></label>
                 <label>Platform<select name="provider" defaultValue={selectedProvider}><option value="all">All platforms</option>{Array.from(new Set(accounts.map((account) => account.provider))).sort().map((provider) => <option key={provider} value={provider}>{provider}</option>)}</select></label>
                 <label>Brand<select name="brand" defaultValue={selectedBrand}><option value="all">All brands</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
                 <div className="publishing-filter-actions"><button type="submit">Apply filters</button><Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}`}>Clear</Link><a href={`/api/publishing/export?workspace=${encodeURIComponent(activeWorkspace.id)}&state=${encodeURIComponent(selectedState)}&provider=${encodeURIComponent(selectedProvider)}&brand=${encodeURIComponent(selectedBrand)}&q=${encodeURIComponent(searchTerm)}`}>Export filtered CSV</a></div>
               </form>
-              {params.saved === 'bulk-cancel' && <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Bulk cancellation: {Number(params.cancelled ?? 0)} cancelled, {Number(params.failed ?? 0)} failed, {Number(params.skipped ?? 0)} skipped because their status no longer allows cancellation. Each item was checked and processed separately.</p>}
               {queueReadFailed ? (
-                <div className="publishing-empty"><h3>{variantsUnavailable ? 'Provider variant migration required' : 'Publishing queue migration required'}</h3><p>{variantsUnavailable ? 'Apply migration 0018_provider_content_variants.sql after migration 0017, then refresh this page. Existing queue records are preserved.' : 'Apply migration 0005_publishing_calendar_queue.sql after migration 0004, then refresh this page.'}</p></div>
+                <div className="publishing-empty"><h3>Publishing queue migration required</h3><p>Apply migration 0005_publishing_calendar_queue.sql after migration 0004, then refresh this page.</p></div>
               ) : historyCount === 0 ? (
                 <div className="publishing-empty"><div className="publishing-empty-mark">▦</div><h3>The queue is empty</h3><p>Once approved content and connected destinations are available, scheduled items will appear here.</p></div>
               ) : filteredJobs.length === 0 ? (
                 <div className="publishing-empty"><h3>No matching queue records</h3><p>Change or clear the filters to see other scheduled operations.</p></div>
               ) : (
-                <>
-                {canSchedule && pageCancellableCount > 0 && <form action={bulkCancelScheduledJobs} id="bulk-cancel-form" className="publishing-bulk-cancel-toolbar">
-                  <input type="hidden" name="workspace_id" value={activeWorkspace.id}/>
-                  <input type="hidden" name="month" value={monthMatch}/>
-                  <input type="hidden" name="page" value={queuePage}/>
-                  <input type="hidden" name="state" value={selectedState}/>
-                  <input type="hidden" name="provider" value={selectedProvider}/>
-                  <input type="hidden" name="brand" value={selectedBrand}/>
-                  <input type="hidden" name="q" value={searchTerm}/>
-                  <div><strong>Bulk queue management</strong><span>Select eligible records on this page. Maximum 25 per operation; published or processing items cannot be cancelled.</span></div>
-                  <button type="submit">Cancel selected</button>
-                </form>}
                 <div className="publishing-job-list">
                   {filteredJobs.map((job) => {
                     const content = contentById.get(job.content_id);
                     const brand = brandById.get(job.brand_id);
                     const account = accountById.get(job.social_account_id);
-                    const variant = job.variant_id ? variantById.get(job.variant_id) : undefined;
                     const canCancel = canSchedule && ['queued', 'retryable', 'needs_review'].includes(job.state);
                     return (
                       <article className="publishing-job-card" key={job.id}>
-                        <div className="publishing-job-date">{canSchedule && ['queued', 'retryable', 'needs_review'].includes(job.state) && <label className="publishing-bulk-select"><input type="checkbox" form="bulk-cancel-form" name="job_ids" value={job.id}/><span>Select for bulk cancel</span></label>}<strong>{displayDate(job.scheduled_at, brand?.timezone ?? 'UTC')}</strong><span>{brand?.timezone ?? 'UTC'}</span></div>
-                        <div className="publishing-job-copy"><span className="publishing-job-brand">{brand?.name ?? 'Brand'} · {account?.provider ?? 'Unknown provider'}</span><h3>{content?.title ?? 'Content record'}</h3><p>{account?.display_name ?? account?.provider ?? 'Destination unavailable'} · {job.attempts} dispatch attempts{variant ? ` · Variant: ${variant.variant_name}` : ''}</p>{job.last_error_safe && <small className="publishing-safe-error">{job.last_error_safe}</small>}</div>
+                        <div className="publishing-job-date"><strong>{displayDate(job.scheduled_at, brand?.timezone ?? 'UTC')}</strong><span>{brand?.timezone ?? 'UTC'}</span></div>
+                        <div className="publishing-job-copy"><span className="publishing-job-brand">{brand?.name ?? 'Brand'} · {account?.provider ?? 'Unknown provider'}</span><h3>{content?.title ?? 'Content record'}</h3><p>{account?.display_name ?? account?.provider ?? 'Destination unavailable'} · {job.attempts} dispatch attempts</p>{job.last_error_safe && <small className="publishing-safe-error">{job.last_error_safe}</small>}</div>
                         <div className="publishing-job-actions"><span className={`publishing-state publishing-state-${job.state}`}>{stateLabel[job.state] ?? job.state}</span>{canCancel && <form action={cancelScheduledJob}><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><input type="hidden" name="job_id" value={job.id}/><button type="submit" className="publishing-cancel">Cancel</button></form>}</div>
                       </article>
                     );
                   })}
                 </div>
-                </>
               )}
               {historyCount > queuePageSize && <nav className="publishing-history-pagination" aria-label="Publishing history pages"><span>Page {queuePage} of {Math.ceil(historyCount / queuePageSize).toLocaleString()}</span><div>{queuePage > 1 && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage - 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Previous</Link>}{queuePage * queuePageSize < historyCount && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage + 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Next</Link>}</div></nav>}
             </section>

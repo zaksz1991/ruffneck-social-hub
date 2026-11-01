@@ -1,13 +1,13 @@
-# RuffNeck Social Hub v2.19.0
+# RuffNeck Social Hub v3.0.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, optional local-AI campaign drafting and human-reviewed platform copy adaptation, per-brand voice profiles, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
 ## Core modules
 
 - Supabase email/password authentication and callback handling.
 - Workspace membership, multiple brands, team invitations and role-aware access.
-- Content Studio with master-content approval, optional AI-generated platform adaptations, editable provider-specific copy/media variants and separate review workflows for Instagram, Facebook and LinkedIn.
-- Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, LinkedIn text-only organization publishing, multi-destination scheduling, approved provider-variant selection and per-destination preflight validation.
+- Content Studio with draft, approval and publishing schedule workflows.
+- Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, plus multi-destination scheduling.
 - Encrypted provider token vault shared by official Instagram, Facebook Pages and LinkedIn organization connection flows.
 - Central provider registry for Facebook, Instagram, LinkedIn, TikTok, YouTube, X and WhatsApp Business, with implemented integrations clearly separated from planned ones.
 - Meta webhook signature verification and workspace-scoped event journal.
@@ -17,10 +17,9 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Important provider boundaries
 
-- Instagram and Facebook Page publishing supports single-image posts only. Facebook publishing requires `pages_manage_posts` plus an eligible Page task.
-- LinkedIn organization publishing supports text-only posts when the required organization and publishing permissions are approved. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
-- The publishing preflight checks content format, brand matching, connection state and worker capability in the UI and repeats those checks server-side before creating schedule records. It does not prove remote media reachability or provider-side acceptance.
-- Instagram messaging is read-only. AI DM reply drafts are never sent.
+- Publishing worker support is limited to supported Instagram and Facebook Page single-image posts. Facebook publishing requires `pages_manage_posts` plus an eligible Page task. Other providers and other media types are not implied to work.
+- LinkedIn organization Pages can be connected after the app has approved `r_organization_admin` and `w_organization_social` access. v2.1.0 adds text-only organization publishing through the existing scheduled worker. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
+- Instagram messaging is read-only. AI DM reply drafts are never sent. Facebook Messenger replies are limited to human-reviewed text drafts, the standard 24-hour window and the Page Send API MESSAGE task.
 - Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
 - Marking a comment Reviewed or Ignored changes only its RuffNeck internal triage status.
 - Marking an AI draft human-reviewed does not publish it.
@@ -38,7 +37,11 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0019. Migration 0018 introduced provider-specific content variants; migration 0019 adds the audited Brand Voice Studio update function. Existing installations must have 0018 and 0019 applied once, in ascending order, before using the full v2.18.0 feature set. v2.19.0 adds no database migration. If 0018 is already applied, apply only 0019. If 0019 is already applied, do not rerun it. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
+Fresh installations apply migrations `0001` through `0018` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing v2.9.0 database (migrations 0001–0017 already applied), apply **only**:
+
+`supabase/migrations/0018_facebook_messenger_inbox_and_replies.sql`
+
+Do not rerun earlier migrations. See `RELEASE-NOTES-v3.0.0.md` for the required Meta messaging permissions, Facebook Page webhook setup and send safeguards.
 
 ## Environment variables
 
@@ -89,17 +92,9 @@ AI drafting is optional. A sanitized brand voice profile plus the relevant messa
 
 This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social-hub` folder and replace the contents of the existing `github.com/zaksz1991/ruffneck-social-hub` repository with it. Keep the project on its existing `main` branch and configure production variables separately. Do not upload it to RuffNeck LMS, RuffNeck Connect or Kano Run.
 
-## v2.19.0 production hardening
-
-- API requests are delegated to their route handlers for authentication. This prevents browser-session middleware from redirecting Meta webhook deliveries and the scheduled publishing worker to the login page. Each API route remains responsible for its own user-session, OAuth-state, webhook-signature or service-bearer verification.
-- Protected browser page routes fail closed if Supabase authentication configuration is absent or identity verification cannot establish a user. Missing configuration returns HTTP 503 (while the static login/signup screens remain renderable); verification exceptions return HTTP 503 and unauthenticated results redirect to login.
-- `/api/health` is a minimal public liveness endpoint. HTTP 200 confirms only that the Next.js process can handle a request; it does not verify Supabase, provider credentials, migrations, webhook delivery or scheduled publishing.
-- Global security headers include MIME sniffing protection, clickjacking protection, a restrictive referrer policy, and a permissions policy. HSTS is enabled only in production. API responses are marked private/no-store. A Content Security Policy is intentionally not imposed until the app's inline script/style requirements have been reviewed.
-- Instagram webhook request bodies are streamed with a 1 MiB byte limit before signature verification and JSON parsing, avoiding unbounded buffering when Content-Length is absent or inaccurate.
-
 ## Verification boundaries
 
-Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that required database migrations through 0017 have been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
+Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0016 has been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
 
 
 ## Publishing operations analytics (v2.2.0)
@@ -115,39 +110,8 @@ The Publishing Queue now includes a monthly calendar above the existing scheduli
 The Publishing Calendar can export the selected month as an iCalendar `.ics` file. The export is authenticated and workspace-scoped, uses UTC event timestamps, and can be imported into compatible calendar applications. It is a point-in-time export; later queue changes are not synchronized automatically. No migration or new environment variable is required.
 
 
-## v2.12.0 publishing preflight
+## v3.0.0 — Facebook Messenger inbox
 
-The publishing form now checks each selected account against the selected approved content before enabling submission. It verifies same-brand ownership, connected state, the stored `content_publish` capability, the active provider worker, media requirements and the caption length limits enforced by the current worker. Instagram and Facebook require exactly one valid HTTPS image URL; LinkedIn is text-only. The server repeats the checks using authenticated workspace-scoped reads and stops the complete scheduling batch if any selected destination fails. No queue entries are created on a preflight failure.
+This release adds inbound Facebook Messenger webhook capture, unified conversation threads, local/private AI reply drafts and human-reviewed text replies. New messages are captured after the Page webhook is enabled; historical conversations are not backfilled. Sending is limited to 2,000 characters and the standard 24-hour window, with a one-attempt ledger and no automatic retries.
 
-The check validates URL format only; it does not fetch the image or prove it can be reached by the provider. Provider-side acceptance remains a separate outcome recorded by the publishing worker. No migration or new environment variable is required.
-
-
-## v2.13.0 bulk publishing queue management
-
-Owners, administrators, managers and publishers can select eligible queue records on the current history page and cancel up to 25 in one operation. The action rechecks workspace membership and job state on the server and calls the existing state-locking cancellation RPC for every selected record. Published and currently processing jobs cannot be cancelled. No migration or new environment variable is required.
-
-## v2.14.0 workspace audit activity
-
-Workspace owners and administrators can open **Activity log** from the dashboard to review records in the existing `audit_events` table. Category, outcome, time-period and text filters are applied before 50-record pagination; filtered counts are exact. The page uses the existing owner/admin row-level security policy and selectively displays allowlisted metadata. Invitation email addresses, credentials, access tokens and arbitrary metadata are not rendered. The default view is the last 30 days, and all displayed timestamps are UTC. The page shows events that existing database functions and workers have recorded; it does not claim that every external provider action is captured. No migration or new environment variable is required.
-
-
-## v2.15.0 provider-specific content variants
-
-Content Studio now supports separate copy and optional single-image variants for the active Instagram Business, Facebook Pages and LinkedIn organization publishing workers. Each variant is attached to an approved master content item and has its own draft, review and approval lifecycle. A variant cannot be scheduled until it has been approved by an authorized reviewer. Approved variants cannot be edited through the application workflow; a reviewer must request changes before a new version can be submitted.
-
-When scheduling, choose the approved copy for each selected provider. Multiple accounts on the same provider use the same selected variant. Server-side scheduling verifies the variant's workspace, master content, provider and approval state. The publishing worker then supplies the selected variant's copy and media to the existing provider dispatcher. Existing queue jobs with no variant continue to use their approved master content.
-
-Apply `supabase/migrations/0018_provider_content_variants.sql` once after migration 0017. No new environment variables or package dependencies are required. Instagram and Facebook still require one public HTTPS image; LinkedIn remains text-only. TikTok, YouTube, X and WhatsApp Business are still not available for publishing.
-
-
-## v2.16.0 local-AI campaign draft assistant
-
-Content Studio now offers an optional AI campaign draft assistant for workspace owners, administrators, managers and publishers. The user selects a brand, campaign objective, tone and language, then supplies a bounded campaign brief and optional audience description. The server verifies workspace membership and brand ownership before sending the sanitized brand voice profile and brief to the configured `LOCAL_AI_BASE_URL`/`LOCAL_AI_MODEL` OpenAI-compatible chat-completions endpoint. `LOCAL_AI_API_KEY` remains optional for protected inference servers.
-
-The assistant returns an editable title and post body for human review. The user must explicitly save the result as a normal content draft; it is not automatically submitted for approval, converted into provider variants, scheduled or published. Master-content approval and the separate provider-variant approval process introduced in v2.15.0 remain unchanged. No database migration, dependency or new environment variable is required. Do not include confidential information or customer records in campaign briefs.
-
-## v2.17.0 AI platform-specific content adaptation
-
-For an already-approved master post, authorized workspace members can ask the configured local/OpenAI-compatible model to draft separate Instagram, Facebook and LinkedIn copy. Platform guidance is distinct, but the prompt requires preservation of the master post's primary language and factual meaning and prohibits the addition of unsupported prices, offers, dates, statistics, endorsements or commitments. The sanitized brand voice profile is included as bounded source context.
-
-The user receives an editable preview for each platform. Instagram and Facebook variants require one public HTTPS image; the master image is inherited when available and can be changed before saving. LinkedIn remains text-only. Saving creates ordinary provider-specific draft variants through the existing role-checked RPC; each must be submitted for review and approved before scheduling. No AI output is automatically approved, scheduled, published or sent. The feature reuses the existing local AI endpoint settings and adds no migration, environment variable or dependency.
+For an existing v2.9.0 database, apply only `supabase/migrations/0018_facebook_messenger_inbox_and_replies.sql`. Then reconnect eligible Facebook Pages after granting the approved Meta messaging scopes and configure the Page `messages` webhook callback at `/api/webhooks/facebook`. See `RELEASE-NOTES-v3.0.0.md` for setup and safeguards.

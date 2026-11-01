@@ -81,66 +81,12 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Live Meta OAuth, the migration against the target Supabase project, full Vitest suite, dependency-backed typecheck, full Next.js build and production deployment have not been verified in this package workspace.
 
 
-## Current provider and publishing status as of v2.12.0
+## 3.0.0 Facebook Messenger inbox and reviewed replies
 
-- Instagram Business: single-image publishing, read-only message conversations, internal comment triage and unsent AI reply drafts. Sending DMs or comment replies and automated moderation remain disabled.
-- Facebook Pages: single-image publishing through the official Page API when the stored permission and Page task checks pass.
-- LinkedIn organization Pages: text-only publishing through the official organization Posts API; image publishing and automatic token refresh are not implemented.
-- TikTok, YouTube, X and WhatsApp Business remain planned, with no publishing worker enabled.
-- Publishing preflight now checks the selected content and each destination both in the client UI and again on the authenticated server action before any queue writes. It does not verify remote image reachability or provider acceptance.
-- v2.12.0 adds no database migration or environment variable.
-- New preflight helper assertions passed in a standalone local runtime check. Changed source files passed TypeScript syntax transpilation. The full Vitest suite, dependency-backed typecheck, production Next.js build, live provider tests and Vercel deployment were not run.
-
-## 2.15.0 provider-specific content variants
-
-- Added named variants for the currently implemented Instagram, Facebook and LinkedIn publishing providers.
-- Master content must already be approved. Each provider variant then follows a separate draft → in-review → approved / changes-requested lifecycle.
-- Approved variants are immutable through the application workflow; a requested change returns the variant to draft for another review.
-- Scheduling can select one approved variant per provider for a multi-destination batch. The authenticated server revalidates the variant's workspace, master-content relationship, provider and approval state for each selected account.
-- Migration 0018 adds variant and review tables, `publishing_jobs.variant_id`, role-checked RPCs, and the worker claim projection that supplies the selected variant's copy and media to the existing dispatch functions.
-- Existing publishing jobs remain valid and continue to use master content because their new `variant_id` is null.
-- TikTok, YouTube, X and WhatsApp Business remain planned, with no active publishing worker.
-- Migration 0018 has not been applied to the live Supabase project as part of this package build. Live provider publishing, full Vitest suite, dependency-backed typecheck, production Next.js build and Vercel deployment are not verified here.
-
-## 2.16.0 local-AI campaign draft assistant
-
-- Added optional Content Studio generation of a master-post title and body using the existing `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL` and optional `LOCAL_AI_API_KEY` configuration.
-- The action verifies the signed-in user, content-creation workspace role and the selected brand's workspace relationship before contacting the configured inference endpoint.
-- Prompts contain a sanitized allowlisted brand-voice profile and bounded campaign fields encoded as untrusted data; the request has a 30-second timeout and bounded response parsing.
-- Generated text is returned as an editable preview and is saved only through the existing content-draft server action/RPC. There is no approval, variant creation, scheduling or publishing automation in this feature.
-- No migration or dependency changes are required.
-- The new helper passed strict standalone TypeScript checking; five changed TypeScript/TSX files passed syntax transpilation; 10 focused runtime assertion groups passed, including a mocked local inference endpoint.
-- The full dependency-backed project typecheck, complete Vitest suite, Next.js production build, live inference endpoint and production deployment were not run in this build environment.
-
-## 2.17.0 AI platform-specific copy adaptation
-
-- Added an optional Content Studio assistant on approved master posts to draft tailored Instagram, Facebook and LinkedIn variants from the approved title/body and sanitized brand voice profile.
-- Generation checks the signed-in user, workspace membership and content-creation role, verifies the approved master belongs to the workspace, and verifies the associated brand belongs to the same workspace.
-- Generated copy is returned as editable previews. Saving rechecks membership and master approval and writes each selected provider draft through the existing role-checked `create_content_variant` RPC.
-- Variant names are checked against existing names before generation; duplicate save attempts are surfaced per provider. Partial saves do not block successful variants from being retained.
-- Generated variants remain draft status and require the established separate review and approval workflow. No automatic scheduling or publishing is added.
-- No new database migration, package dependency or environment variable. Existing `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL` and optional `LOCAL_AI_API_KEY` settings are reused. Migration 0018 remains a prerequisite for provider variants.
-- Provider adaptation prompt/parser tests were added. New helper strict TypeScript check passed; six changed TypeScript/TSX files passed syntax transpilation; 17 focused runtime assertions passed, including a mocked local AI endpoint.
-- Full Vitest suite, dependency-backed project typecheck, Next.js production build, live Supabase RPC behavior, live AI endpoint and Vercel deployment were not run in this environment.
-
-
-## 2.18.0 Brand Voice Studio
-
-- Added an owner/admin-only brand voice profile editor for tone, supported languages, approved facts, forbidden claims and escalation triggers.
-- Uses the existing `brands.voice_profile` JSONB field and existing AI `sanitizeBrandVoice` allowlist; no column or table redesign is needed.
-- Added migration 0019, which validates structured profile input, independently checks workspace role and brand association, performs the update and writes a safe audit event with counts only.
-- Other workspace roles can view profiles but cannot save changes.
-- Helper tests cover normalization, duplicate line removal, list bounds, safe reads and formatting.
-- Migration 0019, live RLS behavior, full Vitest suite, dependency-backed project typecheck, production Next.js build and Vercel deployment are not verified against the live project.
-
-
-## 2.19.0 production hardening
-
-- Corrected middleware/API routing: middleware protects browser pages and delegates API requests to route-level authentication. This restores machine-to-machine delivery paths for the Meta webhook and GitHub Actions publishing worker while retaining the endpoint-specific signature/bearer checks.
-- Missing Supabase page-auth configuration fails closed with HTTP 503 for protected pages (static login/signup screens remain renderable). Protected pages also remain inaccessible when identity verification cannot establish a user; verification exceptions return HTTP 503.
-- Added a minimal public `/api/health` liveness route. It reports process-level availability only and intentionally does not expose secrets or claim database/provider readiness.
-- Added baseline security headers and private/no-store API response headers; HSTS is production-only. No CSP was added without a compatibility audit.
-- Instagram webhook body handling now streams with a hard 1 MiB limit before JSON parsing and signature verification.
-- Added focused tests for request-boundary policy, bounded request-body reading and security-header selection.
-- No database migration, dependency or environment variable is introduced.
-- Live webhook redelivery, scheduled worker execution, Supabase connectivity, provider publishing, Vercel deployment, complete Vitest, dependency-backed typecheck and production build remain acceptance checks for the target environment.
+- Facebook OAuth requests the Page messaging scopes `pages_messaging` and `pages_manage_metadata` in addition to existing Facebook Page scopes. Messaging is enabled separately from Page publishing and requires a suitable Page task for inbox access; the Send API additionally requires the MESSAGE task or full Page management.
+- Callback attempts the Page `messages` webhook subscription and stores the subscription result. Existing Facebook Pages must be reconnected after these grants are approved.
+- Added signature-verified `/api/webhooks/facebook`, normalized Page-scoped participant messages, idempotent conversation storage and attachment-type labels without attachment URLs. Capture begins after webhook subscription; no historical conversation backfill is implemented.
+- The unified conversations list now displays Instagram and Facebook threads. Instagram direct messages remain read-only.
+- Facebook uses the configured local/private AI adapter for drafts. A human must review each draft before an explicit text reply can be sent. The database checks the latest inbound message, Page Send API task and Meta's standard 24-hour response window at send time.
+- One send attempt per draft; no automatic retries. Ambiguous outcomes are marked `needs_review`. Text sends are capped at 2,000 characters; the server requires strictly less than 24 hours since the latest inbound message. No AI auto-send, broadcast, message-tag bypass, attachment sends or out-of-window sends are enabled.
+- Migration 0018 must be applied after 0017. Live Meta app review, live Page permission grants, webhook subscription/delivery, migration execution, Vitest, dependency-backed typecheck, production build and end-to-end send are not verified in this package environment.

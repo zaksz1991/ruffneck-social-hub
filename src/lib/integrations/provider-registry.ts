@@ -16,8 +16,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
   {
     id: 'facebook', name: 'Facebook Pages', accountLabel: 'Page', availability: 'available',
     connectionMethod: 'Facebook Login and Page access tokens',
-    supportedSurfaces: ['Managed Page listing', 'Encrypted Page token storage', 'Single-image publishing via approved queue'],
-    notes: 'Facebook Page image publishing is enabled only when the required Meta publishing permission and Page task are verified.',
+    supportedSurfaces: ['Managed Page listing', 'Encrypted Page token storage', 'Single-image publishing via approved queue', 'Messenger inbox via signed Page webhooks', 'Local AI-assisted replies with human review and 24-hour send-window enforcement'],
+    notes: 'Publishing and Messenger capabilities are separately permission-gated. Messenger replies require approved Page scopes/tasks, a verified webhook subscription, a human-reviewed draft and the standard 24-hour response window; no AI reply is sent automatically.',
   },
   {
     id: 'instagram', name: 'Instagram Business', accountLabel: 'Professional account', availability: 'available',
@@ -38,8 +38,8 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
   {
     id: 'linkedin', name: 'LinkedIn Pages', accountLabel: 'LinkedIn Page', availability: 'available',
     connectionMethod: 'LinkedIn OAuth and approved organization APIs',
-    supportedSurfaces: ['Managed organization Page discovery', 'Encrypted access-token storage', 'Administrator-role verification', 'Text-only organization publishing'],
-    notes: 'Text-only organization publishing is implemented. LinkedIn Marketing API access and the required organization administrator and publishing permissions must be approved; image publishing and automatic token refresh are not implemented.',
+    supportedSurfaces: ['Managed organization Page discovery', 'Encrypted access-token storage', 'Administrator-role verification'],
+    notes: 'Page connection is read-only in this release. LinkedIn Marketing API access and r_organization_admin approval are required; publishing is not enabled.',
   },
   {
     id: 'x', name: 'X', accountLabel: 'X account', availability: 'planned',

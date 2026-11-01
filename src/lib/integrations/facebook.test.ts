@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildFacebookAuthorizationUrl, canPublishToFacebookPage, getFacebookGraphVersion,
+  buildFacebookAuthorizationUrl, canManageFacebookMessages, canPublishToFacebookPage, canSendFacebookMessages, getFacebookGraphVersion,
   getGrantedFacebookPageScopes, normalizeFacebookPages,
 } from './facebook';
 
@@ -11,6 +11,8 @@ describe('Facebook Pages integration helpers', () => {
     expect(url.pathname).toBe('/v26.0/dialog/oauth');
     expect(url.searchParams.get('scope')).toContain('pages_show_list');
     expect(url.searchParams.get('scope')).toContain('pages_manage_posts');
+    expect(url.searchParams.get('scope')).toContain('pages_messaging');
+    expect(url.searchParams.get('scope')).toContain('pages_manage_metadata');
     expect(url.searchParams.get('state')).toBe('state');
   });
 
@@ -32,6 +34,8 @@ describe('Facebook Pages integration helpers', () => {
     expect(getGrantedFacebookPageScopes({ data: [
       { permission: 'pages_show_list', status: 'granted' },
       { permission: 'pages_manage_posts', status: 'declined' },
+      { permission: 'pages_messaging', status: 'granted' },
+      { permission: 'pages_manage_metadata', status: 'granted' },
       { permission: 'email', status: 'granted' },
     ] })).toEqual(['pages_show_list']);
   });
@@ -40,5 +44,24 @@ describe('Facebook Pages integration helpers', () => {
     expect(canPublishToFacebookPage(['pages_manage_posts'], ['CREATE_CONTENT'])).toBe(true);
     expect(canPublishToFacebookPage(['pages_manage_posts'], ['MODERATE'])).toBe(false);
     expect(canPublishToFacebookPage([], ['MANAGE'])).toBe(false);
+  });
+});
+
+
+describe('Facebook Messenger capability gate', () => {
+  it('requires both scopes and a messaging-capable Page task', () => {
+    expect(canManageFacebookMessages(['pages_messaging', 'pages_manage_metadata'], ['MODERATE'])).toBe(true);
+    expect(canManageFacebookMessages(['pages_messaging'], ['MODERATE'])).toBe(false);
+    expect(canManageFacebookMessages(['pages_messaging', 'pages_manage_metadata'], ['ANALYZE'])).toBe(false);
+  });
+});
+
+
+describe('Facebook Messenger send task gate', () => {
+  it('requires the Send API MESSAGE task or full Page management', () => {
+    expect(canSendFacebookMessages(['MESSAGE'])).toBe(true);
+    expect(canSendFacebookMessages(['MANAGE'])).toBe(true);
+    expect(canSendFacebookMessages(['MODERATE'])).toBe(false);
+    expect(canSendFacebookMessages(['MESSAGING'])).toBe(false);
   });
 });

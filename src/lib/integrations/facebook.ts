@@ -3,12 +3,16 @@ export const FACEBOOK_REQUESTED_SCOPES = [
   'pages_show_list',
   'pages_read_engagement',
   'pages_manage_posts',
+  'pages_manage_metadata',
+  'pages_messaging',
 ] as const;
 
 export const FACEBOOK_PAGE_SCOPES = [
   'pages_show_list',
   'pages_read_engagement',
   'pages_manage_posts',
+  'pages_manage_metadata',
+  'pages_messaging',
 ] as const;
 
 export type FacebookPage = {
@@ -80,6 +84,17 @@ export function getGrantedFacebookPageScopes(value: unknown): string[] {
 export function canPublishToFacebookPage(scopes: string[], tasks: string[]): boolean {
   const canCreateContent = tasks.includes('CREATE_CONTENT') || tasks.includes('MANAGE');
   return scopes.includes('pages_manage_posts') && canCreateContent;
+}
+
+export function canManageFacebookMessages(scopes: string[], tasks: string[]): boolean {
+  const canManageMessages = ['MESSAGE', 'MESSAGING', 'MODERATE', 'MANAGE'].some((task) => tasks.includes(task));
+  return scopes.includes('pages_messaging') && scopes.includes('pages_manage_metadata') && canManageMessages;
+}
+
+export function canSendFacebookMessages(tasks: string[]): boolean {
+  // Meta Send API requires the Page authorizing person to have the MESSAGE task.
+  // MANAGE is treated as full Page control; MODERATE/MESSAGING alone only gate inbox access.
+  return tasks.includes('MESSAGE') || tasks.includes('MANAGE');
 }
 
 export function safeFacebookErrorCode(value: unknown): string {

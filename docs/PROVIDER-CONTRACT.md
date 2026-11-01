@@ -35,3 +35,14 @@ A login success does not mean publishing or messaging capability is approved. Ex
 - Page token `token_expires_at` is NULL because this Page-list response does not return an expiry. Future Facebook actions must validate the token and handle revocation; NULL is not a promise of indefinite validity.
 - Facebook Page identity/list connection is implemented. Facebook post publishing, comments, messaging, moderation and insights are not enabled.
 - The publishing queue worker remains provider-gated and Instagram-only. A Page connection never implies that a queued Facebook post can be dispatched.
+
+
+## Facebook Messenger inbox and replies (3.0.0)
+
+- OAuth requests `pages_messaging` and `pages_manage_metadata`; granted scopes are allowlisted in the connection RPC.
+- A Page must report an eligible messaging/moderation task. The callback subscribes the Page to `messages` and records the result. Messaging is not enabled unless both permissions and a supported Page task are present.
+- Callback: `/api/webhooks/facebook`; verify token: `META_WEBHOOK_VERIFY_TOKEN`; raw-body HMAC secret: `FACEBOOK_APP_SECRET`; subscribed object/field: Page / `messages`.
+- Webhook messages are normalized by Page-scoped participant ID and provider message ID. Attachment URLs are not persisted. The event journal receives an allowlisted sanitized payload.
+- Replies are text-only and limited to 2,000 characters. `begin_facebook_reply_send` validates workspace role, human-reviewed status, the latest inbound source message, current 24-hour response window, connected Page, scopes and webhook subscription before a unique send attempt is recorded.
+- No automatic retries after a provider request. Network timeouts, rate-limit/server responses and post-send storage failures require human reconciliation.
+- Instagram DM actions remain read-only; the shared inbox does not imply the same send capability across providers.
