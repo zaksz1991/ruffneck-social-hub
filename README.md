@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v4.3.0
+# RuffNeck Social Hub v4.4.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, provider-scoped Customer CRM, deterministic inbox routing automation, SLA and team analytics, campaign planning with UTM links, manual performance snapshots and human-triggered official post insights for Facebook Pages, Instagram professional accounts and LinkedIn organization Pages; and TikTok creator OAuth, public-video analytics and consent-based video transfer to the TikTok creator inbox. TikTok direct/public publishing and scheduled TikTok dispatch remain disabled. LinkedIn analytics is limited to organic organization-post statistics; paid/ad activity, follower/visitor analytics and saves are not included. TikTok video counters are account-scoped public video statistics, not reach, campaign attribution, clicks or conversion analytics.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, provider-scoped Customer CRM, deterministic inbox routing automation, SLA and team analytics, campaign planning with UTM links, manual performance snapshots and human-triggered official post insights for Facebook Pages, Instagram professional accounts and LinkedIn organization Pages; TikTok creator OAuth, public-video analytics and consent-based video transfer to the TikTok creator inbox; and YouTube channel OAuth, manual channel-owner video analytics and consented private-only approved-video uploads. TikTok direct/public publishing and scheduled TikTok dispatch remain disabled. LinkedIn analytics is limited to organic organization-post statistics; paid/ad activity, follower/visitor analytics and saves are not included. TikTok video counters are account-scoped public video statistics, not reach, campaign attribution, clicks or conversion analytics.
 
 ## Core modules
 
@@ -8,7 +8,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Workspace membership, multiple brands, team invitations and role-aware access.
 - Content Studio with draft, approval and publishing schedule workflows.
 - Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, plus multi-destination scheduling.
-- Encrypted provider token vault shared by official Instagram, Facebook Pages and LinkedIn organization connection flows.
+- Encrypted provider token vault shared by official Instagram, Facebook Pages, LinkedIn organization and YouTube channel connection flows.
 - Central provider registry for Facebook, Instagram, LinkedIn, TikTok, YouTube, X and WhatsApp Business, with implemented integrations clearly separated from planned ones.
 - Meta webhook signature verification and workspace-scoped event journal.
 - Read-only Instagram text message conversations with optional local AI reply drafts.
@@ -24,12 +24,14 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Manager-triggered inbox routing rules using provider, AI triage, escalation, confidence and keyword conditions; dry-run previews, idempotent internal assignment/priority/Open/Pending updates and safe execution history.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
 - Campaign intelligence: brand-scoped campaign planning, UTM tracking, manually recorded performance and separate provider-verified Facebook, Instagram and LinkedIn post snapshots.
+- YouTube: Google OAuth for owned channels, encrypted channel-bound credentials, manual YouTube Analytics API video-level reports and an explicitly consented private-only upload flow for approved video assets. Public or scheduled YouTube publishing is not enabled.
 - TikTok: Login Kit OAuth v2 with encrypted/rotating credentials, manual Display API video-list analytics, and a user-consented PULL_FROM_URL transfer of one approved video to the creator’s TikTok inbox. The creator finishes the draft and publishes inside TikTok; no direct posting or scheduled TikTok worker exists.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
 ## Important provider boundaries
 
 - Publishing worker support is limited to supported Instagram and Facebook Page single-image posts. Facebook publishing requires `pages_manage_posts` plus an eligible Page task. Other providers and other media types are not implied to work.
+- YouTube channels can be connected through Google OAuth with YouTube Data API v3 and YouTube Analytics API. Channel-owner video analytics are synced manually; approved videos can be uploaded as private with an exact verified media host. Public and scheduled YouTube publishing remain disabled.
 - TikTok accounts can be connected with `user.info.basic`, `video.list` and `video.upload` scopes when the TikTok app has the required product/scope access. v4.3.0 reads recent public video counters through the Display API and can transfer one approved video to the creator inbox with `PULL_FROM_URL` after explicit consent. TikTok must verify each exact media hostname for URL pull. The creator must review, select privacy and complete final publishing in the TikTok app. RuffNeck does not implement TikTok Direct Post, scheduled TikTok dispatch, comments, messaging or inbox automation. Provider app approval and media-host verification are external requirements.
 - LinkedIn organization Pages can be connected after the app has approved `rw_organization_admin` and `w_organization_social` access. v4.2.0 adds human-triggered organic post statistics for successful campaign-linked organization posts; the endpoint requires `rw_organization_admin` and an organization administrator role; this permission is included in LinkedIn's Community Management API product and avoids requiring the separate Advertising API product for the legacy read-only scope. Existing connections must reconnect to grant this additional scope. Paid/ad activity, saves and Page follower/visitor analytics are not included. v2.1.0 adds text-only organization publishing through the existing scheduled worker. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
 - Instagram messaging is read-only. AI DM reply drafts are never sent. Facebook Messenger replies are limited to human-reviewed text drafts, the standard 24-hour window and the Page Send API MESSAGE task.
@@ -50,7 +52,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0030` in ascending order. v4.0.0 adds `0027_publishing_campaign_intelligence.sql`; v4.1.0 adds `0028_official_meta_campaign_analytics.sql`; v4.2.0 adds `0029_linkedin_organization_post_analytics.sql`; v4.3.0 adds `0030_tiktok_video_analytics_and_inbox_uploads.sql`. Existing installations apply only migrations that have not already been successfully applied. A database upgraded through v4.2.0 (migrations 0001–0029) applies migration 0030 once. For earlier installations, inspect migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md`, `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md`, `README-v4.2.0-LINKEDIN-ORGANIC-ANALYTICS.md` and `README-v4.3.0-TIKTOK-INTEGRATION.md` for feature boundaries and permissions.
+Fresh installations apply migrations `0001` through `0031` in ascending order. v4.0.0 adds `0027_publishing_campaign_intelligence.sql`; v4.1.0 adds `0028_official_meta_campaign_analytics.sql`; v4.2.0 adds `0029_linkedin_organization_post_analytics.sql`; v4.3.0 adds `0030_tiktok_video_analytics_and_inbox_uploads.sql`; v4.4.0 adds `0031_youtube_channel_analytics_and_private_video_uploads.sql`. Existing installations apply only migrations that have not already been successfully applied. A database upgraded through v4.3.0 (migrations 0001–0030) applies migration 0031 once. A database upgraded through v4.2.0 (migrations 0001–0029) applies migrations 0030 and 0031 in order. For earlier installations, inspect migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See `README-v4.0.0-PUBLISHING-CAMPAIGN-INTELLIGENCE.md`, `README-v4.1.0-OFFICIAL-META-CAMPAIGN-ANALYTICS.md`, `README-v4.2.0-LINKEDIN-ORGANIC-ANALYTICS.md`, `README-v4.3.0-TIKTOK-INTEGRATION.md` and `README-v4.4.0-YOUTUBE-INTEGRATION.md` for feature boundaries and permissions.
 
 ## Environment variables
 
@@ -75,6 +77,9 @@ Server-only variables used by existing modules:
 - `LINKEDIN_API_VERSION` (optional; default `202610`)
 - `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET` (required for TikTok Login Kit OAuth)
 - `TIKTOK_VERIFIED_MEDIA_HOSTS` (optional exact host allowlist; required for TikTok PULL_FROM_URL video transfer)
+- `YOUTUBE_CLIENT_ID` and `YOUTUBE_CLIENT_SECRET` (required for YouTube Google OAuth)
+- `YOUTUBE_VERIFIED_MEDIA_HOSTS` (exact comma-separated host allowlist; required for approved private YouTube video uploads)
+- `YOUTUBE_MAX_UPLOAD_BYTES` (optional; hard-capped at 67,108,864 bytes / 64 MiB)
 - `LOCAL_AI_BASE_URL` and `LOCAL_AI_MODEL` (optional); `LOCAL_AI_API_KEY` is optional
 
 New optional variable:
@@ -105,7 +110,7 @@ This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social
 
 ## Verification boundaries
 
-Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0025 has been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, routing rules match real conversation samples, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
+Static source audits and focused no-network regression scripts may be run against this package. A successful ZIP or static check does not prove that all Supabase migrations (through 0031) have been applied, Google/YouTube, TikTok, LinkedIn or Meta app permissions have been approved, media hostnames have been verified, provider OAuth connections work, a webhook is subscribed/delivered, an AI endpoint is reachable, routing rules match real conversation samples, or production deployment succeeds. Live Supabase, Google/YouTube, TikTok, LinkedIn, Meta, Vercel and complete CI acceptance must be completed in the target accounts. See `VERIFICATION-v4.4.0.md` for the exact checks completed for this release and the checks that remain outstanding.
 
 
 ## Publishing operations analytics (v2.2.0)

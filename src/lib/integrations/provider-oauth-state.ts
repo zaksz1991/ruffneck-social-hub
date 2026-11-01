@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export type ProviderOAuthState = {
   version: 1;
   purpose: 'provider_connect';
-  provider: 'facebook' | 'linkedin' | 'tiktok';
+  provider: 'facebook' | 'linkedin' | 'tiktok' | 'youtube';
   userId: string;
   workspaceId: string;
   brandId: string;
@@ -23,7 +23,7 @@ function sign(body: string, rootKey: Buffer): string {
 }
 
 export function createProviderOAuthState(payload: ProviderOAuthState, rootKey: Buffer): string {
-  if (payload.version !== 1 || payload.purpose !== 'provider_connect' || !['facebook', 'linkedin', 'tiktok'].includes(payload.provider) ||
+  if (payload.version !== 1 || payload.purpose !== 'provider_connect' || !['facebook', 'linkedin', 'tiktok', 'youtube'].includes(payload.provider) ||
       !UUID.test(payload.userId) || !UUID.test(payload.workspaceId) || !UUID.test(payload.brandId) ||
       !NONCE.test(payload.nonce) || !Number.isSafeInteger(payload.expiresAt)) {
     throw new Error('Invalid provider OAuth state payload.');
@@ -47,7 +47,7 @@ export function verifyProviderOAuthState(
   if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return null;
   try {
     const parsed = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as ProviderOAuthState;
-    if (parsed.version !== 1 || parsed.purpose !== 'provider_connect' || !['facebook', 'linkedin', 'tiktok'].includes(parsed.provider) ||
+    if (parsed.version !== 1 || parsed.purpose !== 'provider_connect' || !['facebook', 'linkedin', 'tiktok', 'youtube'].includes(parsed.provider) ||
         !UUID.test(parsed.userId) || !UUID.test(parsed.workspaceId) || !UUID.test(parsed.brandId) ||
         !NONCE.test(parsed.nonce) || !Number.isSafeInteger(parsed.expiresAt) ||
         parsed.expiresAt <= nowSeconds || parsed.expiresAt > nowSeconds + 15 * 60) return null;

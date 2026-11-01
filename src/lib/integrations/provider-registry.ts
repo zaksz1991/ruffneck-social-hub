@@ -32,9 +32,10 @@ export const PROVIDER_REGISTRY: readonly ProviderDefinition[] = [
     notes: 'TikTok API access depends on approved app products and user-granted scopes. Inbox upload transfers a video draft for the creator to finish in TikTok; this integration does not directly publish, schedule or choose public privacy settings. No scraping or browser automation is used.',
   },
   {
-    id: 'youtube', name: 'YouTube', accountLabel: 'YouTube channel', availability: 'planned',
-    connectionMethod: 'Google OAuth and YouTube Data API', supportedSurfaces: [],
-    notes: 'Not connectable in this release. YouTube channel and upload workflows are a separate provider milestone.',
+    id: 'youtube', name: 'YouTube', accountLabel: 'YouTube channel', availability: 'available',
+    connectionMethod: 'Google OAuth, YouTube Data API v3 and YouTube Analytics API',
+    supportedSurfaces: ['Google OAuth with encrypted refresh-token storage', 'Official channel and video analytics: views, watch time, average view duration, likes, comments, shares and subscriber changes', 'Human-initiated upload of approved videos as private YouTube videos', 'Upload history and duplicate/outcome-unknown protection'],
+    notes: 'Analytics uses the authenticated channel owner report. Video uploads are deliberately private and manually initiated; public publishing, scheduled dispatch, comments and monetization analytics are not enabled. Google OAuth verification and YouTube API project approval may be required. Upload is capped at 64 MiB per request on this serverless deployment.',
   },
   {
     id: 'linkedin', name: 'LinkedIn Pages', accountLabel: 'LinkedIn Page', availability: 'available',

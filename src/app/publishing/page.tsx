@@ -3,7 +3,9 @@ import { redirect } from 'next/navigation';
 import { cancelScheduledJob, scheduleApprovedContent } from '@/app/actions/publishing';
 import { refreshTikTokInboxUploadStatus, resolveUnknownTikTokInboxUpload, uploadApprovedVideoToTikTokInbox } from '@/app/actions/tiktok';
 import { validateTikTokVideoSourceUrl } from '@/lib/integrations/tiktok';
+import { validateYouTubeVideoSourceUrl } from '@/lib/integrations/youtube';
 import './tiktok-publishing.css';
+import './youtube-publishing.css';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { summarizeQueueHealth } from '@/lib/publishing/queue-health';
 
@@ -20,6 +22,7 @@ type SocialAccount = {
   granted_scopes: string[] | null;
 };
 type TikTokInboxUpload = { id: string; content_id: string; social_account_id: string; status: string; safe_error_code: string | null; publish_id: string | null; provider_video_id: string | null; created_at: string; updated_at: string };
+type YouTubeUpload = { id: string; content_id: string; social_account_id: string; status: 'initiating' | 'succeeded' | 'failed' | 'unknown'; privacy_status: 'private'; provider_video_id: string | null; provider_url: string | null; safe_error_code: string | null; created_at: string; updated_at: string };
 type PublishingJob = {
   id: string;
   brand_id: string;
@@ -67,7 +70,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string; tiktok_upload?: string; tiktok_error?: string }>; 
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string; tiktok_upload?: string; tiktok_error?: string; youtube_upload?: string; youtube_error?: string }>; 
 }) {
   const params = await searchParams;
   const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
@@ -100,6 +103,8 @@ export default async function PublishingQueuePage({
   let historyCount = 0;
   let tiktokUploads: TikTokInboxUpload[] = [];
   let tiktokUploadReadError = false;
+  let youtubeUploads: YouTubeUpload[] = [];
+  let youtubeUploadReadError = false;
 
   if (activeWorkspace) {
     const { data: member } = await supabase
@@ -131,9 +136,14 @@ export default async function PublishingQueuePage({
     historyJobs = (historyResult.data ?? []) as PublishingJob[];
     historyCount = historyResult.count ?? 0;
     if (historyResult.error) queueReadFailed = true;
-    const uploadResult = await supabase.from('tiktok_inbox_uploads').select('id,content_id,social_account_id,status,safe_error_code,publish_id,provider_video_id,created_at,updated_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }).limit(15);
+    const [uploadResult, youtubeUploadResult] = await Promise.all([
+      supabase.from('tiktok_inbox_uploads').select('id,content_id,social_account_id,status,safe_error_code,publish_id,provider_video_id,created_at,updated_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }).limit(15),
+      supabase.from('youtube_video_uploads').select('id,content_id,social_account_id,status,privacy_status,provider_video_id,provider_url,safe_error_code,created_at,updated_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }).limit(15),
+    ]);
     tiktokUploads = (uploadResult.data ?? []) as TikTokInboxUpload[];
     tiktokUploadReadError = Boolean(uploadResult.error);
+    youtubeUploads = (youtubeUploadResult.data ?? []) as YouTubeUpload[];
+    youtubeUploadReadError = Boolean(youtubeUploadResult.error);
   }
 
   const brandById = new Map(brands.map((brand) => [brand.id, brand]));
@@ -145,6 +155,12 @@ export default async function PublishingQueuePage({
   const approvedTikTokVideos = approvedContent.filter((item) => {
     const refs = Array.isArray(item.media_refs) ? item.media_refs : [];
     return refs.length === 1 && validateTikTokVideoSourceUrl(refs[0], verifiedTikTokHosts).ok;
+  });
+  const youtubeInboxAccounts = accounts.filter((account) => account.connection_state === 'connected' && account.provider === 'youtube' && account.capabilities?.content_upload === true && account.granted_scopes?.includes('https://www.googleapis.com/auth/youtube.upload') === true);
+  const verifiedYouTubeHosts = (process.env.YOUTUBE_VERIFIED_MEDIA_HOSTS ?? '').split(',').map((host) => host.trim()).filter(Boolean);
+  const approvedYouTubeVideos = approvedContent.filter((item) => {
+    const refs = Array.isArray(item.media_refs) ? item.media_refs : [];
+    return refs.length === 1 && validateYouTubeVideoSourceUrl(refs[0], verifiedYouTubeHosts).ok;
   });
   const canSchedule = roleCanSchedule(role);
   const allowedStates = ['all', 'queued', 'claimed', 'dispatching', 'succeeded', 'retryable', 'failed', 'needs_review', 'cancelled'];
@@ -198,6 +214,29 @@ export default async function PublishingQueuePage({
     status_check: 'TikTok status could not be checked. Try again later; the original upload was not repeated.',
     upload_record: 'A secure upload record could not be created. Check migration 0030 and workspace permissions.',
     reconciliation: 'The manual reconciliation was not accepted. Confirm you are an owner, administrator or manager and refresh the transfer record.',
+  };
+  const youtubeErrorMessages: Record<string, string> = {
+    input: 'Select a valid approved video and YouTube channel.',
+    origin: 'The upload request origin could not be verified. Reload the publishing page and try again.',
+    permission: 'Your workspace role cannot upload approved videos to YouTube.',
+    consent: 'Confirm that the workspace has rights to upload this video to the selected YouTube channel.',
+    content: 'Only approved content can be uploaded.',
+    account: 'Choose a connected YouTube channel belonging to the approved content brand.',
+    upload_scope: 'Reconnect YouTube and grant the YouTube upload permission.',
+    url_invalid: 'The media URL must be HTTPS without credentials, a custom port or a fragment.',
+    video_format: 'YouTube upload accepts .mp4, .mov, .m4v or .webm files with a supported video MIME type.',
+    domain_unverified: 'The media hostname is not listed exactly in YOUTUBE_VERIFIED_MEDIA_HOSTS. Verify the host and add its exact hostname in Vercel.',
+    media_fetch: 'The video file could not be retrieved from the verified host.',
+    media_empty: 'The source host returned an empty video file.',
+    video_too_large: 'The video exceeds the 64 MiB upload limit for this release.',
+    upload_record: 'The secure upload record could not be created. Confirm migration 0031 is applied.',
+    duplicate: 'This approved video already has a YouTube upload record. A previous successful or uncertain upload cannot be repeated.',
+    token: 'YouTube access could not be refreshed. Reconnect the channel and retry after checking its permissions.',
+    provider: 'Google rejected the upload. Check YouTube API access, quota and channel permissions.',
+    upload_session: 'Google did not create a resumable upload session. No video bytes were sent.',
+    upload_session_invalid: 'Google returned an unrecognised upload-session URL. No video bytes were sent.',
+    outcome_unknown: 'Google may have received the video, but the final response was not confirmed. Automatic retry is blocked; verify the channel in YouTube Studio before contacting support.',
+    upload_record_failed: 'The upload completed but its result could not be recorded. Do not repeat the upload until the channel and history are checked.',
   };
 
   return (
@@ -268,9 +307,27 @@ export default async function PublishingQueuePage({
 
             <section className="publishing-safety-banner">
               <span className="publishing-safety-icon">✓</span>
-              <div><strong>Human-approved multi-network publishing</strong><p>Approved image posts can be dispatched to Instagram Business accounts and Facebook Pages. Approved text-only posts can be dispatched to LinkedIn organization Pages when the required LinkedIn permission is granted. TikTok videos use a separate consent-based transfer into the creator inbox; final publication happens in TikTok.</p></div>
+              <div><strong>Human-approved multi-network publishing</strong><p>Approved image posts can be dispatched to Instagram Business accounts and Facebook Pages. Approved text-only posts can be dispatched to LinkedIn organization Pages when the required LinkedIn permission is granted. TikTok videos use a consent-based creator-inbox transfer; YouTube videos can be uploaded privately for review in YouTube Studio.</p></div>
               <span className="publishing-gate">INSTAGRAM + FACEBOOK + LINKEDIN + TIKTOK INBOX</span>
             </section>
+
+            {params.youtube_upload === 'private' && <p className="notice success">The video was uploaded to YouTube with private visibility. Review it in YouTube Studio before changing its visibility. No public post or schedule was created.</p>}
+            {params.youtube_error && <p className="notice error" role="alert">{youtubeErrorMessages[params.youtube_error] ?? 'The YouTube upload could not be completed. Check the upload history before retrying.'}</p>}
+
+            {canSchedule && <section className="tiktok-inbox-transfer-card youtube-upload-card">
+              <div className="publishing-section-heading"><div><span className="eyebrow">OFFICIAL YOUTUBE DATA API V3</span><h2>Upload an approved video privately to YouTube</h2><p>Upload one approved video to the connected channel as private. Public visibility and scheduled publication are not enabled in this release.</p></div><span className="publishing-tag">PRIVATE UPLOAD ONLY</span></div>
+              {youtubeInboxAccounts.length === 0 ? <p className="tiktok-transfer-muted">Connect a YouTube channel with the youtube.upload permission to enable private video uploads.</p> : approvedYouTubeVideos.length === 0 ? <p className="tiktok-transfer-muted">No approved content has exactly one .mp4, .mov, .m4v or .webm URL on an exact hostname configured in YOUTUBE_VERIFIED_MEDIA_HOSTS.</p> : <form action="/api/integrations/youtube/upload" method="post" className="tiktok-transfer-form">
+                <input type="hidden" name="workspace_id" value={activeWorkspace.id}/>
+                <label>Approved video<select name="content_id" required defaultValue=""><option value="" disabled>Select approved video</option>{approvedYouTubeVideos.map((item) => <option key={item.id} value={item.id}>{item.title || 'Untitled approved video'} · {brandById.get(item.brand_id)?.name ?? 'Brand'}</option>)}</select></label>
+                <label>YouTube channel<select name="social_account_id" required defaultValue=""><option value="" disabled>Select connected channel</option>{youtubeInboxAccounts.map((account) => <option key={account.id} value={account.id}>{account.display_name ?? 'YouTube channel'} · {brandById.get(account.brand_id)?.name ?? 'Brand'}</option>)}</select></label>
+                <label className="tiktok-transfer-consent"><input type="checkbox" name="upload_consent" value="yes" required/><span>I confirm the workspace owns or is authorised to upload this video to the selected channel. I understand the upload will remain private, and a team member must review it in YouTube Studio before choosing any further visibility or publication settings.</span></label>
+                <button type="submit" className="publishing-primary">Upload as private YouTube video</button>
+              </form>}
+              <div className="tiktok-transfer-history"><div className="tiktok-transfer-history-heading"><strong>Recent YouTube uploads</strong><span>Latest 15 records</span></div>
+                {youtubeUploadReadError ? <p className="tiktok-transfer-muted">YouTube upload history is unavailable. Confirm migration 0031 is applied.</p> : youtubeUploads.length === 0 ? <p className="tiktok-transfer-muted">No YouTube video uploads yet.</p> : youtubeUploads.map((upload) => <div className="tiktok-transfer-row" key={upload.id}><div><strong>{contentById.get(upload.content_id)?.title ?? 'Approved video'}</strong><span>{accountById.get(upload.social_account_id)?.display_name ?? 'YouTube channel'} · {new Date(upload.updated_at).toLocaleString()} · {upload.privacy_status}</span>{upload.safe_error_code && <small>{upload.safe_error_code}</small>}{upload.provider_video_id && <small>Video ID: {upload.provider_video_id}</small>}</div><span className={`tiktok-transfer-state tiktok-transfer-${upload.status}`}>{upload.status.replaceAll('_', ' ')}</span>{upload.provider_url && <a href={upload.provider_url} target="_blank" rel="noreferrer" className="youtube-upload-link">Open video</a>}</div>)}
+              </div>
+              <p className="tiktok-transfer-footnote">Security: the server retrieves one video from an exact hostname listed in YOUTUBE_VERIFIED_MEDIA_HOSTS. Files are capped at 64 MiB. Uploads are created as private, without scheduled publication or automatic public visibility. Ambiguous outcomes are marked unknown and cannot be blindly retried. Check YouTube Studio and upload history before taking further action.</p>
+            </section>}
 
             {canSchedule && <section className="tiktok-inbox-transfer-card">
               <div className="publishing-section-heading"><div><span className="eyebrow">OFFICIAL TIKTOK CONTENT API</span><h2>Send an approved video to TikTok</h2><p>Transfer one approved video into the connected creator&apos;s TikTok inbox. This is not an automatic public post or scheduled publication.</p></div><span className="publishing-tag">HUMAN FINAL PUBLISH</span></div>
@@ -361,7 +418,7 @@ export default async function PublishingQueuePage({
               )}
               {historyCount > queuePageSize && <nav className="publishing-history-pagination" aria-label="Publishing history pages"><span>Page {queuePage} of {Math.ceil(historyCount / queuePageSize).toLocaleString()}</span><div>{queuePage > 1 && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage - 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Previous</Link>}{queuePage * queuePageSize < historyCount && <Link href={`/publishing?workspace=${activeWorkspace.id}&month=${monthMatch}&page=${queuePage + 1}&state=${selectedState}&provider=${selectedProvider}&brand=${selectedBrand}&q=${encodeURIComponent(searchTerm)}`}>Next</Link>}</div></nav>}
             </section>
-            <p className="publishing-footnote">Scheduled queue dispatch currently supports one public HTTPS image with caption to Instagram Business or Facebook Pages and text-only LinkedIn organization posts. TikTok is a separate creator-inbox video transfer that requires explicit consent, a verified media hostname and a final manual publish action inside TikTok. It is not a scheduled queue destination.</p>
+            <p className="publishing-footnote">Scheduled queue dispatch currently supports one public HTTPS image with caption to Instagram Business or Facebook Pages and text-only LinkedIn organization posts. TikTok remains a consent-based creator-inbox video transfer. YouTube supports separate, manually initiated private uploads from approved video assets; neither workflow is a scheduled queue destination or creates a public post.</p>
           </>
         )}
       </div>

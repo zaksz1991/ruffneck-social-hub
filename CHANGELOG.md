@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.4.0 — YouTube channel analytics and private video uploads
+
+- Added Google OAuth for owned YouTube channels, signed cookie-bound state, channel discovery and encrypted channel-bound token bundles with server-side refresh.
+- Required `youtube.readonly` plus `yt-analytics.readonly` for analytics; treated `youtube.upload` as optional and enabled private uploads only when it was granted.
+- Added manual channel-owner Analytics API reports for a selected channel, identifying up to 50 recent uploads from the channel's uploads playlist and querying per-video metrics with a bounded multi-video filter; report windows use completed Pacific-time dates; a single-video channel uses the documented no-dimension fallback. Video-level subscriber changes are watch-page-attributed.
+- Added views, estimated watch minutes, average view duration, likes, comments, shares and video-watch-page subscriber gains/losses, stored separately from campaign snapshots and included in CSV exports.
+- Added explicit-consent uploads for exactly one approved video to YouTube as private content, with exact HTTPS media-host allowlisting, bounded 64 MiB transfer, a 60-second function budget, duplicate protection and an `unknown` outcome for uncertain final uploads.
+- Kept public YouTube publishing, scheduled dispatch, automatic polling, monetization, revenue, demographic and paid-ad reports disabled.
+- Added migration 0031, YouTube OAuth/analytics/upload integration audits and focused no-network regression checks. Full Next.js build, live Google authorization, migration and provider calls remain deployment acceptance requirements.
+
 ## 4.3.0 — TikTok official connection, video analytics and creator-inbox transfer
 
 - Added TikTok Login Kit OAuth v2 with signed, cookie-bound state, server-side code exchange, encrypted token storage and refresh-token rotation.
@@ -329,3 +339,12 @@
 
 ### Database
 - Added migration `0025_inbox_routing_automation_rules.sql`.
+
+## 4.4.0 — YouTube Analytics and private video uploads
+
+- Added Google OAuth connection for YouTube channel owners with encrypted refresh-token storage.
+- Added channel-owner video analytics reporting and manual synchronization for views, watch time, average view duration, likes, comments, shares and subscriber changes.
+- Added a separate approved-content upload workflow that creates private YouTube videos only.
+- Added exact verified-host media retrieval, a 64 MiB cap, upload-outcome ambiguity protection and duplicate upload controls.
+- Added YouTube channel analytics to the cross-platform Analytics screen and private upload history to Publishing.
+- Scheduled/public YouTube dispatch remains disabled.

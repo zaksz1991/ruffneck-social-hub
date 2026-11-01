@@ -64,8 +64,8 @@ for (const [relative, tokens] of requirements) {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (pkg.version !== '4.3.0') failures.push(`package.json: expected 4.3.0, got ${pkg.version}`);
-if (!String(pkg.scripts?.build ?? '').includes('audit:tiktok && next build')) failures.push('package.json: TikTok integration audit must gate next build');
+if (pkg.version !== '4.4.0') failures.push(`package.json: expected 4.4.0, got ${pkg.version}`);
+if (!String(pkg.scripts?.build ?? '').includes('audit:tiktok && npm run audit:youtube && next build')) failures.push('package.json: TikTok integration audit must gate next build');
 if (!String(pkg.scripts?.test ?? '').includes('test-tiktok-integration.mjs')) failures.push('package.json: TikTok regression script missing from test command');
 
 if (failures.length) {

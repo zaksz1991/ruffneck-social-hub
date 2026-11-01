@@ -34,7 +34,7 @@ for (const [relative, tokens] of required) {
   for (const token of tokens) if (!content.includes(token)) failures.push(`${relative}: missing contract '${token}'`);
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.0.0', '4.1.0', '4.2.0', '4.3.0'].includes(pkg.version)) failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
+if (!['4.0.0', '4.1.0', '4.2.0', '4.3.0', '4.4.0'].includes(pkg.version)) failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:campaign-intelligence')) failures.push('package.json: build does not run campaign intelligence audit');
 if (!String(pkg.scripts?.test ?? '').includes('test-campaign-intelligence.mjs')) failures.push('package.json: test does not run campaign intelligence regression guard');
 if (failures.length) {

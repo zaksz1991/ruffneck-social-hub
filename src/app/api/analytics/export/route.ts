@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { toCsv } from '@/lib/analytics/csv';
+import { getYouTubeAnalyticsWindow } from '@/lib/integrations/youtube';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,7 @@ type Job = {
 };
 type Account = { id: string; provider: string; display_name: string | null };
 type ProviderSnapshot = { campaign_id: string; publishing_job_id: string; social_account_id: string; provider: string; snapshot_date: string; impressions: number; reach: number; likes: number; comments: number; shares: number; saves: number; clicks: number; source: string; fetched_at: string };
+type YouTubeSnapshot = { social_account_id: string; provider_video_id: string; video_title: string; video_url: string; provider_published_at: string | null; report_start_date: string; report_end_date: string; snapshot_date: string; views: number | string; watch_time_minutes: number | string; average_view_duration_seconds: number | string; likes: number | string; comments: number | string; shares: number | string; subscribers_gained: number | string; subscribers_lost: number | string; fetched_at: string };
 
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -38,19 +40,22 @@ export async function GET(request: NextRequest) {
   if (!membership) return NextResponse.json({ error: 'Workspace not found.' }, { status: 404 });
 
   const since = new Date(Date.now() - range * 86400000).toISOString();
-  const [workspaceResult, accountResult, jobResult, providerSnapshotResult] = await Promise.all([
+  const { startDate: youtubeStartDate, endDate: youtubeEndDate } = getYouTubeAnalyticsWindow(new Date(), range as 7 | 30 | 90);
+  const [workspaceResult, accountResult, jobResult, providerSnapshotResult, youtubeSnapshotResult] = await Promise.all([
     supabase.from('workspaces').select('name').eq('id', workspaceId).maybeSingle(),
     supabase.from('social_accounts').select('id,provider,display_name').eq('workspace_id', workspaceId),
     supabase.from('publishing_jobs').select('id,social_account_id,state,created_at,scheduled_at,delivered_at,provider_post_id,attempts,last_error_code,last_error_safe').eq('workspace_id', workspaceId).gte('created_at', since).order('created_at', { ascending: false }).limit(5000),
     supabase.from('provider_analytics_snapshots').select('campaign_id,publishing_job_id,social_account_id,provider,snapshot_date,impressions,reach,likes,comments,shares,saves,clicks,source,fetched_at').eq('workspace_id', workspaceId).gte('snapshot_date', since.slice(0, 10)).order('snapshot_date', { ascending: false }).order('fetched_at', { ascending: false }).limit(5000),
+    supabase.from('youtube_video_analytics_snapshots').select('social_account_id,provider_video_id,video_title,video_url,provider_published_at,report_start_date,report_end_date,snapshot_date,views,watch_time_minutes,average_view_duration_seconds,likes,comments,shares,subscribers_gained,subscribers_lost,fetched_at').eq('workspace_id', workspaceId).eq('report_start_date', youtubeStartDate).eq('report_end_date', youtubeEndDate).order('snapshot_date', { ascending: false }).order('fetched_at', { ascending: false }).limit(1000),
   ]);
-  if (workspaceResult.error || accountResult.error || jobResult.error || providerSnapshotResult.error) {
+  if (workspaceResult.error || accountResult.error || jobResult.error || providerSnapshotResult.error || youtubeSnapshotResult.error) {
     return NextResponse.json({ error: 'Analytics export could not be generated.' }, { status: 503 });
   }
 
   const accounts = (accountResult.data ?? []) as Account[];
   const jobs = (jobResult.data ?? []) as Job[];
   const providerSnapshots = (providerSnapshotResult.data ?? []) as ProviderSnapshot[];
+  const youtubeSnapshots = (youtubeSnapshotResult.data ?? []) as YouTubeSnapshot[];
   const accountMap = new Map(accounts.map((account) => [account.id, account]));
   const published = jobs.filter((job) => job.state === 'succeeded').length;
   const pending = jobs.filter((job) => ['queued', 'claimed', 'dispatching', 'retryable'].includes(job.state)).length;
@@ -87,8 +92,19 @@ export async function GET(request: NextRequest) {
     ]);
   }
 
+  rows.push([], ['YouTube channel-owner video analytics snapshots'],
+    ['Channel account', 'Video ID', 'Video title', 'Video URL', 'Published at', 'Report start date', 'Report end date', 'Views', 'Estimated watch minutes', 'Average view duration (seconds)', 'Likes', 'Comments', 'Shares', 'Subscribers gained', 'Subscribers lost', 'Snapshot date', 'Fetched at (UTC)']);
+  for (const snapshot of youtubeSnapshots) {
+    rows.push([
+      accountMap.get(snapshot.social_account_id)?.display_name ?? snapshot.social_account_id, snapshot.provider_video_id, snapshot.video_title, snapshot.video_url,
+      snapshot.provider_published_at ?? '', snapshot.report_start_date, snapshot.report_end_date, snapshot.views, snapshot.watch_time_minutes,
+      snapshot.average_view_duration_seconds, snapshot.likes, snapshot.comments, snapshot.shares, snapshot.subscribers_gained, snapshot.subscribers_lost,
+      snapshot.snapshot_date, snapshot.fetched_at,
+    ]);
+  }
+
   rows.push([], ['Metric interpretation'],
-    ['LinkedIn rows contain organic organization-post share statistics only. LinkedIn does not expose saves or paid/ad performance through this endpoint. Reach and impressions are post-level sums and are not deduplicated across audiences or posts. Provider metric definitions differ. The CSV preserves one row per campaign association, so a destination linked to multiple campaigns can appear in multiple rows.']);
+    ['LinkedIn rows contain organic organization-post share statistics only. LinkedIn does not expose saves or paid/ad performance through this endpoint. Reach and impressions are post-level sums and are not deduplicated across audiences or posts. Provider metric definitions differ. The CSV preserves one row per campaign association, so a destination linked to multiple campaigns can appear in multiple rows. YouTube rows are channel-owner video-level reports; summing them does not deduplicate a viewer across videos. YouTube monetization, revenue, demographics and paid-ad metrics are not included.']);
 
   const csv = `\uFEFF${toCsv(rows)}`;
   const safeWorkspace = (workspaceResult.data?.name ?? 'workspace').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '').slice(0, 48) || 'workspace';
