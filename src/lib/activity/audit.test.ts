@@ -15,6 +15,7 @@ describe('activity audit helpers', () => {
     expect(parseActivityFilters({ category: 'secrets', outcome: 'nope', period: '5', page: '-8' })).toEqual({
       category: 'all', outcome: 'all', period: '30', page: 1, query: '',
     });
+    expect(parseActivityFilters({ category: 'brand' }).category).toBe('brand');
   });
 
   it('strips PostgREST filter punctuation and caps search length', () => {
@@ -43,5 +44,14 @@ describe('activity audit helpers', () => {
     const now = Date.UTC(2026, 10, 1, 0, 0, 0);
     expect(activityDateCutoff('7', now)).toBe(new Date(now - 7 * 86400000).toISOString());
     expect(activityDateCutoff('all', now)).toBeNull();
+  });
+});
+
+
+describe('brand voice audit metadata', () => {
+  it('shows only safe configuration counts and boolean flags', () => {
+    expect(formatSafeAuditMetadata({ approved_facts_count: 2, forbidden_claims_count: 1, escalation_triggers_count: 3, tone_configured: true, languages_configured: false, approved_facts: ['private business fact'] })).toEqual([
+      'Approved facts: 2', 'Forbidden claims: 1', 'Escalation triggers: 3', 'Tone guidance: Present', 'Language guidance: Not present',
+    ]);
   });
 });

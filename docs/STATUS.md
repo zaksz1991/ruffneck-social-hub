@@ -122,3 +122,13 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - No new database migration, package dependency or environment variable. Existing `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL` and optional `LOCAL_AI_API_KEY` settings are reused. Migration 0018 remains a prerequisite for provider variants.
 - Provider adaptation prompt/parser tests were added. New helper strict TypeScript check passed; six changed TypeScript/TSX files passed syntax transpilation; 17 focused runtime assertions passed, including a mocked local AI endpoint.
 - Full Vitest suite, dependency-backed project typecheck, Next.js production build, live Supabase RPC behavior, live AI endpoint and Vercel deployment were not run in this environment.
+
+
+## 2.18.0 Brand Voice Studio
+
+- Added an owner/admin-only brand voice profile editor for tone, supported languages, approved facts, forbidden claims and escalation triggers.
+- Uses the existing `brands.voice_profile` JSONB field and existing AI `sanitizeBrandVoice` allowlist; no column or table redesign is needed.
+- Added migration 0019, which validates structured profile input, independently checks workspace role and brand association, performs the update and writes a safe audit event with counts only.
+- Other workspace roles can view profiles but cannot save changes.
+- Helper tests cover normalization, duplicate line removal, list bounds, safe reads and formatting.
+- Migration 0019, live RLS behavior, full Vitest suite, dependency-backed project typecheck, production Next.js build and Vercel deployment are not verified against the live project.

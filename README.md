@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v2.17.0
+# RuffNeck Social Hub v2.18.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, optional local-AI campaign drafting and human-reviewed platform copy adaptation, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, optional local-AI campaign drafting and human-reviewed platform copy adaptation, per-brand voice profiles, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
 
 ## Core modules
 
@@ -38,7 +38,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0018. Version 2.15.0 added `0018_provider_content_variants.sql`. Version 2.17.0 adds no migration. Existing installations that have already applied migrations 0001–0017 must apply migration 0018 once, using the Supabase SQL Editor, before enabling provider-specific variants and variant-aware scheduling. Existing installations that already applied 0018 do not need another migration for v2.17.0. Do not rerun migrations 0001–0017. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
+The complete ZIP contains migrations 0001–0019. Migration 0018 introduced provider-specific content variants; migration 0019 adds the audited Brand Voice Studio update function. Existing installations must have 0018 and 0019 applied once, in ascending order, before using the full v2.18.0 feature set. If 0018 is already applied, apply only 0019. If 0019 is already applied, do not rerun it. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
 
 ## Environment variables
 

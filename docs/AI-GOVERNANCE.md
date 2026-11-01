@@ -21,3 +21,10 @@ Brand profile includes tone, languages, approved facts, forbidden claims and esc
 - Each adaptation is an editable preview. Saving calls the existing authenticated `create_content_variant` RPC, which rechecks membership and master approval and records a draft variant with an audit event.
 - Saved variants must follow the existing separate submit-for-review and approval workflow. No model output is automatically approved, scheduled, published or sent to a provider.
 - The feature reuses `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL` and optional `LOCAL_AI_API_KEY`; no new migration or dependency is required.
+
+
+## v2.18.0 brand voice management
+- Workspace owners/admins can configure structured tone, language, approved facts, forbidden claims and escalation triggers for each brand.
+- Values are stored in the existing brand voice JSONB profile and passed through the existing allowlist sanitizer before use by AI drafting/adaptation/reply-draft prompts.
+- Database updates are role-checked and audited; audit metadata stores only entry counts and configuration flags, not the profile text.
+- A profile is guidance. The brand owner remains responsible for verifying every approved fact. Profile configuration does not approve content or enable automated replies/publishing.

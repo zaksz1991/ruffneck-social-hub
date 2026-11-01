@@ -1,3 +1,12 @@
+## [2.18.0] - Brand Voice Studio
+
+- Added a workspace-scoped Brand Voice Studio for editing tone, supported languages, approved facts, forbidden claims and escalation triggers for each brand.
+- Reuses the existing `brands.voice_profile` JSONB field and existing AI sanitization path; AI drafting and reply assistance receive the saved profile without a schema redesign.
+- Restricted profile changes to workspace owners and admins in both the server action and a security-definer database function.
+- Added migration 0019 with input validation, role enforcement and audit events that record configuration counts without storing profile text in audit metadata.
+- Added helper tests for normalization, bounds, safe reads and textarea formatting.
+- No new dependencies or environment variables.
+
 ## [2.17.0] - AI platform-specific content adaptation
 
 - Added an optional AI adaptation assistant to each approved master post in Content Studio.

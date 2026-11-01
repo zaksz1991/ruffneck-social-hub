@@ -21,3 +21,8 @@ Code presence alone never marks an operational gate complete.
 14. TikTok, YouTube and X publishing, plus WhatsApp Business messaging, remain planned pending official OAuth, API access, app review and provider-action tests.
 
 A registry entry is not a working integration. A connected account is not proof that publish, inbox, analytics or moderation capabilities are enabled.
+
+
+## Brand safety configuration (2.18.0)
+
+15. Brand voice profiles can now be managed per brand using tone, language, approved facts, forbidden claims and escalation triggers. The application and migration both restrict writes to workspace owners/admins; the database records an audit event without copying the sensitive profile text. Gate: apply migration 0019 and verify read/write denial using at least one owner/admin and one non-admin user in separate workspaces. AI still drafts only and requires human review.

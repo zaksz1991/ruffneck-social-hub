@@ -1,4 +1,4 @@
-export const ACTIVITY_CATEGORIES = ['all', 'workspace', 'content', 'publishing', 'integration', 'instagram'] as const;
+export const ACTIVITY_CATEGORIES = ['all', 'workspace', 'brand', 'content', 'publishing', 'integration', 'instagram'] as const;
 export type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[number];
 
 export const ACTIVITY_OUTCOMES = ['all', 'success', 'system'] as const;
@@ -54,6 +54,11 @@ const SAFE_METADATA_LABELS: Record<string, string> = {
   triage_status: 'Triage status',
   model: 'Model',
   provider: 'Provider',
+  approved_facts_count: 'Approved facts',
+  forbidden_claims_count: 'Forbidden claims',
+  escalation_triggers_count: 'Escalation triggers',
+  tone_configured: 'Tone guidance',
+  languages_configured: 'Language guidance',
 };
 
 function safeMetadataValue(value: unknown): string | null {
