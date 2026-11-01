@@ -88,9 +88,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ as
       admin.from('social_account_token_vault').select('ciphertext,iv,auth_tag,token_expires_at')
         .eq('social_account_id', asset.social_account_id).maybeSingle(),
     ]);
-    const expiresAt = Date.parse(vault?.token_expires_at ?? '');
+    const tokenExpiresAt = Date.parse(vault?.token_expires_at ?? '');
     if (!account || account.provider !== 'whatsapp' || account.connection_state !== 'connected' ||
-        account.capabilities?.messaging !== true || !vault || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+        account.capabilities?.messaging !== true || !vault || !Number.isFinite(tokenExpiresAt) || tokenExpiresAt <= Date.now()) {
       await markUnavailable(admin, assetId, 'whatsapp_account_or_token_unavailable');
       return redirectResult(request, asset.conversation_id, 'account_unavailable');
     }
