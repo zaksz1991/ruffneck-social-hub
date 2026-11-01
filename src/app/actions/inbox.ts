@@ -572,3 +572,43 @@ export async function createInboxDraftFromSavedReply(formData: FormData): Promis
   revalidatePath(page);
   redirect(`${page}?draft_action=template_added`);
 }
+
+/** Updates workspace first-response SLA targets through a role-checked database RPC. */
+export async function saveInboxSlaPolicy(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const page = isUuid(workspaceId) ? `/inbox/sla?workspace=${workspaceId}` : '/inbox/sla';
+  const parseMinutes = (key: string): number | null => {
+    const raw = formText(formData, key);
+    if (!/^\d+$/.test(raw)) return null;
+    const value = Number(raw);
+    return Number.isSafeInteger(value) && value >= 5 && value <= 10080 ? value : null;
+  };
+  const low = parseMinutes('low_minutes');
+  const normal = parseMinutes('normal_minutes');
+  const high = parseMinutes('high_minutes');
+  const urgent = parseMinutes('urgent_minutes');
+  if (!isUuid(workspaceId) || low === null || normal === null || high === null || urgent === null) {
+    redirect(`${page}${page.includes('?') ? '&' : '?'}policy=invalid`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: membership, error: membershipError } = await supabase.from('workspace_members')
+    .select('role').eq('workspace_id', workspaceId).eq('user_id', user.id).maybeSingle();
+  if (membershipError || !membership || !['owner', 'admin', 'manager'].includes(membership.role)) {
+    redirect(`${page}${page.includes('?') ? '&' : '?'}policy=forbidden`);
+  }
+
+  const { error } = await supabase.rpc('save_inbox_sla_policy', {
+    target_workspace_id: workspaceId,
+    target_low_minutes: low,
+    target_normal_minutes: normal,
+    target_high_minutes: high,
+    target_urgent_minutes: urgent,
+  });
+  if (error) redirect(`${page}${page.includes('?') ? '&' : '?'}policy=failed`);
+  revalidatePath('/inbox/sla');
+  revalidatePath('/inbox/conversations');
+  redirect(`${page}${page.includes('?') ? '&' : '?'}policy=saved`);
+}

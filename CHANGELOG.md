@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.3.0 — 2026-11-01
+
+- Added workspace-configurable first-response SLA targets for low, normal, high and urgent inbox priorities.
+- Added 7/30/90-day first-response reporting for Instagram and Facebook Messenger, including compliance, average response time, at-risk and overdue queues.
+- Added current-assignee workload analytics with explicit limits around sender attribution and historical target recalculation.
+- Added migration 0022, protected workspace RPCs, aggregate-only reporting, audit metadata, responsive dashboard and regression guards.
+- No provider auto-send behaviour or additional provider permissions were added.
+
 ## v3.2.0 — 2026-11-01
 
 - Added a workspace-scoped saved reply library with all-channel, Instagram-only and Facebook-only templates.

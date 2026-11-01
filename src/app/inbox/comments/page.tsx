@@ -75,7 +75,7 @@ export default async function InstagramCommentsPage({
   return <main className="inbox-shell">
     <header className="inbox-topbar">
       <Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" /></Link>
-      <nav><Link href="/">Overview</Link><Link href="/content">Content Studio</Link><Link href="/publishing">Publishing</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><span>Comments</span></nav>
+      <nav><Link href="/">Overview</Link><Link href="/content">Content Studio</Link><Link href="/publishing">Publishing</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/sla">Inbox SLA</Link><span>Comments</span></nav>
       <Link href="/inbox" className="inbox-back">Event journal</Link>
     </header>
     <section className="inbox-main">
