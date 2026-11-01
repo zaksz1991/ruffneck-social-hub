@@ -1,4 +1,4 @@
-# RuffNeck Social Hub v2.12.0
+# RuffNeck Social Hub v2.14.0
 
 RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
 
@@ -38,7 +38,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0017. Version 2.12.0 adds no database migration. Existing installations at v2.11.0 do not need to run SQL for this release. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
+The complete ZIP contains migrations 0001–0017. Versions 2.13.0 and 2.14.0 add no database migrations. Existing installations that have applied migrations 0001–0017 do not need to run SQL for these releases. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
 
 ## Environment variables
 
@@ -112,3 +112,12 @@ The Publishing Calendar can export the selected month as an iCalendar `.ics` fil
 The publishing form now checks each selected account against the selected approved content before enabling submission. It verifies same-brand ownership, connected state, the stored `content_publish` capability, the active provider worker, media requirements and the caption length limits enforced by the current worker. Instagram and Facebook require exactly one valid HTTPS image URL; LinkedIn is text-only. The server repeats the checks using authenticated workspace-scoped reads and stops the complete scheduling batch if any selected destination fails. No queue entries are created on a preflight failure.
 
 The check validates URL format only; it does not fetch the image or prove it can be reached by the provider. Provider-side acceptance remains a separate outcome recorded by the publishing worker. No migration or new environment variable is required.
+
+
+## v2.13.0 bulk publishing queue management
+
+Owners, administrators, managers and publishers can select eligible queue records on the current history page and cancel up to 25 in one operation. The action rechecks workspace membership and job state on the server and calls the existing state-locking cancellation RPC for every selected record. Published and currently processing jobs cannot be cancelled. No migration or new environment variable is required.
+
+## v2.14.0 workspace audit activity
+
+Workspace owners and administrators can open **Activity log** from the dashboard to review records in the existing `audit_events` table. Category, outcome, time-period and text filters are applied before 50-record pagination; filtered counts are exact. The page uses the existing owner/admin row-level security policy and selectively displays allowlisted metadata. Invitation email addresses, credentials, access tokens and arbitrary metadata are not rendered. The default view is the last 30 days, and all displayed timestamps are UTC. The page shows events that existing database functions and workers have recorded; it does not claim that every external provider action is captured. No migration or new environment variable is required.

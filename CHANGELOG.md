@@ -1,3 +1,10 @@
+## [2.14.0] - Workspace audit activity
+
+- Added an owner/admin activity log backed by the existing workspace audit table and RLS policy.
+- Added full-history category, outcome, date and text filters with exact counts and pagination.
+- Added allowlisted metadata display to keep invitation email addresses, credentials and arbitrary metadata out of the UI.
+- No database migration or environment changes.
+
 ## [2.5.0] - Calendar interoperability
 
 - Added authenticated, workspace-scoped iCalendar (.ics) export for the selected publishing month.
