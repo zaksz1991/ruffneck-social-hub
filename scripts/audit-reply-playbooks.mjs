@@ -32,7 +32,7 @@ const checks = [
   ['language choices include Hausa and Nigerian Pidgin in both composers', [instagram, facebook].every((source) => source.includes('value="Hausa"') && source.includes('value="Nigerian Pidgin"'))],
   ['existing reply safety scan remains integrated', /assessReplyDraftSafety/.test(actions) && /save_inbox_reply_safety_assessment/.test(actions)],
   ['Messenger send remains behind the existing guarded send action', /begin_facebook_reply_send/.test(read('supabase/migrations/0018_facebook_messenger_inbox_and_replies.sql'))],
-  ['no database migration was added for prompt-only preferences', migrationFiles.every((file) => !file.startsWith('0025_'))],
+  ['reply approach and language preferences remain prompt-only; the new migration is exclusively inbox routing', migrationFiles.includes('0025_inbox_routing_automation_rules.sql') && /inbox_routing_rules/.test(read('supabase/migrations/0025_inbox_routing_automation_rules.sql')) && !/reply_approach|reply_language/.test(read('supabase/migrations/0025_inbox_routing_automation_rules.sql'))],
   ['build runs the reply playbook integration audit', packageJson.scripts.build.includes('audit:reply-playbooks')],
   ['test script runs reply playbook regression checks', packageJson.scripts.test.includes('test-reply-playbooks.mjs')],
 ];

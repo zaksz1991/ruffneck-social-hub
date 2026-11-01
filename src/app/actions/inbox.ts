@@ -7,6 +7,7 @@ import { generateLocalAiReplyDraft, isReplyApproach, isReplyLanguage, type Reply
 import { generateLocalAiConversationTriage, type ConversationTriageMessage } from '@/lib/ai/conversation-triage';
 import { validateSavedReplyInput } from '@/lib/inbox/saved-replies';
 import { assessReplyDraftSafety } from '@/lib/ai/reply-safety';
+import { validateRoutingRuleInput } from '@/lib/inbox/routing-rules';
 
 export type GenerateReplyDraftState = {
   status: 'idle' | 'success' | 'error';
@@ -883,3 +884,127 @@ export async function applyInboxAiTriagePriority(formData: FormData): Promise<vo
   revalidatePath('/inbox/sla');
   redirect(`${page}?triage_action=priority_applied`);
 }
+
+/** Save a deterministic routing rule. Only the database role check can authorize rule management. */
+export async function saveInboxRoutingRule(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const ruleId = formText(formData, 'rule_id');
+  const page = isUuid(workspaceId) ? `/inbox/automation?workspace=${workspaceId}` : '/inbox/automation';
+  const orderRaw = formText(formData, 'rule_order');
+  const ruleOrder = /^\d+$/.test(orderRaw) ? Number(orderRaw) : 0;
+  if (!isUuid(workspaceId) || (ruleId && !isUuid(ruleId)) || !Number.isSafeInteger(ruleOrder) || ruleOrder < 1 || ruleOrder > 10000) redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=invalid`);
+
+  const escalationValue = formText(formData, 'condition_escalation_required');
+  const escalationCondition = escalationValue === 'true' ? true : escalationValue === 'false' ? false : null;
+  const confidencePercent = formText(formData, 'min_ai_confidence');
+  const confidence = /^\d{1,3}$/.test(confidencePercent) ? Number(confidencePercent) / 100 : Number.NaN;
+  const validated = validateRoutingRuleInput({
+    name: formText(formData, 'name'),
+    providerScope: formText(formData, 'provider_scope'),
+    conditionIntent: formText(formData, 'condition_intent'),
+    conditionSentiment: formText(formData, 'condition_sentiment'),
+    conditionPriority: formText(formData, 'condition_priority'),
+    conditionEscalationRequired: escalationCondition,
+    conditionKeyword: formText(formData, 'condition_keyword'),
+    minAiConfidence: confidence,
+    assignTo: formText(formData, 'assign_to'),
+    setPriority: formText(formData, 'set_priority'),
+    setStatus: formText(formData, 'set_status'),
+    stopAfterMatch: formText(formData, 'stop_after_match') !== 'false',
+  });
+  if (validated.ok === false) {
+    redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=invalid`);
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const rule = validated.value;
+  const { error } = await supabase.rpc('save_inbox_routing_rule', {
+    target_workspace_id: workspaceId,
+    target_rule_id: ruleId || null,
+    target_name: rule.name,
+    target_enabled: formText(formData, 'rule_enabled') !== 'false',
+    target_rule_order: ruleOrder,
+    target_provider_scope: rule.providerScope,
+    target_condition_intent: rule.conditionIntent,
+    target_condition_sentiment: rule.conditionSentiment,
+    target_condition_priority: rule.conditionPriority,
+    target_condition_escalation_required: rule.conditionEscalationRequired,
+    target_condition_keyword: rule.conditionKeyword,
+    target_min_ai_confidence: rule.minAiConfidence,
+    target_assign_to: rule.assignTo,
+    target_set_priority: rule.setPriority,
+    target_set_status: rule.setStatus,
+    target_stop_after_match: rule.stopAfterMatch,
+  });
+  if (error) redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=${error.code === '23505' ? 'duplicate' : error.code === '42501' ? 'forbidden' : 'failed'}`);
+  revalidatePath('/inbox/automation');
+  revalidatePath('/inbox/conversations');
+  redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=saved`);
+}
+
+/** Pause or resume an existing workspace routing rule. */
+export async function setInboxRoutingRuleEnabled(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const ruleId = formText(formData, 'rule_id');
+  const enabled = formText(formData, 'enabled');
+  const page = isUuid(workspaceId) ? `/inbox/automation?workspace=${workspaceId}` : '/inbox/automation';
+  if (!isUuid(workspaceId) || !isUuid(ruleId) || !['true', 'false'].includes(enabled)) redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=invalid`);
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { error } = await supabase.rpc('set_inbox_routing_rule_enabled', {
+    target_workspace_id: workspaceId, target_rule_id: ruleId, target_enabled: enabled === 'true',
+  });
+  if (error) redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=${error.code === '42501' ? 'forbidden' : 'failed'}`);
+  revalidatePath('/inbox/automation');
+  redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=updated`);
+}
+
+/** Delete a routing rule; prior execution logs remain as a safe audit trail. */
+export async function deleteInboxRoutingRule(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const ruleId = formText(formData, 'rule_id');
+  const page = isUuid(workspaceId) ? `/inbox/automation?workspace=${workspaceId}` : '/inbox/automation';
+  if (!isUuid(workspaceId) || !isUuid(ruleId)) redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=invalid`);
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { error } = await supabase.rpc('delete_inbox_routing_rule', {
+    target_workspace_id: workspaceId, target_rule_id: ruleId,
+  });
+  if (error) redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=${error.code === '42501' ? 'forbidden' : 'failed'}`);
+  revalidatePath('/inbox/automation');
+  redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=deleted`);
+}
+
+/** Evaluate the latest inbound messages in a bounded batch. Preview is the default and never mutates workflows. */
+export async function runInboxRoutingRules(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const providerScope = formText(formData, 'provider_scope') || 'all';
+  const dryRun = formText(formData, 'dry_run') !== 'false';
+  const rawLimit = formText(formData, 'max_conversations') || '50';
+  const maxConversations = /^\d+$/.test(rawLimit) ? Number(rawLimit) : 0;
+  const page = isUuid(workspaceId) ? `/inbox/automation?workspace=${workspaceId}` : '/inbox/automation';
+  if (!isUuid(workspaceId) || !['all', 'instagram', 'facebook'].includes(providerScope) ||
+      !Number.isSafeInteger(maxConversations) || maxConversations < 1 || maxConversations > 100) {
+    redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=invalid`);
+  }
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { error } = await supabase.rpc('run_inbox_routing_rules', {
+    target_workspace_id: workspaceId,
+    target_provider_scope: providerScope,
+    target_dry_run: dryRun,
+    target_max_conversations: maxConversations,
+  });
+  if (error) redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=${error.code === '42501' ? 'forbidden' : 'run_failed'}`);
+  revalidatePath('/inbox/automation');
+  revalidatePath('/inbox/conversations');
+  revalidatePath('/inbox/sla');
+  redirect(`${page}${page.includes('?') ? '&' : '?'}automation_action=${dryRun ? 'previewed' : 'applied'}`);
+}
+

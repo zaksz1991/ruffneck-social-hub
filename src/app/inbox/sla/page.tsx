@@ -104,7 +104,7 @@ export default async function InboxSlaPage({
   return <main className="inbox-shell">
     <header className="inbox-topbar">
       <Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link>
-      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/comments">Comments</Link><Link href="/inbox/saved-replies">Saved replies</Link><span>Inbox SLA</span></nav>
+      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/comments">Comments</Link><Link href="/inbox/saved-replies">Saved replies</Link><Link href="/inbox/automation">Automation</Link><span>Inbox SLA</span></nav>
       <Link href="/inbox/conversations" className="inbox-back">Back to inbox</Link>
     </header>
     <section className="inbox-main inbox-sla-main">

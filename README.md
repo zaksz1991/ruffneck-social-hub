@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v3.6.0
+# RuffNeck Social Hub v3.7.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, deterministic manager-triggered inbox routing automation, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
 ## Core modules
 
@@ -14,11 +14,13 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Read-only Instagram text message conversations with optional local AI reply drafts.
 - Facebook Messenger conversations with human-reviewed text replies, a guarded 24-hour send window and one-attempt send protection.
 - Unified inbox team workflow: assignment, open/pending/resolved status, priority and private handoff notes.
+- Controlled routing automation: manager-created rules can be previewed or manually applied to up to 100 recent inbound threads; automation updates internal workflow metadata only and cannot resolve conversations or send customer replies.
 - Workspace-shared saved replies with channel scope and atomic creation of unsent provider drafts.
 - First-response SLA reporting and team workload analytics for Instagram and Facebook Messenger.
 - Advisory AI intent, sentiment, summary, escalation and suggested-priority triage on both supported inbox channels; priority changes require an explicit team action.
 - Deterministic AI reply safety scans for brand restrictions, risky topics, unsupported commitments and language mismatch, with two-person escalation clearance for high-risk Facebook replies.
 - AI reply playbooks for direct, empathetic, clarifying, resolution and human-handoff approaches, with customer-language matching or explicit English, Hausa, Nigerian Pidgin, Yoruba, Igbo and French output selection.
+- Manager-triggered inbox routing rules using provider, AI triage, escalation, confidence and keyword conditions; dry-run previews, idempotent internal assignment/priority/Open/Pending updates and safe execution history.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
@@ -44,7 +46,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0024` in ascending order. v3.6.0 adds prompt-only reply preferences and does not add a database migration. Existing installations apply only migrations that have not already been successfully applied. For an existing database upgraded through v3.4.0 (migrations 0001–0023), apply `0024_ai_reply_safety_and_language_guardrails.sql` once. A database already upgraded through v3.5.0 needs no additional migration for v3.6.0. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the individual release notes for Meta messaging, brand voice, team workflow, saved replies, SLA analytics and AI triage setup.
+Fresh installations apply migrations `0001` through `0025` in ascending order. v3.6.0 added prompt-only reply preferences without a migration. v3.7.0 adds `0025_inbox_routing_automation_rules.sql`. Existing installations apply only migrations that have not already been successfully applied. A database already upgraded through v3.6.0 (migrations 0001–0024) applies migration 0025 once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the v3.7.0 release notes for routing-rule conditions, dry-run previews, execution limits and workflow safeguards.
 
 ## Environment variables
 
@@ -97,7 +99,7 @@ This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social
 
 ## Verification boundaries
 
-Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0016 has been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
+Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0025 has been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, routing rules match real conversation samples, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
 
 
 ## Publishing operations analytics (v2.2.0)
@@ -156,3 +158,12 @@ See `README-v3.2.0-SAVED-REPLIES.md` and `RELEASE-MANIFEST-v3.2.0.md` for the co
 ## v3.4.0 AI conversation triage
 
 Open an Instagram or Facebook Messenger thread and select **Analyse conversation** after the latest inbound text message. Review the intent, sentiment, summary, escalation recommendation and suggested priority. Analysis does not change the conversation. Applying the priority is a separate human action; it preserves the current status and assignment, and the server rejects stale assessments after a newer message arrives. Apply migration `0023_inbox_ai_conversation_triage.sql` once after 0022. See `README-v3.4.0-AI-CONVERSATION-TRIAGE.md`.
+
+
+## v3.7.0 — Controlled inbox routing automation
+
+Open **Inbox → Routing automation** to configure deterministic rules for Instagram and Facebook Messenger. Each rule combines one or more conditions (provider, current AI intent, sentiment, suggested priority, escalation recommendation, confidence threshold or a keyword in the latest inbound message) and at least one internal action (assignment, priority or Open/Pending status). Conditions are ANDed. Rules are managed and executed only by workspace owners, admins and managers.
+
+Run **Preview matches (dry run)** before applying a rule set. A preview logs `would_apply` matches but makes no workflow changes and does not consume idempotency keys. **Apply matching rules** evaluates up to 100 of the most recent conversations whose latest message is inbound. Each applied rule is bound to that exact source message and cannot run twice for the same rule/message pair. A new customer message makes a fresh evaluation possible.
+
+For existing installations through migration 0024, apply `supabase/migrations/0025_inbox_routing_automation_rules.sql` once. This release is intentionally manually triggered; it is not a webhook subscriber or background worker. Routing changes internal workflow metadata only. It never generates, approves or sends customer replies, never resolves conversations and does not call social-provider APIs.

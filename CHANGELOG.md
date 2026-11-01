@@ -246,3 +246,22 @@
 - Added server-side preference allowlists and regression checks.
 - Preserved safety scanning, human review, draft-only Instagram behavior and guarded Facebook Messenger send controls.
 - No database migration or additional provider configuration.
+
+## [3.7.0] — 2026-11-01
+
+### Added
+- Controlled inbox routing rules for Instagram and Facebook Messenger.
+- Provider, AI intent, sentiment, suggested-priority, escalation, confidence and keyword conditions.
+- Internal assignment, priority and Open/Pending status actions.
+- Dry-run previews, bounded manual batch execution, safe execution history and per-message idempotency.
+- Workspace owner/admin/manager controls and automation page at `/inbox/automation`.
+
+### Safety
+- No webhook-triggered or background execution in this release.
+- No customer replies are generated, approved or sent by routing rules.
+- No automatic conversation resolution; no provider messaging API calls.
+- Exact latest-inbound-message binding for AI triage and keyword matching.
+- Safe execution logs exclude message content and customer profile details.
+
+### Database
+- Added migration `0025_inbox_routing_automation_rules.sql`.
