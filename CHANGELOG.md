@@ -1,3 +1,8 @@
+## 3.0.4 — 2026-11-01
+
+- Adds guarded pre-build removal of the known unreferenced AI provider variants component that persisted after ZIP overlays.
+- Adds cleanup regression tests and keeps the full internal import/export audit before Next.js build.
+
 ## 3.0.3 — 2026-11-01
 
 - Added a TypeScript/JavaScript internal-source audit to the production build, checking local module resolution and named/default export contracts before Next.js runs.

@@ -1,9 +1,7 @@
-RuffNeck Social Hub v3.0.3 — required exact deletion
+Historical v3.0.3 deletion note — superseded by v3.0.4
 
-DELETE this existing repository file if it is still present:
+The obsolete file identified by v3.0.3 was:
 
 src/app/content/ai-provider-variant-generator.tsx
 
-Reason: the unreferenced component imports five server-action exports that do not exist. It is not mounted by the active Content Studio page and no database persistence contract exists for its save operation. Keeping the stale file causes the TypeScript check to fail even though the component is not rendered.
-
-No other deletion is required by this release.
+Manual deletion is no longer required when deploying v3.0.4. The v3.0.4 build runs scripts/remove-known-stale-content-component.mjs before the source audit. That guard removes this exact unreferenced legacy component only when its known five-import signature matches and no other source file imports it. It refuses to remove changed or referenced content.

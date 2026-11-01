@@ -1,10 +1,10 @@
 {
   "name": "ruffneck-social-hub",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run audit:imports && next build",
+    "build": "node scripts/remove-known-stale-content-component.mjs && npm run audit:imports && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
