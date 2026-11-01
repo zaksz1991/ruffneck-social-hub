@@ -1,0 +1,9 @@
+RuffNeck Social Hub v3.0.3 — required exact deletion
+
+DELETE this existing repository file if it is still present:
+
+src/app/content/ai-provider-variant-generator.tsx
+
+Reason: the unreferenced component imports five server-action exports that do not exist. It is not mounted by the active Content Studio page and no database persistence contract exists for its save operation. Keeping the stale file causes the TypeScript check to fail even though the component is not rendered.
+
+No other deletion is required by this release.

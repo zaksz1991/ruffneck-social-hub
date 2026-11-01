@@ -1,3 +1,10 @@
+## 3.0.3 — 2026-11-01
+
+- Added a TypeScript/JavaScript internal-source audit to the production build, checking local module resolution and named/default export contracts before Next.js runs.
+- Reproduced the five unresolved exports reported by Vercel in the abandoned AI provider-variant component; removed that component because it was not mounted by the active Content Studio page and had no matching persistence/action implementation.
+- Updated migration guidance so fresh installs and existing v2.9/v3.0 databases apply migrations 0018 and 0019 only when pending.
+- No new migration, environment variable or provider integration.
+
 ## 3.0.2 — 2026-11-01
 
 - Fixed the Content Studio TypeScript build failure by implementing the missing `generateAiContentDraft` server action and its exported state type.

@@ -1,4 +1,4 @@
-# RuffNeck Social Hub v3.0.1
+# RuffNeck Social Hub v3.0.3
 
 RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
@@ -37,11 +37,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0018` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing v2.9.0 database (migrations 0001–0017 already applied), apply **only**:
-
-`supabase/migrations/0018_facebook_messenger_inbox_and_replies.sql`
-
-Do not rerun earlier migrations. See `RELEASE-NOTES-v3.0.0.md` for the required Meta messaging permissions, Facebook Page webhook setup and send safeguards.
+Fresh installations apply migrations `0001` through `0019` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing v2.9.0 database (migrations 0001–0017 already applied), apply `0018_facebook_messenger_inbox_and_replies.sql` and then `0019_brand_voice_profiles.sql` if either is not already recorded as applied. For a database already upgraded to v3.0.0, apply only migration `0019_brand_voice_profiles.sql` if it is still pending. Never rerun a migration that has already succeeded. See `RELEASE-NOTES-v3.0.0.md` for Meta messaging setup and `RELEASE-NOTES-v3.0.1.md` for brand voice setup.
 
 ## Environment variables
 
@@ -90,7 +86,7 @@ AI drafting is optional. A sanitized brand voice profile plus the relevant messa
 
 ## Replace the repository contents
 
-This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social-hub` folder and replace the contents of the existing `github.com/zaksz1991/ruffneck-social-hub` repository with it. Keep the project on its existing `main` branch and configure production variables separately. Do not upload it to RuffNeck LMS, RuffNeck Connect or Kano Run.
+This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social-hub` folder and replace the contents of the existing `github.com/zaksz1991/ruffneck-social-hub` repository with it. Before committing, apply every exact deletion listed in `REMOVE-FILES-v3.0.3.txt`; adding replacement files without deleting stale files can leave TypeScript errors in the repository. Keep the project on its existing `main` branch and configure production variables separately. Do not upload it to RuffNeck LMS, RuffNeck Connect or Kano Run.
 
 ## Verification boundaries
 
@@ -129,3 +125,12 @@ See `RELEASE-NOTES-v3.0.1.md` for the Vercel build repair and verification bound
 ## v3.0.2 — AI campaign draft assistant
 
 Content Studio now includes optional AI-assisted first-draft generation through the existing server-configured local/OpenAI-compatible inference endpoint. The feature uses the brand voice profile and role-checks access by workspace. Generated copy is editable and remains unsaved until a user explicitly saves it as a draft. It cannot approve, schedule or publish content. No new migration or environment variable is required. See `README-AI-CONTENT-DRAFTS-v3.0.2.md` and `RELEASE-NOTES-v3.0.2.md`.
+
+
+## v3.0.3 — build integration guard
+
+The production build now runs `scripts/audit-internal-imports.mjs` before `next build`. The audit checks source syntax, local relative and `@/` module paths, and named/default exports across the repository's TypeScript and JavaScript files. It reports all detected internal import/export mismatches in one pass rather than allowing Next.js to reveal them one at a time.
+
+The incomplete, unreferenced `src/app/content/ai-provider-variant-generator.tsx` component is explicitly removed. It imported five server-action exports that do not exist, was not mounted by the active Content Studio page, and had no persistence migration or completed server-side contract. Its removal does not remove a functioning route or published feature. See `REMOVE-FILES-v3.0.3.txt` and `RELEASE-NOTES-v3.0.3.md`.
+
+No Supabase migration or new environment variable is introduced. The existing v3.0.0–v3.0.2 features are retained.

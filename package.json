@@ -1,13 +1,14 @@
 {
   "name": "ruffneck-social-hub",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run audit:imports && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "audit:imports": "node scripts/audit-internal-imports.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
