@@ -72,7 +72,7 @@ export default async function InboxSlaPage({
   const workspace = workspaces.find((item) => item.id === params.workspace) ?? workspaces[0] ?? null;
   const membership = workspace ? memberships.find((item) => item.workspace_id === workspace.id) : null;
   if (!workspace || !membership) {
-    return <main className="inbox-shell"><header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link><nav><Link href="/">Overview</Link><Link href="/inbox/conversations">Conversations</Link><span>Inbox SLA</span></nav></header><section className="inbox-main"><h1>Inbox SLA &amp; team performance</h1><div className="inbox-empty"><h2>No workspace available</h2><p>Create or join a workspace before viewing response-time analytics.</p></div></section></main>;
+    return <main className="inbox-shell"><header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link><nav><Link href="/">Overview</Link><Link href="/inbox/conversations">Conversations</Link><Link href={`/inbox/customers?workspace=${workspace?.id ?? ''}`}>Customer CRM</Link><span>Inbox SLA</span></nav></header><section className="inbox-main"><h1>Inbox SLA &amp; team performance</h1><div className="inbox-empty"><h2>No workspace available</h2><p>Create or join a workspace before viewing response-time analytics.</p></div></section></main>;
   }
 
   const canConfigure = ['owner', 'admin', 'manager'].includes(membership.role);
@@ -104,7 +104,7 @@ export default async function InboxSlaPage({
   return <main className="inbox-shell">
     <header className="inbox-topbar">
       <Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link>
-      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/comments">Comments</Link><Link href="/inbox/saved-replies">Saved replies</Link><Link href="/inbox/automation">Automation</Link><span>Inbox SLA</span></nav>
+      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href={`/inbox/customers?workspace=${workspace?.id ?? ''}`}>Customer CRM</Link><Link href="/inbox/comments">Comments</Link><Link href="/inbox/saved-replies">Saved replies</Link><Link href="/inbox/automation">Automation</Link><span>Inbox SLA</span></nav>
       <Link href="/inbox/conversations" className="inbox-back">Back to inbox</Link>
     </header>
     <section className="inbox-main inbox-sla-main">

@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.9.0 — Inbox customer CRM
+
+- Added workspace-scoped, provider-account-specific customer records for Instagram and Facebook Messenger conversation participants.
+- Added manual relationship stages (lead, prospect, customer, VIP, at risk and former customer), bounded tags and internal customer labels.
+- Added an interaction timeline for the latest 30 text messages and append-only private team notes.
+- Added RLS read policies and security-definer RPCs for profile and note writes; direct browser writes remain revoked.
+- Provider participant IDs remain masked in CRM UI; identities are not automatically merged across platforms or connected accounts. No external contact enrichment, automatic segmentation, customer messaging or provider permission changes were introduced.
+- Added migration 0026, CRM validation tests and pre-build integration audit.
+
 ## 3.8.0 — Routing automation insights
 
 - Added a read-only manager dashboard for routing execution metrics, provider mix, per-rule outcomes, daily activity and safe reason codes.

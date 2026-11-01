@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v3.7.0
+# RuffNeck Social Hub v3.9.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, deterministic manager-triggered inbox routing automation, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, a provider-scoped Customer CRM with interaction history and private notes, deterministic manager-triggered inbox routing automation, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
 ## Core modules
 
@@ -17,6 +17,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Controlled routing automation: manager-created rules can be previewed or manually applied to up to 100 recent inbound threads; automation updates internal workflow metadata only and cannot resolve conversations or send customer replies.
 - Workspace-shared saved replies with channel scope and atomic creation of unsent provider drafts.
 - First-response SLA reporting and team workload analytics for Instagram and Facebook Messenger.
+- Customer CRM records for supported inbox participants, with manual relationship stages, tags, a recent interaction timeline and append-only internal notes. Profiles remain scoped to one connected provider account; identities are not auto-merged across accounts or channels.
 - Advisory AI intent, sentiment, summary, escalation and suggested-priority triage on both supported inbox channels; priority changes require an explicit team action.
 - Deterministic AI reply safety scans for brand restrictions, risky topics, unsupported commitments and language mismatch, with two-person escalation clearance for high-risk Facebook replies.
 - AI reply playbooks for direct, empathetic, clarifying, resolution and human-handoff approaches, with customer-language matching or explicit English, Hausa, Nigerian Pidgin, Yoruba, Igbo and French output selection.
@@ -46,7 +47,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0025` in ascending order. v3.6.0 added prompt-only reply preferences without a migration. v3.7.0 adds `0025_inbox_routing_automation_rules.sql`. Existing installations apply only migrations that have not already been successfully applied. A database already upgraded through v3.6.0 (migrations 0001–0024) applies migration 0025 once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the v3.7.0 release notes for routing-rule conditions, dry-run previews, execution limits and workflow safeguards.
+Fresh installations apply migrations `0001` through `0026` in ascending order. v3.6.0 added prompt-only reply preferences without a migration. v3.7.0 adds `0025_inbox_routing_automation_rules.sql`; v3.9.0 adds `0026_inbox_customer_crm.sql`. Existing installations apply only migrations that have not already been successfully applied. A database already upgraded through v3.8.0 (migrations 0001–0025) applies migration 0026 once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the v3.7.0 and v3.9.0 release notes for routing safeguards and Customer CRM privacy boundaries.
 
 ## Environment variables
 
@@ -159,6 +160,14 @@ See `README-v3.2.0-SAVED-REPLIES.md` and `RELEASE-MANIFEST-v3.2.0.md` for the co
 
 Open an Instagram or Facebook Messenger thread and select **Analyse conversation** after the latest inbound text message. Review the intent, sentiment, summary, escalation recommendation and suggested priority. Analysis does not change the conversation. Applying the priority is a separate human action; it preserves the current status and assignment, and the server rejects stale assessments after a newer message arrives. Apply migration `0023_inbox_ai_conversation_triage.sql` once after 0022. See `README-v3.4.0-AI-CONVERSATION-TRIAGE.md`.
 
+
+## v3.9.0 — Inbox Customer CRM
+
+Open **Inbox → Customer CRM** to enrol an Instagram or Facebook Messenger conversation into a workspace CRM record. Add an internal label, set a relationship stage (Lead, Prospect, Customer, VIP, At risk or Former customer), and add up to 12 searchable tags. Selecting a record shows up to 30 recent text messages and append-only internal notes for operational team members.
+
+CRM identities are provider/account-specific. RuffNeck does not assume that the same person on two Pages or providers is the same customer, and does not enrich profiles with names, email addresses or telephone numbers. Provider participant IDs are masked in the CRM interface. Notes are private internal records and are never sent to a customer. The UI displays the latest 200 CRM records and up to 12 recent conversations that can be enrolled.
+
+For databases already upgraded through migration 0025, apply `supabase/migrations/0026_inbox_customer_crm.sql` once. No new provider permission, API operation or environment variable is required. Owners, admins, managers and publishers can manage profiles and add notes. Analysts and client approvers can view CRM profiles but do not receive private note rows.
 
 ## v3.7.0 — Controlled inbox routing automation
 

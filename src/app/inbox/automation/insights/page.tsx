@@ -50,7 +50,7 @@ export default async function InboxAutomationInsightsPage({ searchParams }: {
   const canView = Boolean(membership && ['owner', 'admin', 'manager'].includes(membership.role));
 
   if (!workspace || !membership) {
-    return <main className="inbox-shell"><header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link><nav><Link href="/">Overview</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/automation">Routing automation</Link><span>Automation insights</span></nav></header><section className="inbox-main"><h1>Automation insights</h1><div className="inbox-empty"><h2>No workspace available</h2><p>Create or join a workspace before reviewing automation activity.</p></div></section></main>;
+    return <main className="inbox-shell"><header className="inbox-topbar"><Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link><nav><Link href="/">Overview</Link><Link href="/inbox/conversations">Conversations</Link><Link href={`/inbox/customers?workspace=${workspace?.id ?? ''}`}>Customer CRM</Link><Link href="/inbox/automation">Routing automation</Link><span>Automation insights</span></nav></header><section className="inbox-main"><h1>Automation insights</h1><div className="inbox-empty"><h2>No workspace available</h2><p>Create or join a workspace before reviewing automation activity.</p></div></section></main>;
   }
 
   if (!canView) {
@@ -86,7 +86,7 @@ export default async function InboxAutomationInsightsPage({ searchParams }: {
   return <main className="inbox-shell">
     <header className="inbox-topbar">
       <Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub"/></Link>
-      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/sla">Inbox SLA</Link><Link href="/inbox/automation">Routing automation</Link><span>Automation insights</span></nav>
+      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href={`/inbox/customers?workspace=${workspace?.id ?? ''}`}>Customer CRM</Link><Link href="/inbox/sla">Inbox SLA</Link><Link href="/inbox/automation">Routing automation</Link><span>Automation insights</span></nav>
       <Link href="/inbox/automation" className="inbox-back">Back to automation</Link>
     </header>
     <section className="inbox-main inbox-automation-insights">

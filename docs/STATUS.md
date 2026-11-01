@@ -90,3 +90,13 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Facebook uses the configured local/private AI adapter for drafts. A human must review each draft before an explicit text reply can be sent. The database checks the latest inbound message, Page Send API task and Meta's standard 24-hour response window at send time.
 - One send attempt per draft; no automatic retries. Ambiguous outcomes are marked `needs_review`. Text sends are capped at 2,000 characters; the server requires strictly less than 24 hours since the latest inbound message. No AI auto-send, broadcast, message-tag bypass, attachment sends or out-of-window sends are enabled.
 - Migration 0018 must be applied after 0017. Live Meta app review, live Page permission grants, webhook subscription/delivery, migration execution, Vitest, dependency-backed typecheck, production build and end-to-end send are not verified in this package environment.
+
+## 3.9.0 Customer CRM
+
+- Added explicit CRM enrolment for supported Instagram and Facebook Messenger conversations.
+- Profiles are keyed by workspace, provider, connected account and participant ID; cross-provider identity matching is intentionally not inferred.
+- Added manual relationship stages, bounded tags, internal labels and a recent interaction timeline (latest 30 text messages).
+- Added append-only team notes. Note reads and writes are limited to owner, admin, manager and publisher roles.
+- Migration 0026 adds workspace RLS, revokes direct client writes and exposes authenticated security-definer mutation functions with independent role and source-conversation validation.
+- CRM UI masks provider participant IDs, lists at most 200 recently updated profiles and shows up to 12 recent conversation candidates for enrolment.
+- Static internal-source audit and all CRM-specific integration/regression checks passed in this package workspace. Full dependency-based Vitest, `npm run typecheck`, Next.js production build, migration execution against Supabase and Vercel deployment remain unverified because package installation did not complete in this environment.
