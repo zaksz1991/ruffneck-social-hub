@@ -12,6 +12,7 @@ import {
 } from '@/app/actions/content';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { canCreateContent, canReviewContent } from '@/lib/content/validation';
+import AiContentGenerator from './ai-content-generator';
 
 type Workspace = { id: string; name: string };
 type Brand = { id: string; name: string; timezone: string };
@@ -192,6 +193,13 @@ export default async function ContentStudioPage({
                   <div className="content-form-footer"><small>Maximum 5,000 characters. Saving does not publish anything.</small><button type="submit" className="content-primary-button">Save draft</button></div>
                 </form>
               </section>
+            )}
+            {canCreate && brands.length > 0 && (
+              <AiContentGenerator
+                workspaceId={activeWorkspace.id}
+                brands={brands.map((brand) => ({ id: brand.id, name: brand.name }))}
+                configured={Boolean(process.env.LOCAL_AI_BASE_URL?.trim() && process.env.LOCAL_AI_MODEL?.trim())}
+              />
             )}
             {canCreate && brands.length === 0 && <p className="content-inline-warning">Add a brand to this workspace before creating content.</p>}
 

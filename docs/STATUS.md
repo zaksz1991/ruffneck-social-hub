@@ -101,3 +101,13 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Existing publishing jobs remain valid and continue to use master content because their new `variant_id` is null.
 - TikTok, YouTube, X and WhatsApp Business remain planned, with no active publishing worker.
 - Migration 0018 has not been applied to the live Supabase project as part of this package build. Live provider publishing, full Vitest suite, dependency-backed typecheck, production Next.js build and Vercel deployment are not verified here.
+
+## 2.16.0 local-AI campaign draft assistant
+
+- Added optional Content Studio generation of a master-post title and body using the existing `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL` and optional `LOCAL_AI_API_KEY` configuration.
+- The action verifies the signed-in user, content-creation workspace role and the selected brand's workspace relationship before contacting the configured inference endpoint.
+- Prompts contain a sanitized allowlisted brand-voice profile and bounded campaign fields encoded as untrusted data; the request has a 30-second timeout and bounded response parsing.
+- Generated text is returned as an editable preview and is saved only through the existing content-draft server action/RPC. There is no approval, variant creation, scheduling or publishing automation in this feature.
+- No migration or dependency changes are required.
+- The new helper passed strict standalone TypeScript checking; five changed TypeScript/TSX files passed syntax transpilation; 10 focused runtime assertion groups passed, including a mocked local inference endpoint.
+- The full dependency-backed project typecheck, complete Vitest suite, Next.js production build, live inference endpoint and production deployment were not run in this build environment.

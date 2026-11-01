@@ -173,3 +173,29 @@
 .publishing-provider-variants label{display:grid;gap:6px;color:#43566d;font-size:8px;font-weight:900}
 .publishing-provider-variants label select{min-height:38px}
 @media(max-width:760px){.provider-variants-heading{align-items:flex-start;flex-direction:column}.provider-variant-list{grid-template-columns:1fr}.provider-variants-panel{padding:12px}.publishing-provider-variants{grid-template-columns:1fr}}
+
+/* v2.16.0 — human-reviewed local AI campaign drafting */
+.ai-content-generator{display:grid;gap:16px;margin-top:18px;padding:21px;border:1px solid #dfeaf0;border-radius:13px;background:linear-gradient(150deg,#f7fcfd 0%,#fff 66%);box-shadow:0 8px 25px #1c345308}
+.ai-content-generator-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.ai-content-generator-heading h2{margin:6px 0;color:#1b2d46;font-family:Manrope,sans-serif;font-size:19px;letter-spacing:-.4px}
+.ai-content-generator-heading p{max-width:720px;margin:0;color:#8794a5;font-size:10px;line-height:1.7}
+.ai-content-generator-pill{padding:7px 9px;border:1px solid #d7eff0;border-radius:20px;background:#effafb;color:#078b9e;font-size:7px;font-weight:900;letter-spacing:.8px;white-space:nowrap}
+.ai-content-generator-form,.ai-content-generator-edit-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ai-content-generator-form label,.ai-content-generator-edit-form label{display:grid;gap:7px;min-width:0;color:#42536b;font-size:9px;font-weight:800}
+.ai-content-generator-form input,.ai-content-generator-form select,.ai-content-generator-form textarea,.ai-content-generator-edit-form input,.ai-content-generator-edit-form textarea{width:100%;min-width:0;min-height:38px;padding:10px 11px;border:1px solid #dfe6ee;border-radius:8px;background:#fff;color:#24364f;font:inherit;font-size:10px;outline:none}
+.ai-content-generator-form textarea,.ai-content-generator-edit-form textarea{resize:vertical;line-height:1.7}
+.ai-content-generator-form input:focus,.ai-content-generator-form select:focus,.ai-content-generator-form textarea:focus,.ai-content-generator-edit-form input:focus,.ai-content-generator-edit-form textarea:focus{border-color:#4dbdcb;box-shadow:0 0 0 3px #00b4d817}
+.ai-content-generator-wide{grid-column:1/-1}
+.ai-content-generator-form label small{color:#9aa5b2;font-size:8px;font-weight:500;line-height:1.6}
+.ai-content-generator-submit,.ai-content-generator-save{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:4px}
+.ai-content-generator-submit>span,.ai-content-generator-save>span{max-width:650px;color:#8d99a8;font-size:8px;line-height:1.6}
+.ai-content-generator-submit button:disabled{cursor:wait;opacity:.65}
+.ai-content-generator-unavailable{display:grid;gap:5px;padding:13px 15px;border:1px solid #f0e2bd;border-radius:9px;background:#fffaf0;color:#8b6b2d;font-size:9px;line-height:1.7}
+.ai-content-generator-unavailable strong{color:#76591e}
+.ai-content-generator-message{margin:0;padding:11px 13px;border-radius:8px;font-size:9px;line-height:1.6}
+.ai-content-generator-message.error{border:1px solid #f1d6d1;background:#fff5f3;color:#a44f43}
+.ai-content-generator-result{display:grid;gap:13px;padding:15px;border:1px solid #deebef;border-radius:10px;background:#fff}
+.ai-content-generator-result-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ai-content-generator-result-heading>div{display:grid;gap:4px}.ai-content-generator-result-heading strong{color:#29415b;font-family:Manrope,sans-serif;font-size:12px}.ai-content-generator-result-heading span{color:#8290a1;font-size:8px;line-height:1.6}
+.ai-content-generator-result-heading code{max-width:220px;overflow:hidden;padding:5px 7px;border-radius:5px;background:#f3f6f8;color:#6f8192;font-size:7px;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.ai-content-generator{padding:15px}.ai-content-generator-heading{flex-direction:column}.ai-content-generator-form,.ai-content-generator-edit-form{grid-template-columns:1fr}.ai-content-generator-wide,.ai-content-generator-submit,.ai-content-generator-save{grid-column:auto}.ai-content-generator-submit,.ai-content-generator-save{align-items:stretch;flex-direction:column}.ai-content-generator-submit button,.ai-content-generator-save button{width:100%}.ai-content-generator-result-heading{flex-direction:column}.ai-content-generator-result-heading code{max-width:100%}}

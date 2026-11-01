@@ -3,8 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { isUuid, validateContentInput } from '@/lib/content/validation';
+import { canCreateContent, isUuid, validateContentInput } from '@/lib/content/validation';
 import { validateProviderVariantInput } from '@/lib/content/provider-variants';
+import { generateLocalAiContentDraft, type ContentDraftObjective, type ContentDraftTone } from '@/lib/ai/content-draft';
 
 function formText(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -207,4 +208,86 @@ export async function reviewContentVariant(formData: FormData) {
   revalidatePath('/content');
   revalidatePath('/publishing');
   variantRedirect(workspaceId, decision === 'approved' ? 'saved=variant-approved' : 'saved=variant-changes');
+}
+
+
+export type GenerateAiContentDraftState = {
+  status: 'idle' | 'success' | 'error';
+  message?: string;
+  title?: string;
+  body?: string;
+  model?: string;
+  workspaceId?: string;
+  brandId?: string;
+};
+
+const AI_CONTENT_OBJECTIVES = ['awareness', 'engagement', 'education', 'sales', 'announcement'] as const;
+const AI_CONTENT_TONES = ['professional', 'friendly', 'confident', 'helpful', 'concise'] as const;
+
+export async function generateAiContentDraft(
+  _previousState: GenerateAiContentDraftState,
+  formData: FormData,
+): Promise<GenerateAiContentDraftState> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const brandId = formText(formData, 'brand_id');
+  const brief = formText(formData, 'brief');
+  const audience = formText(formData, 'audience');
+  const objective = formText(formData, 'objective');
+  const tone = formText(formData, 'tone');
+  const language = formText(formData, 'language');
+
+  if (!isUuid(workspaceId) || !isUuid(brandId) || brief.length < 20 || brief.length > 1200 ||
+      audience.length > 240 || language.length < 2 || language.length > 80 ||
+      !AI_CONTENT_OBJECTIVES.includes(objective as (typeof AI_CONTENT_OBJECTIVES)[number]) ||
+      !AI_CONTENT_TONES.includes(tone as (typeof AI_CONTENT_TONES)[number])) {
+    return { status: 'error', message: 'Complete the campaign brief and select valid audience, objective, tone and language settings.' };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { status: 'error', message: 'Sign in before generating content.' };
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (membershipError || !membership || !canCreateContent(membership.role)) {
+    return { status: 'error', message: 'Your workspace role cannot generate or create content drafts.' };
+  }
+
+  const { data: brand, error: brandError } = await supabase
+    .from('brands')
+    .select('id,name,voice_profile')
+    .eq('id', brandId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  if (brandError || !brand) {
+    return { status: 'error', message: 'The selected brand could not be verified in this workspace.' };
+  }
+
+  try {
+    const generated = await generateLocalAiContentDraft({
+      brandName: brand.name,
+      brief,
+      audience,
+      objective: objective as ContentDraftObjective,
+      tone: tone as ContentDraftTone,
+      language,
+      brandVoice: brand.voice_profile,
+    });
+    return {
+      status: 'success',
+      message: 'AI draft generated. Review and edit it before saving; it has not been submitted or published.',
+      title: generated.title,
+      body: generated.body,
+      model: generated.model,
+      workspaceId,
+      brandId,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'The local AI content-draft request failed.';
+    return { status: 'error', message: message.slice(0, 260) };
+  }
 }

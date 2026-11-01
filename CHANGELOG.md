@@ -194,3 +194,13 @@
 - Rechecked provider, workspace, master-content and variant approval on the server before queue insertion.
 - Updated the server-only publishing claim RPC to return the exact approved variant copy and media bound to each job.
 - Added migration 0018; no environment variables or package dependencies changed.
+
+
+## 2.16.0 — Local-AI campaign draft assistant
+
+- Added an optional Content Studio assistant that generates editable master-post title and copy from a bounded campaign brief, target audience, brand voice, objective, tone and language.
+- Reuses the existing server-side local/OpenAI-compatible AI endpoint settings; no new provider, package dependency or environment variable was added.
+- Verifies authenticated workspace membership, content-creation role and selected brand/workspace relationship before calling the configured model endpoint.
+- Sanitizes the brand voice profile, bounds prompts and output, applies a timeout and rejects malformed/oversized model responses.
+- Generated text is only a preview until a user edits and explicitly saves it through the existing content-draft RPC. No automatic approval, variant creation, scheduling or publishing was added.
+- No database migration is required.

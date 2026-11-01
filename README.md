@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v2.15.0
+# RuffNeck Social Hub v2.16.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, optional local-AI campaign draft generation, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
 
 ## Core modules
 
@@ -130,3 +130,10 @@ Content Studio now supports separate copy and optional single-image variants for
 When scheduling, choose the approved copy for each selected provider. Multiple accounts on the same provider use the same selected variant. Server-side scheduling verifies the variant's workspace, master content, provider and approval state. The publishing worker then supplies the selected variant's copy and media to the existing provider dispatcher. Existing queue jobs with no variant continue to use their approved master content.
 
 Apply `supabase/migrations/0018_provider_content_variants.sql` once after migration 0017. No new environment variables or package dependencies are required. Instagram and Facebook still require one public HTTPS image; LinkedIn remains text-only. TikTok, YouTube, X and WhatsApp Business are still not available for publishing.
+
+
+## v2.16.0 local-AI campaign draft assistant
+
+Content Studio now offers an optional AI campaign draft assistant for workspace owners, administrators, managers and publishers. The user selects a brand, campaign objective, tone and language, then supplies a bounded campaign brief and optional audience description. The server verifies workspace membership and brand ownership before sending the sanitized brand voice profile and brief to the configured `LOCAL_AI_BASE_URL`/`LOCAL_AI_MODEL` OpenAI-compatible chat-completions endpoint. `LOCAL_AI_API_KEY` remains optional for protected inference servers.
+
+The assistant returns an editable title and post body for human review. The user must explicitly save the result as a normal content draft; it is not automatically submitted for approval, converted into provider variants, scheduled or published. Master-content approval and the separate provider-variant approval process introduced in v2.15.0 remain unchanged. No database migration, dependency or new environment variable is required. Do not include confidential information or customer records in campaign briefs.
