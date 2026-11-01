@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.2.0 — 2026-11-01
+
+- Added a workspace-scoped saved reply library with all-channel, Instagram-only and Facebook-only templates.
+- Added secure manager-only template management and provider-specific unsent draft creation in conversation threads.
+- Added saved-reply unit, integration and build-time audit checks.
+- No provider auto-send behaviour or new provider permission scope was added.
+
+
 ## 3.1.0 — Unified inbox team workflow
 
 - Added workspace-scoped assignment, open/pending/resolved status and low/normal/high/urgent priority for Instagram and Facebook Messenger conversations.

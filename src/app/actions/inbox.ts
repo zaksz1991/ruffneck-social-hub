@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { generateLocalAiReplyDraft, type ReplyHistoryMessage } from '@/lib/ai/reply-draft';
+import { validateSavedReplyInput } from '@/lib/inbox/saved-replies';
 
 export type GenerateReplyDraftState = {
   status: 'idle' | 'success' | 'error';
@@ -491,3 +492,83 @@ export async function addInboxInternalNote(formData: FormData): Promise<void> {
   redirect(`${page}?note_action=added`);
 }
 
+
+
+/** Create or update a workspace response template. Only owners, admins and managers may manage the library. */
+export async function saveInboxSavedReply(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const savedReplyId = formText(formData, 'saved_reply_id');
+  const providerScope = formText(formData, 'provider_scope');
+  const title = formText(formData, 'title');
+  const body = formText(formData, 'body');
+  const page = isUuid(workspaceId) ? `/inbox/saved-replies?workspace=${workspaceId}` : '/inbox/saved-replies';
+  if (!isUuid(workspaceId) || (savedReplyId && !isUuid(savedReplyId))) redirect(`${page}${page.includes('?') ? '&' : '?'}action=invalid`);
+  const validated = validateSavedReplyInput({ providerScope, title, body });
+  if (validated.ok === false) {
+    redirect(`${page}${page.includes('?') ? '&' : '?'}action=invalid`);
+    return;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: membership, error: membershipError } = await supabase.from('workspace_members')
+    .select('role').eq('workspace_id', workspaceId).eq('user_id', user.id).maybeSingle();
+  if (membershipError || !membership || !['owner', 'admin', 'manager'].includes(membership.role)) {
+    redirect(`${page}${page.includes('?') ? '&' : '?'}action=forbidden`);
+  }
+  const { error } = await supabase.rpc('save_inbox_saved_reply', {
+    target_workspace_id: workspaceId,
+    target_saved_reply_id: savedReplyId || null,
+    target_provider_scope: validated.value.providerScope,
+    target_title: validated.value.title,
+    target_body: validated.value.body,
+  });
+  if (error) redirect(`${page}${page.includes('?') ? '&' : '?'}action=${error.code === '23505' ? 'duplicate' : 'failed'}`);
+  revalidatePath('/inbox/saved-replies');
+  redirect(`${page}${page.includes('?') ? '&' : '?'}action=saved`);
+}
+
+/** Delete a workspace template through the role-checked database RPC. */
+export async function deleteInboxSavedReply(formData: FormData): Promise<void> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const savedReplyId = formText(formData, 'saved_reply_id');
+  const page = isUuid(workspaceId) ? `/inbox/saved-replies?workspace=${workspaceId}` : '/inbox/saved-replies';
+  if (!isUuid(workspaceId) || !isUuid(savedReplyId)) redirect(`${page}${page.includes('?') ? '&' : '?'}action=invalid`);
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+  const { error } = await supabase.rpc('delete_inbox_saved_reply', { target_saved_reply_id: savedReplyId });
+  if (error) redirect(`${page}${page.includes('?') ? '&' : '?'}action=failed`);
+  revalidatePath('/inbox/saved-replies');
+  redirect(`${page}${page.includes('?') ? '&' : '?'}action=deleted`);
+}
+
+/** Converts a workspace template into a provider draft atomically; the database rechecks the latest inbound message. */
+export async function createInboxDraftFromSavedReply(formData: FormData): Promise<void> {
+  const provider = formText(formData, 'provider');
+  const conversationId = formText(formData, 'conversation_id');
+  const savedReplyId = formText(formData, 'saved_reply_id');
+  if (!['instagram', 'facebook'].includes(provider) || !isUuid(conversationId) || !isUuid(savedReplyId)) {
+    redirect('/inbox/conversations?action=template_invalid');
+  }
+  const targetProvider = provider as 'instagram' | 'facebook';
+  const page = targetProvider === 'facebook' ? `/inbox/facebook/${conversationId}` : `/inbox/conversations/${conversationId}`;
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
+
+  const { error } = await supabase.rpc('create_inbox_saved_reply_draft', {
+    target_provider: targetProvider,
+    target_conversation_id: conversationId,
+    target_saved_reply_id: savedReplyId,
+  });
+  if (error) {
+    const action = error.code === '42501' ? 'template_forbidden'
+      : error.code === '22023' ? 'template_requires_inbound'
+      : error.code === 'P0002' ? 'template_unavailable' : 'template_failed';
+    redirect(`${page}?draft_action=${action}`);
+  }
+  revalidatePath(page);
+  redirect(`${page}?draft_action=template_added`);
+}

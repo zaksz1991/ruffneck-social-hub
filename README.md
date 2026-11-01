@@ -1,6 +1,6 @@
-# RuffNeck Social Hub v3.0.4
+# RuffNeck Social Hub v3.2.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, Facebook Messenger inbox with human-reviewed text replies, workspace team assignment and internal notes, a shared saved-reply library, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
 
 ## Core modules
 
@@ -12,6 +12,9 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 - Central provider registry for Facebook, Instagram, LinkedIn, TikTok, YouTube, X and WhatsApp Business, with implemented integrations clearly separated from planned ones.
 - Meta webhook signature verification and workspace-scoped event journal.
 - Read-only Instagram text message conversations with optional local AI reply drafts.
+- Facebook Messenger conversations with human-reviewed text replies, a guarded 24-hour send window and one-attempt send protection.
+- Unified inbox team workflow: assignment, open/pending/resolved status, priority and private handoff notes.
+- Workspace-shared saved replies with channel scope and atomic creation of unsent provider drafts.
 - Instagram comment ingestion, internal triage states and optional AI-assisted public reply drafts.
 - GitHub Actions CI and scheduled publishing worker workflow.
 
@@ -37,7 +40,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-Fresh installations apply migrations `0001` through `0019` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing v2.9.0 database (migrations 0001–0017 already applied), apply `0018_facebook_messenger_inbox_and_replies.sql` and then `0019_brand_voice_profiles.sql` if either is not already recorded as applied. For a database already upgraded to v3.0.0, apply only migration `0019_brand_voice_profiles.sql` if it is still pending. Never rerun a migration that has already succeeded. See `RELEASE-NOTES-v3.0.0.md` for Meta messaging setup and `RELEASE-NOTES-v3.0.1.md` for brand voice setup.
+Fresh installations apply migrations `0001` through `0021` in ascending order. Existing installations apply only migrations that have not already been successfully applied. For an existing database upgraded through v3.1.0 (migrations 0001–0020), apply `0021_inbox_saved_replies.sql` once. For earlier installations, inspect the migration history and apply each missing migration in ascending order; never rerun a migration that has already succeeded. See the individual release notes for Meta messaging, brand voice, team workflow and saved-reply setup.
 
 ## Environment variables
 
@@ -139,3 +142,9 @@ No Supabase migration or new environment variable is introduced. The existing v3
 ## v3.1.0 team inbox workflow
 
 See `README-v3.1.0-TEAM-INBOX-WORKFLOW.md`. Apply `supabase/migrations/0020_unified_inbox_team_workflow.sql` after migration 0019.
+
+## Unified inbox saved replies (v3.2.0)
+
+Apply `supabase/migrations/0021_inbox_saved_replies.sql` after migration 0020. Owners, admins and managers can create, update and delete workspace-shared templates. Templates can be scoped to Instagram, Facebook Messenger or both. Authorized team members can use a template to create an editable draft tied atomically to the latest inbound conversation message. Template use never sends a message. Facebook drafts still follow the explicit human-review, permission, 24-hour-window and one-attempt send protections. Instagram drafts remain unsent.
+
+See `README-v3.2.0-SAVED-REPLIES.md` and `RELEASE-MANIFEST-v3.2.0.md` for the complete feature and verification boundaries.

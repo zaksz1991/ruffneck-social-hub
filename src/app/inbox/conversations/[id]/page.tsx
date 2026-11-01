@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import ReplyDraftStudio from './reply-draft-studio';
+import SavedReplyPicker, { type InboxSavedReply } from '@/app/inbox/saved-reply-picker';
 import InboxConversationWorkflowPanel, { type InboxWorkflow, type InboxInternalNote, type InboxTeammate } from '@/app/inbox/conversation-workflow-panel';
 import '../../inbox.css';
 
@@ -29,6 +30,10 @@ export default async function ConversationDetail({ params, searchParams }: { par
   if (messageResult.error) notFound();
 
   const c = conversation as Conversation;
+  const { data: savedReplyRows } = await supabase.from('inbox_saved_replies')
+    .select('id,provider_scope,title,body,updated_at').eq('workspace_id', c.workspace_id)
+    .in('provider_scope', ['all', 'instagram']).order('title', { ascending: true }).limit(100);
+  const savedReplies = (savedReplyRows ?? []) as InboxSavedReply[];
   const messages = ((messageResult.data ?? []) as Message[]).reverse();
   const drafts = (draftResult.data ?? []) as Draft[];
   const latestMessage = messages[messages.length - 1];
@@ -60,18 +65,19 @@ export default async function ConversationDetail({ params, searchParams }: { par
   return <main className="inbox-shell">
     <header className="inbox-topbar">
       <Link href="/" className="inbox-brand"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" /></Link>
-      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/comments">Comments</Link></nav>
+      <nav><Link href="/">Overview</Link><Link href="/inbox">Event journal</Link><Link href="/inbox/conversations">Conversations</Link><Link href="/inbox/comments">Comments</Link><Link href="/inbox/saved-replies">Saved replies</Link></nav>
       <Link href="/inbox/conversations" className="inbox-back">All conversations</Link>
     </header>
     <section className="inbox-main">
       <div className="inbox-heading"><div><span className="eyebrow">INSTAGRAM · MESSAGE THREAD</span><h1>Conversation</h1><p>Participant reference: {c.participant_provider_id}</p></div></div>
-      {query.draft_action && <div className={query.draft_action === 'failed' || query.draft_action === 'invalid' ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{query.draft_action === 'saved' ? 'Draft changes saved.' : query.draft_action === 'reviewed' ? 'Draft marked as human-reviewed. No message was sent.' : query.draft_action === 'discarded' ? 'Draft discarded.' : query.draft_action === 'invalid' ? 'The draft update was invalid.' : 'The draft could not be updated. Confirm migration 0011 and workspace access.'}</div>}
+      {query.draft_action && <div className={query.draft_action === 'failed' || query.draft_action === 'invalid' ? 'reply-action-message is-error' : 'reply-action-message'} role="status">{query.draft_action === 'template_added' ? 'Saved reply copied into a new unsent draft.' : query.draft_action === 'template_requires_inbound' ? 'A saved reply requires the latest message to be from the customer.' : query.draft_action === 'template_forbidden' ? 'Your workspace role cannot create reply drafts.' : query.draft_action === 'template_unavailable' ? 'That saved reply is unavailable for this workspace or channel.' : query.draft_action === 'template_failed' ? 'The saved reply could not be converted into a draft. Confirm migrations 0011 and 0021.' : query.draft_action === 'saved' ? 'Draft changes saved.' : query.draft_action === 'reviewed' ? 'Draft marked as human-reviewed. No message was sent.' : query.draft_action === 'discarded' ? 'Draft discarded.' : query.draft_action === 'invalid' ? 'The draft update was invalid.' : 'The draft could not be updated. Confirm migration 0011 and workspace access.'}</div>}
       <div className="inbox-notice"><strong>Inbound messages are read-only</strong><p>RuffNeck Social Hub can prepare and save a proposed direct-message reply for human review. It does not send replies or access attachments. Comment triage is available separately in Comments.</p></div>
       <InboxConversationWorkflowPanel provider="instagram" conversationId={id} workflow={workflow} notes={notes} teammates={teammates} canAssign={canAssign} canUpdate={canUpdate} available={workflowAvailable} workflowAction={query.workflow_action} noteAction={query.note_action}/>
       <section className="inbox-events">
         <div className="inbox-section-title"><div><h2>Message history</h2><p>{messages.length} messages · oldest first</p></div></div>
         {!messages.length ? <div className="inbox-empty"><p>No text messages stored.</p></div> : <div className="inbox-event-list">{messages.map(m => <article className="inbox-event" key={m.id}><div className="event-symbol">{m.direction === 'inbound' ? 'IN' : 'OUT'}</div><div className="event-copy"><div className="event-title"><strong>{m.direction === 'inbound' ? 'Incoming message' : 'Outgoing message'}</strong></div><p style={{ whiteSpace:'pre-wrap' }}>{m.message_text}</p><small>{new Date(m.provider_sent_at).toLocaleString()}</small></div></article>)}</div>}
       </section>
+      <SavedReplyPicker provider="instagram" conversationId={id} replies={savedReplies} canUse={canDraft} hasLatestInbound={latestMessage?.direction === 'inbound'} />
       <ReplyDraftStudio conversationId={id} drafts={drafts} canGenerate={canDraft && latestMessage?.direction === 'inbound'} disabledReason={draftDisabledReason} />
     </section>
   </main>;
