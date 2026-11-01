@@ -8,6 +8,7 @@ import {
 } from '@/app/actions/content';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { canCreateContent, canReviewContent } from '@/lib/content/validation';
+import AiContentGenerator from './ai-content-generator';
 
 type Workspace = { id: string; name: string };
 type Brand = { id: string; name: string; timezone: string };
@@ -136,6 +137,14 @@ export default async function ContentStudioPage({
               <article><span>Awaiting review</span><strong>{items.filter((item) => item.status === 'in_review').length}</strong></article>
               <article><span>Approved</span><strong>{items.filter((item) => item.status === 'approved').length}</strong></article>
             </section>
+
+            {canCreate && brands.length > 0 && (
+              <AiContentGenerator
+                workspaceId={activeWorkspace.id}
+                brands={brands.map(({ id, name }) => ({ id, name }))}
+                configured={Boolean(process.env.LOCAL_AI_BASE_URL?.trim() && process.env.LOCAL_AI_MODEL?.trim())}
+              />
+            )}
 
             {canCreate && brands.length > 0 && (
               <section className="content-compose-card">

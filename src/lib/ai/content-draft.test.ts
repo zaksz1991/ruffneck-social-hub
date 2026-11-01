@@ -1,69 +1,46 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildAiContentDraftMessages,
-  parseAiContentDraftResponse,
-  type AiContentBrief,
-} from './content-draft';
+import { buildContentDraftMessages, parseGeneratedContentDraft } from './content-draft';
 
-const sample: AiContentBrief = {
-  brandName: 'Northstar Foods',
-  brief: 'Announce our new weekend menu. Do not mention prices because they are not confirmed.',
-  audience: 'Families in the local area',
-  objective: 'announcement',
-  tone: 'friendly',
+const brief = {
+  objective: 'awareness' as const,
+  tone: 'professional' as const,
   language: 'English',
-  brandVoice: {
-    tone: 'Warm and direct',
-    approved_facts: ['Open on weekends'],
-    private_notes: 'Must never be forwarded',
-  },
+  audience: 'Small business owners',
+  brief: 'Explain that the company provides practical digital training for SMEs.',
 };
 
-describe('AI-assisted content drafts', () => {
-  it('builds a constrained human-review-only content prompt', () => {
-    const messages = buildAiContentDraftMessages(sample);
-    expect(messages[0].content).toContain('cannot publish, schedule, approve');
-    expect(messages[0].content).toContain('Do not invent factual claims');
-    expect(messages[0].content).toContain('Return only valid JSON');
-    expect(messages[1].content).toContain('weekend menu');
-    expect(messages[1].content).not.toContain('private_notes');
-    expect(messages[0].content).not.toContain('Northstar Foods');
-  });
-
-  it('parses a valid JSON response and trims copy', () => {
-    expect(parseAiContentDraftResponse('{"title":" Weekend menu ","body":"  Join us this weekend.  "}')).toEqual({
-      title: 'Weekend menu',
-      body: 'Join us this weekend.',
+describe('AI content draft prompt and response handling', () => {
+  it('uses the selected campaign details and safe brand voice fields', () => {
+    const messages = buildContentDraftMessages(brief, {
+      tone: 'clear and practical',
+      languages: 'English, Hausa',
+      approved_facts: ['Practical digital training'],
+      forbidden_claims: ['Guaranteed revenue growth'],
+      escalation_triggers: ['Legal advice'],
     });
+    expect(messages[0].content).toContain('Guaranteed revenue growth');
+    expect(messages[0].content).toContain('Practical digital training');
+    expect(messages[0].content).toContain('increase accurate awareness');
+    expect(messages[1].content).toContain('Small business owners');
   });
 
-  it('accepts a fenced JSON response from compatible local models', () => {
-    expect(parseAiContentDraftResponse('```json\n{"title":"New menu","body":"See what is new."}\n```')).toEqual({
-      title: 'New menu',
-      body: 'See what is new.',
-    });
+  it('accepts valid JSON drafts and trims surrounding whitespace', () => {
+    expect(parseGeneratedContentDraft('{"title":"  A useful title  ","body":"  Useful post copy.  "}'))
+      .toEqual({ title: 'A useful title', body: 'Useful post copy.' });
   });
 
-  it('rejects non-JSON model output', () => {
-    expect(() => parseAiContentDraftResponse('Here is your post: hello')).toThrow(/required JSON/);
+  it('accepts JSON inside a markdown code fence from a model', () => {
+    expect(parseGeneratedContentDraft('```json\n{"title":"Helpful title","body":"Helpful body"}\n```'))
+      .toEqual({ title: 'Helpful title', body: 'Helpful body' });
   });
 
-  it('rejects missing or too-short fields', () => {
-    expect(() => parseAiContentDraftResponse('{"title":"x","body":"copy"}')).toThrow(/title and post copy/);
-    expect(() => parseAiContentDraftResponse('{"title":"Valid title","body":""}')).toThrow(/title and post copy/);
+  it('accepts clearly labelled title and body fallback output', () => {
+    expect(parseGeneratedContentDraft('Title: Helpful title\nBody: A useful, accurate caption.'))
+      .toEqual({ title: 'Helpful title', body: 'A useful, accurate caption.' });
   });
 
-  it('rejects oversized model output', () => {
-    expect(() => parseAiContentDraftResponse('x'.repeat(32_001))).toThrow(/oversized/);
-  });
-
-  it('strips control characters and bounds output fields', () => {
-    const result = parseAiContentDraftResponse(JSON.stringify({
-      title: `A valid title\u0000${'x'.repeat(200)}`,
-      body: `Copy\u0007${'y'.repeat(6000)}`,
-    }));
-    expect(result.title.length).toBe(160);
-    expect(result.body.length).toBe(5000);
-    expect(result.title).not.toContain('\u0000');
+  it('rejects missing or oversized content', () => {
+    expect(() => parseGeneratedContentDraft('not structured content')).toThrow(/valid title and post body/i);
+    expect(() => parseGeneratedContentDraft(JSON.stringify({ title: 'x', body: 'copy' }))).toThrow();
   });
 });

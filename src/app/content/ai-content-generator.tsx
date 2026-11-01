@@ -2,9 +2,9 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import { createContentDraft, generateAiContentDraft, type GenerateAiContentDraftState } from '@/app/actions/content';
+import './ai-content-generator.css';
 
 type BrandOption = { id: string; name: string };
-
 const initialState: GenerateAiContentDraftState = { status: 'idle' };
 
 export default function AiContentGenerator({
@@ -30,7 +30,6 @@ export default function AiContentGenerator({
   }, [state.status, state.title, state.body]);
 
   if (!brands.length) return null;
-
   return (
     <section className="ai-content-generator" aria-labelledby="ai-content-generator-title">
       <div className="ai-content-generator-heading">
@@ -41,11 +40,10 @@ export default function AiContentGenerator({
         </div>
         <span className="ai-content-generator-pill">HUMAN REVIEW REQUIRED</span>
       </div>
-
       {!configured ? (
         <div className="ai-content-generator-unavailable" role="status">
           <strong>Local AI is not configured.</strong>
-          <span>Set the existing server-side LOCAL_AI_BASE_URL and LOCAL_AI_MODEL variables to enable this assistant. LOCAL_AI_API_KEY is optional for authenticated model servers.</span>
+          <span>Set the server-only LOCAL_AI_BASE_URL and LOCAL_AI_MODEL variables to enable this assistant. LOCAL_AI_API_KEY is optional for authenticated model servers.</span>
         </div>
       ) : (
         <>
@@ -93,13 +91,11 @@ export default function AiContentGenerator({
               <small>20–1,200 characters. Do not include passwords, customer records or confidential information.</small>
             </label>
             <div className="ai-content-generator-submit">
-              <span>Uses your configured local/OpenAI-compatible model endpoint. No external model is selected by RuffNeck.</span>
+              <span>Uses your server-configured local/OpenAI-compatible model endpoint. No external model is selected by RuffNeck.</span>
               <button className="content-primary-button" type="submit" disabled={pending}>{pending ? 'Generating draft…' : 'Generate draft'}</button>
             </div>
           </form>
-
           {state.status === 'error' && <p className="ai-content-generator-message error" role="alert">{state.message}</p>}
-
           {state.status === 'success' && (
             <div className="ai-content-generator-result" aria-live="polite">
               <div className="ai-content-generator-result-heading">

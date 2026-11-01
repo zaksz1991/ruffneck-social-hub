@@ -124,3 +124,8 @@ The Brands & clients area supports workspace-scoped brand voice settings: tone, 
 The save action is restricted by the database to workspace owners and admins. For databases that have applied migrations through 0018 but not 0019, apply `supabase/migrations/0019_brand_voice_profiles.sql` once. Do not reapply a migration already recorded as applied.
 
 See `RELEASE-NOTES-v3.0.1.md` for the Vercel build repair and verification boundaries.
+
+
+## v3.0.2 — AI campaign draft assistant
+
+Content Studio now includes optional AI-assisted first-draft generation through the existing server-configured local/OpenAI-compatible inference endpoint. The feature uses the brand voice profile and role-checks access by workspace. Generated copy is editable and remains unsaved until a user explicitly saves it as a draft. It cannot approve, schedule or publish content. No new migration or environment variable is required. See `README-AI-CONTENT-DRAFTS-v3.0.2.md` and `RELEASE-NOTES-v3.0.2.md`.

@@ -1,3 +1,12 @@
+## 3.0.2 — 2026-11-01
+
+- Fixed the Content Studio TypeScript build failure by implementing the missing `generateAiContentDraft` server action and its exported state type.
+- Activated the existing AI campaign draft component in Content Studio for authorized workspace content creators.
+- Added local/OpenAI-compatible model generation for editable title and post copy using the existing `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL` and optional `LOCAL_AI_API_KEY` settings.
+- Applies workspace membership and brand/workspace checks before generation; includes sanitized brand-voice guidance and bounded campaign inputs.
+- Generated copy remains an unsaved preview until a user edits/reviews it and explicitly saves it as a content draft. No auto-approval, scheduling or publishing is performed.
+- No database migration or new environment variable is required.
+
 # Changelog
 
 ## 3.0.0 — 2026-11-01

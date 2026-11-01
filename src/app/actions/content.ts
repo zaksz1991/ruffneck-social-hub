@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { isUuid, validateContentInput } from '@/lib/content/validation';
+import { canCreateContent, isUuid, validateContentInput } from '@/lib/content/validation';
+import { generateLocalAiContentDraft, type ContentDraftBrief } from '@/lib/ai/content-draft';
 
 function formText(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -105,4 +106,93 @@ export async function reviewContentItem(formData: FormData) {
   if (error) contentRedirect(workspaceId, 'error=review');
   revalidatePath('/content');
   contentRedirect(workspaceId, decision === 'approved' ? 'saved=approved' : 'saved=changes');
+}
+
+
+export type GenerateAiContentDraftState = {
+  status: 'idle' | 'success' | 'error';
+  message?: string;
+  title?: string;
+  body?: string;
+  model?: string;
+  workspaceId?: string;
+  brandId?: string;
+};
+
+const OBJECTIVES = ['awareness', 'engagement', 'education', 'sales', 'announcement'] as const;
+const TONES = ['professional', 'friendly', 'confident', 'helpful', 'concise'] as const;
+const LANGUAGES = ['English', 'Hausa', 'Nigerian Pidgin', 'Yoruba', 'Igbo', 'French', 'Use the language best suited to the campaign'] as const;
+
+function safeActionText(value: string, maximum: number): string {
+  const clean = value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim();
+  return clean.length <= maximum ? clean : clean.slice(0, maximum + 1);
+}
+
+/** Generates editable copy only. The user must explicitly save it as a draft. */
+export async function generateAiContentDraft(
+  _previousState: GenerateAiContentDraftState,
+  formData: FormData,
+): Promise<GenerateAiContentDraftState> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const brandId = formText(formData, 'brand_id');
+  const objective = formText(formData, 'objective');
+  const tone = formText(formData, 'tone');
+  const language = safeActionText(formText(formData, 'language'), 80);
+  const audience = safeActionText(formText(formData, 'audience'), 240);
+  const brief = safeActionText(formText(formData, 'brief'), 1200);
+
+  if (!isUuid(workspaceId) || !isUuid(brandId) ||
+      !OBJECTIVES.includes(objective as typeof OBJECTIVES[number]) ||
+      !TONES.includes(tone as typeof TONES[number]) ||
+      !LANGUAGES.includes(language as typeof LANGUAGES[number]) ||
+      brief.length < 20 || brief.length > 1200 || audience.length > 240) {
+    return { status: 'error', message: 'Check the selected brand and campaign details. The brief must contain 20–1,200 characters.' };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { status: 'error', message: 'Sign in before generating a content draft.' };
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (membershipError || !membership || !canCreateContent(membership.role)) {
+    return { status: 'error', message: 'Your workspace role does not permit creating content drafts.' };
+  }
+
+  const { data: brand, error: brandError } = await supabase
+    .from('brands')
+    .select('id,voice_profile')
+    .eq('id', brandId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  if (brandError || !brand) {
+    return { status: 'error', message: 'The selected brand is not available in this workspace.' };
+  }
+
+  try {
+    const generated = await generateLocalAiContentDraft({
+      objective: objective as ContentDraftBrief['objective'],
+      tone: tone as ContentDraftBrief['tone'],
+      language,
+      audience,
+      brief,
+      brandVoice: brand.voice_profile,
+    });
+    return {
+      status: 'success',
+      message: 'Draft generated. Review and edit it before saving.',
+      title: generated.title,
+      body: generated.body,
+      model: generated.model,
+      workspaceId,
+      brandId,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'The AI content draft could not be generated.';
+    return { status: 'error', message: message.slice(0, 220) };
+  }
 }
