@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { cancelScheduledJob, scheduleApprovedContent } from '@/app/actions/publishing';
+import { cancelScheduledJob } from '@/app/actions/publishing';
+import { PublishingScheduleForm } from '@/app/components/publishing-schedule-form';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { summarizeQueueHealth } from '@/lib/publishing/queue-health';
 
 type Workspace = { id: string; name: string };
 type Brand = { id: string; name: string; timezone: string };
-type ContentItem = { id: string; brand_id: string; title: string; status: string; updated_at: string };
+type ContentItem = { id: string; brand_id: string; title: string; body: string; media_refs: unknown; status: string; updated_at: string };
 type SocialAccount = {
   id: string;
   brand_id: string;
@@ -62,7 +63,7 @@ function displayDate(value: string, timeZone: string) {
 export default async function PublishingQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; month?: string; error?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>; 
+  searchParams: Promise<{ workspace?: string; month?: string; error?: string; reason?: string; blocked?: string; saved?: string; created?: string; failed?: string; duplicates?: string; denied?: string; state?: string; provider?: string; brand?: string; q?: string; page?: string }>;  
 }) {
   const params = await searchParams;
   const monthMatch = typeof params.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(params.month) ? params.month : new Date().toISOString().slice(0, 7);
@@ -105,7 +106,7 @@ export default async function PublishingQueuePage({
 
     const [brandResult, contentResult, accountResult, jobResult] = await Promise.all([
       supabase.from('brands').select('id,name,timezone').eq('workspace_id', activeWorkspace.id).order('name'),
-      supabase.from('content_items').select('id,brand_id,title,status,updated_at').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(100),
+      supabase.from('content_items').select('id,brand_id,title,body,media_refs,status,updated_at').eq('workspace_id', activeWorkspace.id).eq('status', 'approved').order('updated_at', { ascending: false }).limit(100),
       supabase.from('social_accounts').select('id,brand_id,provider,display_name,connection_state,capabilities').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: false }),
       supabase.from('publishing_jobs').select('id,brand_id,content_id,social_account_id,scheduled_at,state,attempts,last_error_safe').eq('workspace_id', activeWorkspace.id).order('scheduled_at', { ascending: true }).limit(100),
     ]);
@@ -189,6 +190,18 @@ export default async function PublishingQueuePage({
     schedule: 'The schedule could not be created. Confirm the content is approved and the channel is connected to the same brand.',
     cancel: 'The queue item could not be cancelled. It may already be processing.',
   };
+  const preflightReasonMessages: Record<string, string> = {
+    lookup: 'The selected content or one of the accounts could not be verified in this workspace.',
+    content_not_approved: 'The content is no longer approved.',
+    brand_mismatch: 'Every selected destination must belong to the content’s brand.',
+    not_connected: 'Reconnect the affected social account.',
+    publishing_disabled: 'The affected account does not have verified publishing permission.',
+    provider_unsupported: 'The selected provider does not have an active publishing worker.',
+    image_required: 'Instagram and Facebook require exactly one image.',
+    invalid_image_url: 'Use a publicly reachable HTTPS image URL without embedded credentials.',
+    linkedin_text_only: 'Remove media before scheduling to LinkedIn.',
+    caption_too_long: 'Shorten the post copy to fit the selected provider’s current worker limit.',
+  };
   const successMessages: Record<string, string> = {
     scheduled: 'Added to the publishing queue. No post has been sent to a social network.',
     cancelled: 'The queued item has been cancelled.',
@@ -212,7 +225,7 @@ export default async function PublishingQueuePage({
           <div className="publishing-workspace-chip"><span>WORKSPACE</span><strong>{activeWorkspace?.name ?? 'No workspace available'}</strong><small>{role.toUpperCase()}</small>{workspaces.length > 1 && <div className="publishing-workspace-options" aria-label="Switch workspace">{workspaces.map((workspace) => <Link key={workspace.id} href={`/publishing?workspace=${workspace.id}`} className={workspace.id === activeWorkspace?.id ? 'selected' : ''}>{workspace.name}</Link>)}</div>}</div>
         </div>
 
-        {params.error && <p className="notice error">{errorMessages[params.error] ?? 'The requested publishing action failed.'}</p>}
+        {params.error && <p className="notice error">{params.error === 'preflight' ? `Scheduling stopped during server preflight. ${preflightReasonMessages[params.reason ?? ''] ?? 'Review the selected content and destinations.'} ${Math.max(1, Math.min(10, Number.parseInt(params.blocked ?? '1', 10) || 1))} destination(s) need attention. No schedules were created.` : errorMessages[params.error] ?? 'The requested publishing action failed.'}</p>}
         {params.saved === 'bulk' ? <p className={Number(params.failed ?? 0) > 0 ? 'notice error' : 'notice success'}>Created {Number(params.created ?? 0)} schedule(s); {Number(params.failed ?? 0)} destination(s) failed. {Number(params.duplicates ?? 0) > 0 ? `${Number(params.duplicates)} duplicate schedule(s) were skipped. ` : ''}{params.denied === '1' ? 'At least one destination was rejected by workspace permissions. ' : ''}Each successful destination is queued separately; nothing is published immediately.</p> : params.saved && <p className="notice success">{successMessages[params.saved] ?? 'Publishing queue updated.'}</p>}
 
         {!activeWorkspace ? (
@@ -262,39 +275,37 @@ export default async function PublishingQueuePage({
               <span className="publishing-gate">INSTAGRAM + FACEBOOK + LINKEDIN</span>
             </section>
 
-            {canSchedule && approvedContent.length > 0 && connectedAccounts.length > 0 && (
+            {canSchedule && approvedContent.length > 0 && accounts.length > 0 && (
               <section className="publishing-compose-card">
                 <div className="publishing-section-heading"><div><span className="eyebrow">NEW SCHEDULE</span><h2>Add approved content to the queue</h2><p>Create matching schedule entries for up to ten connected destinations in one operation.</p></div><span className="publishing-tag">APPROVED CONTENT ONLY</span></div>
-                <form action={scheduleApprovedContent} className="publishing-form">
-                  <input type="hidden" name="workspace_id" value={activeWorkspace.id} />
-                  <label>Approved content
-                    <select name="content_id" required defaultValue="">
-                      <option value="" disabled>Select approved content</option>
-                      {approvedContent.map((item) => {
-                        const brand = brandById.get(item.brand_id);
-                        return <option value={item.id} key={item.id}>{item.title} · {brand?.name ?? 'Brand'} ({brand?.timezone ?? 'UTC'})</option>;
-                      })}
-                    </select>
-                  </label>
-                  <label>Connected destinations (select up to 10)
-                    <select name="social_account_ids" required multiple size={Math.min(Math.max(connectedAccounts.length, 3), 7)} aria-describedby="publishing-destinations-help">
-                      {connectedAccounts.map((account) => <option value={account.id} key={account.id}>{account.display_name || account.provider} · {account.provider} · {brandById.get(account.brand_id)?.name ?? 'Brand'}</option>)}
-                    </select>
-                    <small id="publishing-destinations-help">Use Ctrl (Windows) or Command (Mac) to select multiple destinations. The database checks that every destination belongs to the selected content brand.</small>
-                  </label>
-                  <label>Publish date and time
-                    <input type="datetime-local" name="scheduled_local" required />
-                    <small>Enter the wall-clock time in the selected content brand&apos;s saved timezone. The server validates the actual UTC schedule.</small>
-                  </label>
-                  <div className="publishing-form-footer"><span>Instagram and Facebook support single-image posts; LinkedIn supports text-only organization posts. Match the content format to each selected destination.</span><button type="submit" className="publishing-primary">Add to queue</button></div>
-                </form>
+                <PublishingScheduleForm
+                  workspaceId={activeWorkspace.id}
+                  contents={approvedContent.map((item) => ({
+                    id: item.id,
+                    title: item.title,
+                    brandId: item.brand_id,
+                    brandName: brandById.get(item.brand_id)?.name ?? 'Brand',
+                    timezone: brandById.get(item.brand_id)?.timezone ?? 'UTC',
+                    status: item.status,
+                    body: item.body,
+                    mediaRefs: item.media_refs,
+                  }))}
+                  destinations={accounts.map((account) => ({
+                    id: account.id,
+                    brandId: account.brand_id,
+                    provider: account.provider,
+                    displayName: account.display_name,
+                    connectionState: account.connection_state,
+                    canPublish: account.capabilities?.content_publish === true,
+                  }))}
+                />
               </section>
             )}
 
             {canSchedule && approvedContent.length === 0 && (
               <section className="publishing-prerequisite"><strong>No approved content is available.</strong><p>Create a draft in Content Studio, submit it for review and approve it before scheduling.</p><Link href="/content">Open Content Studio</Link></section>
             )}
-            {canSchedule && approvedContent.length > 0 && connectedAccounts.length === 0 && (
+            {canSchedule && approvedContent.length > 0 && accounts.length === 0 && (
               <section className="publishing-prerequisite"><strong>No publishing-enabled social destinations.</strong><p>Connect a supported Instagram Business account, Facebook Page or LinkedIn organization Page and grant the required publishing permissions. A connected account without a verified publishing capability cannot enter the queue.</p><Link href="/#channels">View connected-channel setup</Link></section>
             )}
             {!canSchedule && <section className="publishing-prerequisite"><strong>Read-only publishing access.</strong><p>Your current workspace role can view queue records but cannot schedule or cancel jobs.</p></section>}

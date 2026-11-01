@@ -159,3 +159,12 @@
 - Exact result counts and page navigation now reflect the selected structured filters across the full history, not just the current 25-record page.
 - Text search remains limited to the currently loaded page and is labelled accordingly.
 - No database migration or environment variable is required.
+
+
+## 2.12.0 — Cross-platform publishing preflight
+- Added live, destination-by-destination compatibility checks before a schedule can be submitted.
+- Checks same-brand ownership, approved status, connection state, verified publishing capability, supported provider worker, media requirements and current worker caption limits.
+- Instagram and Facebook require one public HTTPS image; LinkedIn rejects attached media and accepts text-only scheduling.
+- Added a second authenticated server-side preflight before creating any queue records; if any selected destination fails, the batch is stopped before any schedule is created.
+- The preflight does not claim to verify remote image reachability, provider-side permissions or actual publication. The existing database RPC and provider worker remain authoritative.
+- No database migration or new environment variable is required.

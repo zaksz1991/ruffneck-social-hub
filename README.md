@@ -1,13 +1,13 @@
-# RuffNeck Social Hub v2.0.0
+# RuffNeck Social Hub v2.12.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio, approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, Instagram inbox and comment workflows, the shared provider registry, official Facebook Pages OAuth, and read-only LinkedIn organization Page connections.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
 
 ## Core modules
 
 - Supabase email/password authentication and callback handling.
 - Workspace membership, multiple brands, team invitations and role-aware access.
 - Content Studio with draft, approval and publishing schedule workflows.
-- Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, plus multi-destination scheduling.
+- Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, LinkedIn text-only organization publishing, multi-destination scheduling and per-destination preflight validation.
 - Encrypted provider token vault shared by official Instagram, Facebook Pages and LinkedIn organization connection flows.
 - Central provider registry for Facebook, Instagram, LinkedIn, TikTok, YouTube, X and WhatsApp Business, with implemented integrations clearly separated from planned ones.
 - Meta webhook signature verification and workspace-scoped event journal.
@@ -17,8 +17,9 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Important provider boundaries
 
-- Publishing worker support is limited to supported Instagram and Facebook Page single-image posts. Facebook publishing requires `pages_manage_posts` plus an eligible Page task. Other providers and other media types are not implied to work.
-- LinkedIn organization Pages can be connected after the app has approved `r_organization_admin` and `w_organization_social` access. v2.1.0 adds text-only organization publishing through the existing scheduled worker. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
+- Instagram and Facebook Page publishing supports single-image posts only. Facebook publishing requires `pages_manage_posts` plus an eligible Page task.
+- LinkedIn organization publishing supports text-only posts when the required organization and publishing permissions are approved. Image publishing and automatic LinkedIn token refresh are not implemented; media-bearing LinkedIn jobs require manual review, and expired tokens require reconnection.
+- The publishing preflight checks content format, brand matching, connection state and worker capability in the UI and repeats those checks server-side before creating schedule records. It does not prove remote media reachability or provider-side acceptance.
 - Instagram messaging is read-only. AI DM reply drafts are never sent.
 - Instagram comments are normalized from the `comments` webhook field. The Comments page supports internal triage and unsent AI reply drafts only.
 - Marking a comment Reviewed or Ignored changes only its RuffNeck internal triage status.
@@ -37,11 +38,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0016. Apply only migrations that have not already been successfully applied, in ascending order. For an installation already at v1.9.0, apply **only**:
-
-`supabase/migrations/0016_linkedin_organization_connection.sql`
-
-Do not rerun migrations 0001–0015. In particular, do not rerun migration 0001 or the previously applied signup/workspace migrations.
+The complete ZIP contains migrations 0001–0017. Version 2.12.0 adds no database migration. Existing installations at v2.11.0 do not need to run SQL for this release. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
 
 ## Environment variables
 
@@ -94,7 +91,7 @@ This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social
 
 ## Verification boundaries
 
-Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that migration 0016 has been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
+Static package and syntax checks may be run against this source package. A successful ZIP or static check does not prove that required database migrations through 0017 have been applied, Meta or LinkedIn app permissions have been approved, a webhook is subscribed/delivered, an AI endpoint is reachable, or production deployment succeeds. Live Supabase, Meta, LinkedIn, Vercel and complete CI acceptance must be completed in the target accounts.
 
 
 ## Publishing operations analytics (v2.2.0)
@@ -108,3 +105,10 @@ The Publishing Queue now includes a monthly calendar above the existing scheduli
 ## v2.5.0 calendar export
 
 The Publishing Calendar can export the selected month as an iCalendar `.ics` file. The export is authenticated and workspace-scoped, uses UTC event timestamps, and can be imported into compatible calendar applications. It is a point-in-time export; later queue changes are not synchronized automatically. No migration or new environment variable is required.
+
+
+## v2.12.0 publishing preflight
+
+The publishing form now checks each selected account against the selected approved content before enabling submission. It verifies same-brand ownership, connected state, the stored `content_publish` capability, the active provider worker, media requirements and the caption length limits enforced by the current worker. Instagram and Facebook require exactly one valid HTTPS image URL; LinkedIn is text-only. The server repeats the checks using authenticated workspace-scoped reads and stops the complete scheduling batch if any selected destination fails. No queue entries are created on a preflight failure.
+
+The check validates URL format only; it does not fetch the image or prove it can be reached by the provider. Provider-side acceptance remains a separate outcome recorded by the publishing worker. No migration or new environment variable is required.

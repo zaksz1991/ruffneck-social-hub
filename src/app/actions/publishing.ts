@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isScheduleUuid, validateScheduleInput } from '@/lib/publishing/validation';
+import { preflightScheduleTargets, type PreflightDestination } from '@/lib/publishing/preflight';
 
 function field(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -18,7 +19,7 @@ async function authenticatedClient() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-  return supabase;
+  return { supabase, user };
 }
 
 export async function scheduleApprovedContent(formData: FormData) {
@@ -36,7 +37,46 @@ export async function scheduleApprovedContent(formData: FormData) {
   const parsed = validateScheduleInput(contentId, accountIds[0], scheduledLocal);
   if (!parsed.ok) returnToQueue(workspaceId, `error=${parsed.reason}`);
 
-  const supabase = await authenticatedClient();
+  const { supabase, user } = await authenticatedClient();
+  const { data: membership } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!membership || !['owner', 'admin', 'manager', 'publisher'].includes(membership.role)) {
+    returnToQueue(workspaceId, 'error=permission');
+  }
+
+  // Recheck content, brand, account state and provider-worker constraints on the server.
+  // The live UI preflight is advisory; this authenticated check is the action gate.
+  const [contentResult, accountResult] = await Promise.all([
+    supabase.from('content_items').select('brand_id,status,body,media_refs').eq('id', contentId).eq('workspace_id', workspaceId).maybeSingle(),
+    supabase.from('social_accounts').select('id,brand_id,provider,display_name,connection_state,capabilities').eq('workspace_id', workspaceId).in('id', accountIds),
+  ]);
+  if (contentResult.error || accountResult.error || !contentResult.data || (accountResult.data ?? []).length !== accountIds.length) {
+    returnToQueue(workspaceId, 'error=preflight&reason=lookup&blocked=1');
+  }
+  const preflightContent = contentResult.data as { brand_id: string; status: string; body: string; media_refs: unknown };
+  const preflightDestinations = (accountResult.data ?? []).map((account) => ({
+    id: account.id,
+    brandId: account.brand_id,
+    provider: account.provider,
+    displayName: account.display_name,
+    connectionState: account.connection_state,
+    canPublish: account.capabilities?.content_publish === true,
+  })) as PreflightDestination[];
+  const preflight = preflightScheduleTargets({
+    brandId: preflightContent.brand_id,
+    status: preflightContent.status,
+    body: preflightContent.body,
+    mediaRefs: preflightContent.media_refs,
+  }, preflightDestinations);
+  if (preflight.blockedCount > 0) {
+    const reason = preflight.issueCodes[0] ?? 'provider_unsupported';
+    returnToQueue(workspaceId, `error=preflight&reason=${encodeURIComponent(reason)}&blocked=${preflight.blockedCount}`);
+  }
+
   let created = 0;
   let failed = 0;
   let duplicate = 0;
@@ -70,7 +110,7 @@ export async function cancelScheduledJob(formData: FormData) {
   const jobId = field(formData, 'job_id');
   if (!isScheduleUuid(workspaceId) || !isScheduleUuid(jobId)) redirect('/publishing?error=input');
 
-  const supabase = await authenticatedClient();
+  const { supabase } = await authenticatedClient();
   const { error } = await supabase.rpc('cancel_scheduled_job', { target_job_id: jobId });
   if (error) {
     console.error('[publishing.cancel] Queue operation rejected:', { code: error.code });

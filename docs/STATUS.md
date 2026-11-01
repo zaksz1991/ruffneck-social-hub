@@ -79,3 +79,14 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Instagram publishing remains the only active publishing worker.
 - TikTok, YouTube, LinkedIn, X and WhatsApp appear in the registry as Planned, without connection buttons.
 - Live Meta OAuth, the migration against the target Supabase project, full Vitest suite, dependency-backed typecheck, full Next.js build and production deployment have not been verified in this package workspace.
+
+
+## Current provider and publishing status as of v2.12.0
+
+- Instagram Business: single-image publishing, read-only message conversations, internal comment triage and unsent AI reply drafts. Sending DMs or comment replies and automated moderation remain disabled.
+- Facebook Pages: single-image publishing through the official Page API when the stored permission and Page task checks pass.
+- LinkedIn organization Pages: text-only publishing through the official organization Posts API; image publishing and automatic token refresh are not implemented.
+- TikTok, YouTube, X and WhatsApp Business remain planned, with no publishing worker enabled.
+- Publishing preflight now checks the selected content and each destination both in the client UI and again on the authenticated server action before any queue writes. It does not verify remote image reachability or provider acceptance.
+- v2.12.0 adds no database migration or environment variable.
+- New preflight helper assertions passed in a standalone local runtime check. Changed source files passed TypeScript syntax transpilation. The full Vitest suite, dependency-backed typecheck, production Next.js build, live provider tests and Vercel deployment were not run.
