@@ -13,6 +13,7 @@ import {
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { canCreateContent, canReviewContent } from '@/lib/content/validation';
 import AiContentGenerator from './ai-content-generator';
+import AiProviderVariantGenerator from './ai-provider-variant-generator';
 
 type Workspace = { id: string; name: string };
 type Brand = { id: string; name: string; timezone: string };
@@ -261,6 +262,13 @@ export default async function ContentStudioPage({
                                   );
                                 })}
                               </div>
+                            )}
+                            {canCreate && (
+                              <AiProviderVariantGenerator
+                                workspaceId={activeWorkspace.id}
+                                contentId={item.id}
+                                configured={Boolean(process.env.LOCAL_AI_BASE_URL?.trim() && process.env.LOCAL_AI_MODEL?.trim())}
+                              />
                             )}
                             {canCreate && <details className="provider-variant-create"><summary>Create provider variant</summary><form action={createContentVariant} className="content-edit-form">
                               <input type="hidden" name="workspace_id" value={activeWorkspace.id} />

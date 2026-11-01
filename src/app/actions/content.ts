@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { canCreateContent, isUuid, validateContentInput } from '@/lib/content/validation';
 import { validateProviderVariantInput } from '@/lib/content/provider-variants';
 import { generateLocalAiContentDraft, type ContentDraftObjective, type ContentDraftTone } from '@/lib/ai/content-draft';
+import { generateLocalAiProviderVariants, type AiVariantProvider, type AiProviderVariantTone } from '@/lib/ai/provider-variants';
 
 function formText(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -290,4 +291,243 @@ export async function generateAiContentDraft(
     const message = error instanceof Error ? error.message : 'The local AI content-draft request failed.';
     return { status: 'error', message: message.slice(0, 260) };
   }
+}
+
+
+export type AiProviderVariantDraft = {
+  provider: AiVariantProvider;
+  name: string;
+  body: string;
+  mediaUrl: string;
+};
+
+export type GenerateAiProviderVariantsState = {
+  status: 'idle' | 'success' | 'error';
+  message?: string;
+  model?: string;
+  workspaceId?: string;
+  contentId?: string;
+  drafts?: AiProviderVariantDraft[];
+};
+
+export type SaveAiProviderVariantsState = {
+  status: 'idle' | 'success' | 'error';
+  message?: string;
+  savedProviders?: AiVariantProvider[];
+  failedProviders?: Array<{ provider: AiVariantProvider; reason: string }>;
+};
+
+const AI_PROVIDER_VARIANT_TONES = ['professional', 'friendly', 'confident', 'helpful', 'concise'] as const;
+const AI_VARIANT_PROVIDER_LABELS: Record<AiVariantProvider, string> = {
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+};
+
+function safeMasterMediaUrl(value: unknown): string {
+  if (!Array.isArray(value) || typeof value[0] !== 'string') return '';
+  try {
+    const parsed = new URL(value[0]);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.toString().length > 2048) return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function availableVariantName(provider: AiVariantProvider, existingNames: string[]): string {
+  const base = `AI ${AI_VARIANT_PROVIDER_LABELS[provider]} adaptation`;
+  const lowerNames = new Set(existingNames.map((name) => name.toLowerCase()));
+  if (!lowerNames.has(base.toLowerCase())) return base;
+  for (let number = 2; number < 100; number += 1) {
+    const candidate = `${base} ${number}`;
+    if (!lowerNames.has(candidate.toLowerCase())) return candidate;
+  }
+  return `${base} ${Date.now().toString().slice(-6)}`.slice(0, 60);
+}
+
+export async function generateAiProviderVariants(
+  _previousState: GenerateAiProviderVariantsState,
+  formData: FormData,
+): Promise<GenerateAiProviderVariantsState> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const contentId = formText(formData, 'content_id');
+  const tone = formText(formData, 'tone');
+  if (!isUuid(workspaceId) || !isUuid(contentId) || !AI_PROVIDER_VARIANT_TONES.includes(tone as AiProviderVariantTone)) {
+    return { status: 'error', message: 'The approved content reference or writing tone is invalid.' };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { status: 'error', message: 'Sign in before generating platform variants.' };
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (membershipError || !membership || !canCreateContent(membership.role)) {
+    return { status: 'error', message: 'Your workspace role cannot create provider-specific content drafts.' };
+  }
+
+  const { data: content, error: contentError } = await supabase
+    .from('content_items')
+    .select('id,workspace_id,brand_id,title,body,media_refs,status')
+    .eq('id', contentId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  if (contentError || !content || content.status !== 'approved') {
+    return { status: 'error', message: 'Only approved master content in this workspace can be adapted.' };
+  }
+
+  const [{ data: brand, error: brandError }, { data: existingVariants, error: variantsError }] = await Promise.all([
+    supabase.from('brands').select('id,name,voice_profile').eq('id', content.brand_id).eq('workspace_id', workspaceId).maybeSingle(),
+    supabase.from('content_variants').select('provider,variant_name').eq('workspace_id', workspaceId).eq('content_id', contentId),
+  ]);
+  if (brandError || !brand) return { status: 'error', message: 'The approved content brand could not be verified.' };
+  if (variantsError) return { status: 'error', message: 'Existing provider variants could not be checked. Confirm migration 0018 is applied.' };
+
+  try {
+    const generated = await generateLocalAiProviderVariants({
+      brandName: brand.name,
+      title: content.title,
+      masterBody: content.body,
+      brandVoice: brand.voice_profile,
+      tone: tone as AiProviderVariantTone,
+    });
+    const existingNames = (existingVariants ?? []).map((variant) => typeof variant.variant_name === 'string' ? variant.variant_name : '');
+    const inheritedMedia = safeMasterMediaUrl(content.media_refs);
+    const drafts: AiProviderVariantDraft[] = [
+      { provider: 'instagram', name: availableVariantName('instagram', existingNames), body: generated.instagram, mediaUrl: inheritedMedia },
+      { provider: 'facebook', name: availableVariantName('facebook', existingNames), body: generated.facebook, mediaUrl: inheritedMedia },
+      { provider: 'linkedin', name: availableVariantName('linkedin', existingNames), body: generated.linkedin, mediaUrl: '' },
+    ];
+    return {
+      status: 'success',
+      message: 'Three platform adaptations generated. Edit each copy and save them as drafts; none is approved or scheduled.',
+      model: generated.model,
+      workspaceId,
+      contentId,
+      drafts,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'The local AI provider-adaptation request failed.';
+    return { status: 'error', message: message.slice(0, 260) };
+  }
+}
+
+export async function saveAiProviderVariants(
+  _previousState: SaveAiProviderVariantsState,
+  formData: FormData,
+): Promise<SaveAiProviderVariantsState> {
+  const workspaceId = formText(formData, 'workspace_id');
+  const contentId = formText(formData, 'content_id');
+  const rawVariants = formText(formData, 'variants_json');
+  if (!isUuid(workspaceId) || !isUuid(contentId) || rawVariants.length < 2 || rawVariants.length > 24_000) {
+    return { status: 'error', message: 'The provider draft submission is invalid or too large.' };
+  }
+
+  let submitted: unknown;
+  try { submitted = JSON.parse(rawVariants); }
+  catch { return { status: 'error', message: 'The provider draft submission could not be read.' }; }
+  if (!Array.isArray(submitted) || submitted.length < 1 || submitted.length > 3) {
+    return { status: 'error', message: 'Select between one and three provider drafts to save.' };
+  }
+
+  const parsedDrafts: Array<{ provider: AiVariantProvider; name: string; body: string; mediaRefs: string[] }> = [];
+  const seenProviders = new Set<string>();
+  for (const value of submitted) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return { status: 'error', message: 'A provider draft has an invalid structure.' };
+    }
+    const row = value as Record<string, unknown>;
+    const provider = typeof row.provider === 'string' ? row.provider : '';
+    if (seenProviders.has(provider)) return { status: 'error', message: 'Each platform can be saved only once per submission.' };
+    seenProviders.add(provider);
+    const parsed = validateProviderVariantInput({
+      provider,
+      name: row.name,
+      body: row.body,
+      mediaUrl: row.mediaUrl,
+    });
+    if (!parsed.ok) return { status: 'error', message: `The ${provider || 'selected'} platform draft contains invalid fields (${parsed.reason}).` };
+    if ((parsed.value.provider === 'instagram' || parsed.value.provider === 'facebook') && parsed.value.mediaRefs.length !== 1) {
+      return { status: 'error', message: `${AI_VARIANT_PROVIDER_LABELS[parsed.value.provider]} requires one public HTTPS image for the currently implemented publishing worker.` };
+    }
+    if (parsed.value.provider === 'linkedin' && parsed.value.mediaRefs.length > 0) {
+      return { status: 'error', message: 'LinkedIn publishing is text-only in the current scheduler. Remove the image from the LinkedIn variant.' };
+    }
+    parsedDrafts.push({
+      provider: parsed.value.provider,
+      name: parsed.value.name,
+      body: parsed.value.body,
+      mediaRefs: parsed.value.mediaRefs,
+    });
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { status: 'error', message: 'Sign in before saving provider drafts.' };
+
+  const { data: membership, error: membershipError } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('workspace_id', workspaceId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (membershipError || !membership || !canCreateContent(membership.role)) {
+    return { status: 'error', message: 'Your workspace role cannot save provider-specific drafts.' };
+  }
+
+  const { data: content, error: contentError } = await supabase
+    .from('content_items')
+    .select('id,status')
+    .eq('id', contentId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  if (contentError || !content || content.status !== 'approved') {
+    return { status: 'error', message: 'The master content is no longer approved or is outside this workspace.' };
+  }
+
+  const savedProviders: AiVariantProvider[] = [];
+  const failedProviders: Array<{ provider: AiVariantProvider; reason: string }> = [];
+  for (const draft of parsedDrafts) {
+    try {
+      const { error } = await supabase.rpc('create_content_variant', {
+        target_content_id: contentId,
+        target_provider: draft.provider,
+        target_variant_name: draft.name,
+        target_variant_body: draft.body,
+        target_media_refs: draft.mediaRefs,
+      });
+      if (error) {
+        failedProviders.push({
+          provider: draft.provider,
+          reason: error.code === '23505' ? 'A variant with that name already exists. Change the name and retry.' : 'The draft could not be saved. Confirm the master remains approved and try again.',
+        });
+      } else {
+        savedProviders.push(draft.provider);
+      }
+    } catch {
+      failedProviders.push({ provider: draft.provider, reason: 'The save request failed. Retry this provider draft.' });
+    }
+  }
+
+  if (savedProviders.length > 0) {
+    revalidatePath('/content');
+    revalidatePath('/publishing');
+    return {
+      status: 'success',
+      message: `${savedProviders.length} provider draft${savedProviders.length === 1 ? '' : 's'} saved. Submit each for review before scheduling.`,
+      savedProviders,
+      failedProviders,
+    };
+  }
+  return {
+    status: 'error',
+    message: 'No provider drafts were saved. Review the platform-specific errors and retry.',
+    savedProviders,
+    failedProviders,
+  };
 }

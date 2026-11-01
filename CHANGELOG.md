@@ -1,3 +1,13 @@
+## [2.17.0] - AI platform-specific content adaptation
+
+- Added an optional AI adaptation assistant to each approved master post in Content Studio.
+- Generates separate Instagram, Facebook and LinkedIn copy using platform-specific editorial guidance while preserving the master post's language and factual claims.
+- Provides editable previews and saves selected outputs as provider-specific draft variants through the existing role-checked RPC.
+- Checks workspace membership, content approval and brand/workspace relationship before generation; rechecks membership and master approval before saving.
+- Generated variants are never automatically submitted for review, approved, scheduled or published.
+- Reuses the existing local/OpenAI-compatible AI endpoint configuration; no new environment variables, dependency or migration.
+- Added parser and prompt-safety tests for all three provider outputs.
+
 ## [2.14.0] - Workspace audit activity
 
 - Added an owner/admin activity log backed by the existing workspace audit table and RLS policy.

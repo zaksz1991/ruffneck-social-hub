@@ -111,3 +111,14 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - No migration or dependency changes are required.
 - The new helper passed strict standalone TypeScript checking; five changed TypeScript/TSX files passed syntax transpilation; 10 focused runtime assertion groups passed, including a mocked local inference endpoint.
 - The full dependency-backed project typecheck, complete Vitest suite, Next.js production build, live inference endpoint and production deployment were not run in this build environment.
+
+## 2.17.0 AI platform-specific copy adaptation
+
+- Added an optional Content Studio assistant on approved master posts to draft tailored Instagram, Facebook and LinkedIn variants from the approved title/body and sanitized brand voice profile.
+- Generation checks the signed-in user, workspace membership and content-creation role, verifies the approved master belongs to the workspace, and verifies the associated brand belongs to the same workspace.
+- Generated copy is returned as editable previews. Saving rechecks membership and master approval and writes each selected provider draft through the existing role-checked `create_content_variant` RPC.
+- Variant names are checked against existing names before generation; duplicate save attempts are surfaced per provider. Partial saves do not block successful variants from being retained.
+- Generated variants remain draft status and require the established separate review and approval workflow. No automatic scheduling or publishing is added.
+- No new database migration, package dependency or environment variable. Existing `LOCAL_AI_BASE_URL`, `LOCAL_AI_MODEL` and optional `LOCAL_AI_API_KEY` settings are reused. Migration 0018 remains a prerequisite for provider variants.
+- Provider adaptation prompt/parser tests were added. New helper strict TypeScript check passed; six changed TypeScript/TSX files passed syntax transpilation; 17 focused runtime assertions passed, including a mocked local AI endpoint.
+- Full Vitest suite, dependency-backed project typecheck, Next.js production build, live Supabase RPC behavior, live AI endpoint and Vercel deployment were not run in this environment.

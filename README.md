@@ -1,12 +1,12 @@
-# RuffNeck Social Hub v2.16.0
+# RuffNeck Social Hub v2.17.0
 
-RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, optional local-AI campaign draft generation, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
+RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, optional local-AI campaign drafting and human-reviewed platform copy adaptation, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
 
 ## Core modules
 
 - Supabase email/password authentication and callback handling.
 - Workspace membership, multiple brands, team invitations and role-aware access.
-- Content Studio with master-content approval plus separate provider-specific copy/media variants and review workflows for Instagram, Facebook and LinkedIn.
+- Content Studio with master-content approval, optional AI-generated platform adaptations, editable provider-specific copy/media variants and separate review workflows for Instagram, Facebook and LinkedIn.
 - Publishing queue with server-side Instagram and Facebook Page single-image dispatchers, LinkedIn text-only organization publishing, multi-destination scheduling, approved provider-variant selection and per-destination preflight validation.
 - Encrypted provider token vault shared by official Instagram, Facebook Pages and LinkedIn organization connection flows.
 - Central provider registry for Facebook, Instagram, LinkedIn, TikTok, YouTube, X and WhatsApp Business, with implemented integrations clearly separated from planned ones.
@@ -38,7 +38,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0018. Version 2.15.0 adds `0018_provider_content_variants.sql`. Existing installations that have already applied migrations 0001–0017 must apply migration 0018 once, using the Supabase SQL Editor, before enabling provider-specific variants and variant-aware scheduling. Do not rerun migrations 0001–0017. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
+The complete ZIP contains migrations 0001–0018. Version 2.15.0 added `0018_provider_content_variants.sql`. Version 2.17.0 adds no migration. Existing installations that have already applied migrations 0001–0017 must apply migration 0018 once, using the Supabase SQL Editor, before enabling provider-specific variants and variant-aware scheduling. Existing installations that already applied 0018 do not need another migration for v2.17.0. Do not rerun migrations 0001–0017. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
 
 ## Environment variables
 
@@ -137,3 +137,9 @@ Apply `supabase/migrations/0018_provider_content_variants.sql` once after migrat
 Content Studio now offers an optional AI campaign draft assistant for workspace owners, administrators, managers and publishers. The user selects a brand, campaign objective, tone and language, then supplies a bounded campaign brief and optional audience description. The server verifies workspace membership and brand ownership before sending the sanitized brand voice profile and brief to the configured `LOCAL_AI_BASE_URL`/`LOCAL_AI_MODEL` OpenAI-compatible chat-completions endpoint. `LOCAL_AI_API_KEY` remains optional for protected inference servers.
 
 The assistant returns an editable title and post body for human review. The user must explicitly save the result as a normal content draft; it is not automatically submitted for approval, converted into provider variants, scheduled or published. Master-content approval and the separate provider-variant approval process introduced in v2.15.0 remain unchanged. No database migration, dependency or new environment variable is required. Do not include confidential information or customer records in campaign briefs.
+
+## v2.17.0 AI platform-specific content adaptation
+
+For an already-approved master post, authorized workspace members can ask the configured local/OpenAI-compatible model to draft separate Instagram, Facebook and LinkedIn copy. Platform guidance is distinct, but the prompt requires preservation of the master post's primary language and factual meaning and prohibits the addition of unsupported prices, offers, dates, statistics, endorsements or commitments. The sanitized brand voice profile is included as bounded source context.
+
+The user receives an editable preview for each platform. Instagram and Facebook variants require one public HTTPS image; the master image is inherited when available and can be changed before saving. LinkedIn remains text-only. Saving creates ordinary provider-specific draft variants through the existing role-checked RPC; each must be submitted for review and approved before scheduling. No AI output is automatically approved, scheduled, published or sent. The feature reuses the existing local AI endpoint settings and adds no migration, environment variable or dependency.
