@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyMetaSignature } from '@/lib/webhooks/meta-signature';
 import { normalizeInstagramMessage } from '@/lib/webhooks/instagram-message';
 import { normalizeInstagramComment } from '@/lib/webhooks/instagram-comment';
+import { readTextWithLimit } from '@/lib/http/read-limited-body';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,10 +28,23 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const declaredLength = Number(request.headers.get('content-length') ?? 0);
-  if (declaredLength > 1_048_576) return NextResponse.json({ error: 'Webhook batch is too large.' }, { status: 413 });
-  const rawBody = await request.text();
-  if (Buffer.byteLength(rawBody, 'utf8') > 1_048_576) return NextResponse.json({ error: 'Webhook batch is too large.' }, { status: 413 });
+  const declaredLengthHeader = request.headers.get('content-length');
+  if (declaredLengthHeader) {
+    const declaredLength = Number(declaredLengthHeader);
+    if (!Number.isSafeInteger(declaredLength) || declaredLength < 0) {
+      return NextResponse.json({ error: 'Invalid webhook content length.' }, { status: 400 });
+    }
+    if (declaredLength > 1_048_576) {
+      return NextResponse.json({ error: 'Webhook batch is too large.' }, { status: 413 });
+    }
+  }
+  const boundedBody = await readTextWithLimit(request.body, 1_048_576);
+  if (!boundedBody.ok) {
+    return boundedBody.reason === 'too_large'
+      ? NextResponse.json({ error: 'Webhook batch is too large.' }, { status: 413 })
+      : NextResponse.json({ error: 'Webhook body could not be read.' }, { status: 400 });
+  }
+  const rawBody = boundedBody.text;
   const appSecret = process.env.INSTAGRAM_CLIENT_SECRET;
   if (!appSecret || !verifyMetaSignature(rawBody, request.headers.get('x-hub-signature-256'), appSecret)) {
     return NextResponse.json({ error: 'Invalid webhook signature.' }, { status: 401 });

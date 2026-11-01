@@ -1,3 +1,14 @@
+# Changelog
+
+## 2.19.0 — Production hardening
+
+- Fixed the request boundary so middleware no longer redirects API calls to the browser login page. Route handlers retain explicit authentication: user session checks for user APIs, OAuth state/session checks for callbacks, Meta HMAC verification for webhooks, and bearer-secret verification for the publishing worker.
+- Added a public, minimal `/api/health` liveness endpoint that does not expose environment configuration or secret state.
+- Added baseline browser security headers, production-only HSTS and private/no-store API caching headers.
+- Changed Instagram webhook ingestion to enforce a 1 MiB streaming request-body limit before buffering/parsing, including requests without a usable Content-Length header.
+- Added focused policy, bounded-body and security-header tests.
+- No database migration, new dependency or environment variable.
+
 ## [2.18.0] - Brand Voice Studio
 
 - Added a workspace-scoped Brand Voice Studio for editing tone, supported languages, approved facts, forbidden claims and escalation triggers for each brand.

@@ -132,3 +132,15 @@ A queue record means only that a schedule has been stored. It is not proof of di
 - Other workspace roles can view profiles but cannot save changes.
 - Helper tests cover normalization, duplicate line removal, list bounds, safe reads and formatting.
 - Migration 0019, live RLS behavior, full Vitest suite, dependency-backed project typecheck, production Next.js build and Vercel deployment are not verified against the live project.
+
+
+## 2.19.0 production hardening
+
+- Corrected middleware/API routing: middleware protects browser pages and delegates API requests to route-level authentication. This restores machine-to-machine delivery paths for the Meta webhook and GitHub Actions publishing worker while retaining the endpoint-specific signature/bearer checks.
+- Missing Supabase page-auth configuration fails closed with HTTP 503 for protected pages (static login/signup screens remain renderable). Protected pages also remain inaccessible when identity verification cannot establish a user; verification exceptions return HTTP 503.
+- Added a minimal public `/api/health` liveness route. It reports process-level availability only and intentionally does not expose secrets or claim database/provider readiness.
+- Added baseline security headers and private/no-store API response headers; HSTS is production-only. No CSP was added without a compatibility audit.
+- Instagram webhook body handling now streams with a hard 1 MiB limit before JSON parsing and signature verification.
+- Added focused tests for request-boundary policy, bounded request-body reading and security-header selection.
+- No database migration, dependency or environment variable is introduced.
+- Live webhook redelivery, scheduled worker execution, Supabase connectivity, provider publishing, Vercel deployment, complete Vitest, dependency-backed typecheck and production build remain acceptance checks for the target environment.

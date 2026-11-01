@@ -29,3 +29,7 @@ See `README-INSTAGRAM-CONNECTION-UPGRADE.md` for detailed setup and acceptance g
 - Added migration 0019 with role and workspace validation plus audit metadata that excludes profile text.
 - Other workspace roles can view brand guidance but cannot edit it.
 - Added focused brand voice helper tests.
+
+## v2.19.0 — Production hardening
+
+API requests now reach route-specific user-session, OAuth-state, webhook-signature or worker-bearer checks instead of being redirected by browser middleware. Added a minimal `/api/health` liveness endpoint, baseline security headers, no-store API caching and a 1 MiB streaming limit for Instagram webhook bodies. No database migration or new environment variable is required.

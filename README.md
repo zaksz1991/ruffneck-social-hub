@@ -1,4 +1,4 @@
-# RuffNeck Social Hub v2.18.0
+# RuffNeck Social Hub v2.19.0
 
 RuffNeck Social Hub is a multi-workspace social operations platform for brands, agencies and client teams. The current package includes workspace and brand management, Content Studio and approval workflow, a multi-destination publishing queue, Instagram and Facebook single-image dispatch, LinkedIn text-only organization publishing, provider-specific content variants with separate review approvals, optional local-AI campaign drafting and human-reviewed platform copy adaptation, per-brand voice profiles, Instagram inbox and comment workflows, client reporting exports, publishing calendar/history tools and preflight checks that validate content compatibility with each selected destination before scheduling.
 
@@ -38,7 +38,7 @@ RuffNeck Social Hub is a multi-workspace social operations platform for brands, 
 
 ## Database migrations
 
-The complete ZIP contains migrations 0001–0019. Migration 0018 introduced provider-specific content variants; migration 0019 adds the audited Brand Voice Studio update function. Existing installations must have 0018 and 0019 applied once, in ascending order, before using the full v2.18.0 feature set. If 0018 is already applied, apply only 0019. If 0019 is already applied, do not rerun it. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
+The complete ZIP contains migrations 0001–0019. Migration 0018 introduced provider-specific content variants; migration 0019 adds the audited Brand Voice Studio update function. Existing installations must have 0018 and 0019 applied once, in ascending order, before using the full v2.18.0 feature set. v2.19.0 adds no database migration. If 0018 is already applied, apply only 0019. If 0019 is already applied, do not rerun it. For older installations, apply only migrations that have not already been successfully applied, in ascending order. Never rerun an applied migration, especially the core/signup/workspace migrations.
 
 ## Environment variables
 
@@ -88,6 +88,14 @@ AI drafting is optional. A sanitized brand voice profile plus the relevant messa
 ## Replace the repository contents
 
 This is a complete source-project ZIP, not a patch. Extract the `ruffneck-social-hub` folder and replace the contents of the existing `github.com/zaksz1991/ruffneck-social-hub` repository with it. Keep the project on its existing `main` branch and configure production variables separately. Do not upload it to RuffNeck LMS, RuffNeck Connect or Kano Run.
+
+## v2.19.0 production hardening
+
+- API requests are delegated to their route handlers for authentication. This prevents browser-session middleware from redirecting Meta webhook deliveries and the scheduled publishing worker to the login page. Each API route remains responsible for its own user-session, OAuth-state, webhook-signature or service-bearer verification.
+- Protected browser page routes fail closed if Supabase authentication configuration is absent or identity verification cannot establish a user. Missing configuration returns HTTP 503 (while the static login/signup screens remain renderable); verification exceptions return HTTP 503 and unauthenticated results redirect to login.
+- `/api/health` is a minimal public liveness endpoint. HTTP 200 confirms only that the Next.js process can handle a request; it does not verify Supabase, provider credentials, migrations, webhook delivery or scheduled publishing.
+- Global security headers include MIME sniffing protection, clickjacking protection, a restrictive referrer policy, and a permissions policy. HSTS is enabled only in production. API responses are marked private/no-store. A Content Security Policy is intentionally not imposed until the app's inline script/style requirements have been reviewed.
+- Instagram webhook request bodies are streamed with a 1 MiB byte limit before signature verification and JSON parsing, avoiding unbounded buffering when Content-Length is absent or inaccurate.
 
 ## Verification boundaries
 

@@ -15,3 +15,14 @@ This baseline is not a certification or legal compliance claim.
 ## Provider access token storage (0.8.0)
 
 Instagram long-lived access tokens are encrypted in the Node.js server with AES-256-GCM before the token payload reaches the database. The 256-bit key is supplied only through `SOCIAL_TOKEN_ENCRYPTION_KEY` and must never be exposed through a `NEXT_PUBLIC_` variable or committed to the repository. The `social_account_token_vault` table has RLS enabled and no grants or policies for `anon` or `authenticated`; browser clients cannot read encrypted token records. The only authenticated write path is the narrowly scoped `store_instagram_connection` RPC, which validates the current user's workspace role and brand/workspace relationship. Never log OAuth codes, access tokens, encryption keys or full provider response bodies.
+
+
+## API request boundary (v2.19.0)
+
+Middleware protects browser page routes. It deliberately delegates `/api/*` requests to their route handlers because API authentication differs by endpoint: signed-in user APIs verify the Supabase user and workspace membership; OAuth callbacks verify signed state and the initiating session; Meta webhooks verify `X-Hub-Signature-256`; and the publishing worker verifies its dedicated bearer secret. New API routes must implement their own authentication and authorization and must never rely on middleware's page redirect.
+
+The public `/api/health` route is a liveness signal only. It must not expose environment values, credential-presence flags, database contents or provider state. A healthy response does not establish production readiness.
+
+## Browser security headers (v2.19.0)
+
+The application sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, a restrictive referrer policy, a permissions policy disabling unused camera/microphone/geolocation browser capabilities, and production-only HSTS. API responses are private/no-store. A Content Security Policy is not yet enabled because Next.js runtime inline requirements and all provider flows have not been fully audited; it requires a separate compatibility review rather than a guessed policy.
