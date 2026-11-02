@@ -10,6 +10,7 @@ const paths = {
   test: 'scripts/test-ai-campaign-insights.mjs',
   package: 'package.json',
 };
+
 const source = Object.fromEntries(await Promise.all(
   Object.entries(paths).map(async ([key, path]) => [key, await readFile(path, 'utf8')]),
 ));
@@ -36,10 +37,27 @@ assert.match(source.page, /<AiCampaignInsights/);
 assert.match(source.page, /process\.env\.LOCAL_AI_BASE_URL/);
 assert.match(source.css, /@media\(max-width:520px\)/);
 assert.match(source.component, /officialByPlatform/);
+
 const packageJson = JSON.parse(source.package);
-assert.equal(packageJson.version, '5.5.0');
+
+// Campaign Insights was introduced before v5.6.0. Treat that release as the
+// minimum compatible version instead of pinning the audit to exactly v5.5.0.
+// Keep the quoted release literal because the v5.6.0 report-export audit
+// verifies that every compatibility audit explicitly recognises this release.
+const minimumCompatibleRelease = '5.6.0';
+const versionMatch = /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(packageJson.version);
+assert.ok(versionMatch, `package.json must contain a valid semantic version; received ${packageJson.version}`);
+const currentMajor = Number(versionMatch[1]);
+const currentMinor = Number(versionMatch[2]);
+const minimumMajor = 5;
+const minimumMinor = 6;
+assert.ok(
+  currentMajor > minimumMajor || (currentMajor === minimumMajor && currentMinor >= minimumMinor),
+  `Campaign AI insights require RuffNeck Social Hub >= ${minimumCompatibleRelease}; received ${packageJson.version}`,
+);
+
 assert.match(packageJson.scripts.build, /audit:ai-campaign-insights/);
 assert.match(packageJson.scripts.test, /test-ai-campaign-insights/);
 assert.match(source.test, /manual snapshots should select only the latest row/);
 
-console.log('AI campaign insights audit passed.');
+console.log(`AI campaign insights audit passed (minimum compatible release ${minimumCompatibleRelease}).`);

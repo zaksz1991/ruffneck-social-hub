@@ -1,0 +1,15 @@
+RUFFNECK SOCIAL HUB v5.6.0 — APPLY HOTFIX
+
+In GitHub, open:
+scripts/audit-ai-campaign-insights.mjs
+
+Replace the complete file with:
+scripts/audit-ai-campaign-insights.mjs
+from this ZIP package.
+
+Do not change package.json. Do not downgrade the project version.
+Do not replace any other file for this specific build error.
+
+Commit the replacement to main and let Vercel run its normal production build.
+
+This is a one-file audit compatibility correction. The full production build has not been verified here.
