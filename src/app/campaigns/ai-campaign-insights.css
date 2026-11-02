@@ -80,3 +80,25 @@
   .aic-result-section,.aic-platform-breakdown{break-inside:avoid-page}
   .aic-data-footnote,.aic-disclaimer{color:#657382!important}
 }
+
+/* v5.7.0 — deterministic campaign evidence health checks */
+.aic-health{margin:22px 0;padding:20px;border:1px solid #d9e2ef;border-radius:16px;background:#f8fafc;color:#142338}
+.aic-health-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.aic-health-heading h3{margin:5px 0 6px;font-size:1.08rem}
+.aic-health-heading p,.aic-health-summary,.aic-health-footnote{margin:0;color:#526176;font-size:.88rem;line-height:1.55}
+.aic-health-overall{flex:0 0 auto;padding:7px 11px;border-radius:999px;font-size:.76rem;font-weight:800;white-space:nowrap}
+.aic-health-summary{margin:12px 0 14px;font-weight:650;color:#263b55}
+.aic-health-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.aic-health-check{min-width:0;padding:13px;border:1px solid #dce4ee;border-left:4px solid #64748b;border-radius:11px;background:#fff}
+.aic-health-check p{margin:8px 0;color:#45566d;font-size:.85rem;line-height:1.5;overflow-wrap:anywhere}
+.aic-health-check small{display:block;color:#5b6a7c;font-size:.78rem;line-height:1.5;overflow-wrap:anywhere}
+.aic-health-check-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.aic-health-check-top strong{font-size:.9rem}
+.aic-health-check-top span{flex:0 0 auto;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.025em}
+.health-good{border-color:#b9e4ce;background:#f0fbf5;color:#17633a}
+.health-review{border-color:#f0d28c;background:#fff9e9;color:#895b0a}
+.health-attention{border-color:#efb7b7;background:#fff2f2;color:#9a2e2e}
+.health-info{border-color:#c8d8ed;background:#f2f7fd;color:#34577f}
+.aic-health-footnote{margin-top:12px;font-size:.78rem}
+@media(max-width:640px){.aic-health{padding:14px}.aic-health-heading{display:block}.aic-health-overall{display:inline-flex;margin-top:10px;white-space:normal}.aic-health-grid{grid-template-columns:1fr}.aic-health-check-top{display:block}.aic-health-check-top span{display:block;margin-top:4px}}
+@media print{.aic-health{break-inside:avoid;background:#fff!important}.aic-health-check{break-inside:avoid}}

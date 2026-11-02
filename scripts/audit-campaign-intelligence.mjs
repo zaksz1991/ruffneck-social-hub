@@ -1,3 +1,4 @@
+import { isCompatibleRelease } from './lib/release-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 const root = process.cwd();
@@ -26,8 +27,8 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 if (![
   '4.0.0', '4.1.0', '4.2.0', '4.3.0', '4.4.0', '4.4.1', '4.5.0',
   '4.6.0', '4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0',
-  '5.3.0', '5.5.0', '5.6.0',
-].includes(pkg.version)) {
+  '5.3.0', '5.5.0', '5.6.0', '5.7.0',
+].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) {
   failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
 }
 if (!String(pkg.scripts?.build ?? '').includes('audit:campaign-intelligence')) failures.push('package.json: build does not run campaign intelligence audit');

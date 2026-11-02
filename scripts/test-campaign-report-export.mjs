@@ -63,6 +63,10 @@ assert.match(csv, /"Official platform: instagram"/);
 assert.match(csv, /"AI observation","Strong saves"/);
 assert.match(csv, /"Recommended experiment","Test CTA placement"/);
 assert.match(csv, /"Data caution","Caution 1"/);
+assert.match(csv, /"Campaign health","Overall evidence status"/);
+assert.match(csv, /"Campaign health check","Snapshot freshness"/);
+assert.match(csv, /"Campaign health check","Evidence provenance"/);
+
 assert.match(csv, /"Suggested next review window","7 days"/);
 assert.ok(csv.includes('"Rationale: The stored data shows clicks but does not prove why users clicked. | Primary metric: clicks'));
 

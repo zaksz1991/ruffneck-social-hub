@@ -1,11 +1,28 @@
-RuffNeck Social Hub v5.6.0 AI Campaign Insights Audit Hotfix
+RuffNeck Social Hub v5.7.0 — Overlay manifest
 
-REPLACE:
-  scripts/audit-ai-campaign-insights.mjs
+Replace existing:
+- package.json
+- src/app/campaigns/ai-campaign-insights.tsx
+- src/app/campaigns/ai-campaign-insights.css
+- src/lib/reporting/campaign-report-export.ts
+- scripts/audit-ai-campaign-insights.mjs
+- scripts/audit-campaign-report-export.mjs
+- scripts/audit-campaign-intelligence.mjs
+- scripts/audit-provider-analytics.mjs
+- scripts/audit-linkedin-analytics.mjs
+- scripts/audit-tiktok-integration.mjs
+- scripts/audit-youtube-integration.mjs
+- scripts/audit-instagram-comments.mjs
+- scripts/audit-whatsapp-integration.mjs
+- scripts/audit-whatsapp-media-replies.mjs
+- scripts/test-campaign-report-export.mjs
 
-UNCHANGED:
-  package.json
-  application source and UI
-  Supabase migrations and schema
-  dependencies and lockfiles
-  OAuth permissions and provider integrations
+Add new:
+- scripts/lib/release-compat.mjs
+- scripts/test-release-compat.mjs
+- src/lib/ai/campaign-health.mjs
+- src/lib/ai/campaign-health.d.mts
+- scripts/audit-campaign-health.mjs
+- scripts/test-campaign-health.mjs
+
+No SQL migrations, dependencies or environment variables added.

@@ -2,6 +2,7 @@ import type {
   CampaignAiInsights,
   CampaignPerformanceSummary,
 } from '../ai/campaign-insights';
+import { buildCampaignHealthReport } from '../ai/campaign-health.mjs';
 
 export type CampaignReportExportInput = {
   campaign: { name: string; objective: string; status: string };
@@ -81,6 +82,11 @@ export function buildCampaignReportCsv(input: CampaignReportExportInput): string
     rows.push(['Data caution', `Caution ${index + 1}`, caution, 'Review before making decisions']);
   }
   rows.push(['AI assessment', 'Suggested next review window', `${input.insights.nextReviewWindowDays} days`, 'Human review required']);
+  const health = buildCampaignHealthReport(input);
+  rows.push(['Campaign health', 'Overall evidence status', health.label, health.summary]);
+  for (const check of health.checks) {
+    rows.push(['Campaign health check', check.title, check.label, `${check.message} Next step: ${check.nextStep}`]);
+  }
   rows.push(['Disclaimer', 'Interpretation', 'AI output is advisory and may be wrong.', 'Manual and official provider data are kept separate. Cross-platform sums are not unique people.']);
 
   return rows.map(csvRow).join('\r\n');

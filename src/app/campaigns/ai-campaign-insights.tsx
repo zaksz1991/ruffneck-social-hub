@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { generateCampaignAiInsights } from '@/app/actions/campaign-ai-insights';
 import { buildCampaignReportCsv, campaignReportFilename } from '@/lib/reporting/campaign-report-export';
+import { buildCampaignHealthReport, type CampaignHealthReport } from '@/lib/ai/campaign-health.mjs';
 import type {
   CampaignAiInsights,
   CampaignMetricTotals,
@@ -102,7 +103,7 @@ export default function AiCampaignInsights({
     <section className="aic-card" aria-labelledby="aic-title">
       <div className="aic-heading">
         <div>
-          <span className="aic-eyebrow">AI PERFORMANCE COACH · V5.6.0</span>
+          <span className="aic-eyebrow">AI PERFORMANCE COACH · V5.7.0</span>
           <h2 id="aic-title">Turn campaign results into next actions</h2>
           <p>Use stored campaign evidence to identify patterns and design measurable, human-reviewed experiments.</p>
         </div>
@@ -166,6 +167,11 @@ export default function AiCampaignInsights({
           <p className="aic-data-footnote">
             Manual and official data are analysed separately. Cross-platform official totals are sums of provider-reported values, not unique people. Metric definitions vary by platform.
           </p>
+          <CampaignHealthPanel report={buildCampaignHealthReport({
+            performance: result.performance,
+            insights: result.insights,
+            generatedAt: result.generatedAt,
+          })} />
           {result.performance.officialByPlatform.length > 0 && (
             <div className="aic-platform-breakdown">
               <h3>Official data by platform</h3>
@@ -252,5 +258,36 @@ function MetricPanel({ title, metrics }: { title: string; metrics: CampaignMetri
       </div>
       <small className="aic-range">Snapshot range: {formatDate(metrics.firstSnapshotDate)} – {formatDate(metrics.latestSnapshotDate)}</small>
     </article>
+  );
+}
+
+function CampaignHealthPanel({ report }: { report: CampaignHealthReport }) {
+  return (
+    <section className="aic-health" aria-labelledby="aic-health-title">
+      <div className="aic-health-heading">
+        <div>
+          <span className="aic-eyebrow">CAMPAIGN HEALTH MONITOR</span>
+          <h3 id="aic-health-title">Check the quality of the evidence</h3>
+          <p>Deterministic checks based on stored snapshots and the AI report. No performance score or external benchmark is invented.</p>
+        </div>
+        <span className={`aic-health-overall health-${report.state === 'clear' ? 'good' : report.state}`}>{report.label}</span>
+      </div>
+      <p className="aic-health-summary">{report.summary}</p>
+      <div className="aic-health-grid">
+        {report.checks.map((check) => (
+          <article className={`aic-health-check health-${check.state}`} key={check.id}>
+            <div className="aic-health-check-top">
+              <strong>{check.title}</strong>
+              <span>{check.label}</span>
+            </div>
+            <p>{check.message}</p>
+            <small><b>Next step:</b> {check.nextStep}</small>
+          </article>
+        ))}
+      </div>
+      <p className="aic-health-footnote">
+        Freshness uses a seven-day current window and flags snapshots older than fourteen days. Source counts and rate calculations are kept separate for manual and official data.
+      </p>
+    </section>
   );
 }

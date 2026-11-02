@@ -1,0 +1,18 @@
+RUFFNECK SOCIAL HUB v5.7.0 — CAMPAIGN HEALTH MONITOR
+
+1. Preserve every folder path in this ZIP.
+2. Replace each existing file listed in README-v5.7.0.md with its complete matching file from this ZIP.
+3. Add each new file listed in README-v5.7.0.md to the matching folder.
+4. Do not delete any other project files.
+5. Commit the complete overlay to GitHub main and allow Vercel to run the normal production build.
+
+This is an overlay, not a full project archive. It deliberately leaves unrelated application files untouched.
+
+DATABASE / ENVIRONMENT
+- No SQL migration.
+- No new environment variables.
+- No new dependencies.
+- No OAuth scope changes.
+
+VALIDATION LIMIT
+The campaign-health helper regression tests and focused audits are intended to run in the project pipeline. The complete repository test suite, TypeScript typecheck and production build have not been executed against the full repository in this environment. Do not treat this release as production-verified until Vercel reports a successful build.
