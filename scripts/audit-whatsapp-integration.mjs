@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-
 const root = process.cwd();
 const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
 const required = [
@@ -54,7 +53,7 @@ assert.match(migration, /grant execute .* to service_role/i);
 assert.match(page, /human_review_confirmed/);
 assert.match(page, /send_consent/);
 assert.match(page, /draft.status==='reviewed' && canSend && !attempt/);
-assert.ok(['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0'].includes(pkg.version));
+assert.ok(['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0'].includes(pkg.version));
 assert.match(pkg.scripts.build, /audit:whatsapp/);
 assert.match(pkg.scripts.test, /test:whatsapp/);
 assert.doesNotMatch(migration, /whatsapp_webhook_event_raw|media_url|access_token text/i);

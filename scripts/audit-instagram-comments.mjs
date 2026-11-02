@@ -5,7 +5,7 @@ const requirements = [
   ['src/lib/integrations/instagram-comment-management.ts', ['INSTAGRAM_PUBLIC_REPLY_MAX_LENGTH', 'buildInstagramCommentReplyUrl', 'validateInstagramPublicReplyText', 'extractInstagramReplyId']],
   ['src/lib/integrations/instagram-comment-token.ts', ["import 'server-only'", 'decryptProviderSecret', 'social_account_token_vault', 'refresh_access_token']],
   ['src/lib/supabase/admin.ts', ["import 'server-only'", 'SUPABASE_SERVICE_ROLE_KEY', 'persistSession: false']],
-  ['src/app/actions/instagram-comments.ts', ['postInstagramCommentReply', 'public_reply_consent', 'begin_instagram_comment_reply_send', 'record_instagram_comment_reply_send_result', 'redirect: \'manual\'', 'AbortSignal.timeout(15_000)']],
+  ['src/app/actions/instagram-comments.ts', ['postInstagramCommentReply', 'public_reply_consent', 'begin_instagram_comment_reply_send', 'record_instagram_comment_reply_send_result', "redirect: 'manual'", 'AbortSignal.timeout(15_000)']],
   ['src/app/inbox/comments/page.tsx', ['instagram_comment_reply_send_attempts', 'INSTAGRAM_ENABLE_COMMENT_MANAGEMENT', 'canPublish', 'parent_provider_comment_id === null']],
   ['src/app/inbox/comments/comment-reply-draft-studio.tsx', ['postInstagramCommentReply', 'public_reply_consent', 'Post reviewed reply to Instagram', 'will not be resent']],
   ['supabase/migrations/0032_instagram_comment_reply_sending.sql', ['instagram_comment_reply_send_attempts', 'unique (reply_draft_id)', 'begin_instagram_comment_reply_send', 'record_instagram_comment_reply_send_result', "auth.role() is distinct from 'service_role'", 'revoke all on public.instagram_comment_reply_send_attempts']],
@@ -19,7 +19,7 @@ for (const [relative, tokens] of requirements) {
   for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0'].includes(pkg.version)) failures.push(`package.json: unsupported release version ${pkg.version}`);
+if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0'].includes(pkg.version)) failures.push(`package.json: unsupported release version ${pkg.version}`);
 if (!String(pkg.scripts?.build ?? '').includes('audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && npm run audit:whatsapp-media && npm run audit:whatsapp-media-replies && next build')) failures.push('package.json: Instagram comment and WhatsApp audits must gate next build');
 if (!String(pkg.scripts?.test ?? '').includes('npm run test:instagram-comments')) failures.push('package.json: Instagram comment tests missing from test command');
 if (failures.length) {

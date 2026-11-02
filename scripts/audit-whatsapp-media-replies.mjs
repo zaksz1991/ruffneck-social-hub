@@ -6,7 +6,6 @@ const action = read('src/app/actions/whatsapp-media-replies.ts');
 const page = read('src/app/inbox/whatsapp/[id]/page.tsx');
 const helper = read('src/lib/integrations/whatsapp-media.ts');
 const pkg = JSON.parse(read('package.json'));
-
 assert.match(migration, /whatsapp_media_reply_drafts/);
 assert.match(migration, /whatsapp_media_reply_send_attempts/);
 assert.match(migration, /create_whatsapp_media_reply_draft/);
@@ -43,7 +42,7 @@ assert.match(page, /windowOpen/);
 assert.match(helper, /getWhatsAppOutboundMediaType/);
 assert.match(helper, /audio\/ogg/);
 assert.doesNotMatch(action, /console\.(log|error)\(/);
-assert.ok(['5.0.0', '5.1.0', '5.2.0', '5.3.0'].includes(pkg.version));
+assert.ok(['5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0'].includes(pkg.version));
 assert.match(pkg.scripts.build, /audit:whatsapp-media-replies/);
 assert.match(pkg.scripts.test, /test:whatsapp-media-replies/);
 console.log('WhatsApp reviewed media reply integration audit: 38 contracts passed.');
