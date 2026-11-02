@@ -1,0 +1,24 @@
+RUFFNECK SOCIAL HUB v5.3.0 — MISSING MIGRATION FIX
+
+The Vercel log confirms that the AI variant source files and build script are present. The build audit stops only because this file is absent from the GitHub repository:
+
+  supabase/migrations/0040_ai_provider_platform_variants.sql
+
+THIS ZIP CONTAINS THE MISSING FILE AT ITS EXACT REPOSITORY PATH.
+
+GITHUB REPAIR
+1. Open the RuffNeck Social Hub repository on GitHub.
+2. Open the existing supabase/migrations folder.
+3. Add the included 0040_ai_provider_platform_variants.sql file there.
+4. Confirm the exact path is supabase/migrations/0040_ai_provider_platform_variants.sql (not a nested supabase/supabase folder).
+5. Commit the file to main.
+
+SUPABASE DATABASE
+After confirming migration 0039 has already been applied, run this SQL migration once in the Supabase SQL Editor. Do not run it repeatedly as a normal deployment step.
+
+EXPECTED NEXT BUILD
+The audit should report:
+  PASS supabase/migrations/0040_ai_provider_platform_variants.sql: 4 contracts
+  AI provider variant audit: all contracts passed.
+
+This correction addresses the exact missing-file failure in the supplied Vercel log. It does not establish that the remaining full Next.js build will pass; Vercel must complete TypeScript validation after this audit passes.
