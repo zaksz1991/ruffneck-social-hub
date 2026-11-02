@@ -9,7 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const script = path.join(here, 'remove-known-stale-content-component.mjs');
 const temporaryRoots = [];
 const staleRelative = path.join('src', 'app', 'content', 'ai-provider-variant-generator.tsx');
-const staleFixture = `import {\n  generateAiProviderVariants,\n  saveAiProviderVariants,\n  type AiProviderVariantDraft,\n  type GenerateAiProviderVariantsState,\n  type SaveAiProviderVariantsState,\n} from '@/app/actions/content';\n`;
+const staleFixture = `import {\n  generateAiProviderVariants,\n  saveAiProviderVariants,\n  type AiProviderVariantDraft,\n  type GenerateAiProviderVariantsState,\n} from '@/app/actions/content';\n`;
 
 function makeProject(source = staleFixture, importer = null) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rnh-stale-cleanup-'));

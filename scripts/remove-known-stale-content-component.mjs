@@ -10,7 +10,6 @@ const requiredLegacyImports = [
   'saveAiProviderVariants',
   'AiProviderVariantDraft',
   'GenerateAiProviderVariantsState',
-  'SaveAiProviderVariantsState',
 ];
 const codeExtensions = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']);
 const ignoredDirectories = new Set(['node_modules', '.next', '.git', '.vercel', 'dist', 'coverage']);
@@ -40,7 +39,8 @@ if (!fs.statSync(target).isFile()) {
 
 const legacySource = fs.readFileSync(target, 'utf8');
 const missingMarkers = requiredLegacyImports.filter((name) => !legacySource.includes(name));
-if (missingMarkers.length) {
+const expectedActionImport = /from\s+['"]@\/app\/actions\/content['"]/.test(legacySource);
+if (missingMarkers.length || !expectedActionImport) {
   console.error(`Legacy component cleanup refused: ${relativeTarget} no longer matches the known obsolete component signature.`);
   process.exit(1);
 }
