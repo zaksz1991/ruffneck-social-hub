@@ -1,0 +1,28 @@
+RUFFNECK SOCIAL HUB — MINIMAL VERCEL BUILD FIX
+
+This is a two-part fix for the exact TypeScript error in the deployment log.
+
+PART 1 — ADD THE SCRIPT
+
+Add this file to the repository at:
+scripts/remove-known-stale-content-component.mjs
+
+PART 2 — CHANGE ONE EXISTING PACKAGE SCRIPT
+
+Open the root package.json in GitHub's file editor. Find:
+
+  "vercel-build": "next build"
+
+Replace only that line with:
+
+  "vercel-build": "node scripts/remove-known-stale-content-component.mjs && next build"
+
+Do not replace the whole package.json. Do not change any dependencies or other scripts.
+
+WHY THIS IS SAFE
+
+Before Next.js starts, the script checks the exact obsolete component path and its known four missing action imports. It scans src/ for other references. It removes the component only when that exact file is unreferenced. If it is referenced or has changed, the script stops without deleting it and prints the reason.
+
+The separate test script can be run locally by a developer; it is not required for Vercel deployment.
+
+This patch does not add placeholder AI actions and does not disable type checking. It only removes a demonstrably unreferenced stale TSX file so TypeScript does not compile it.

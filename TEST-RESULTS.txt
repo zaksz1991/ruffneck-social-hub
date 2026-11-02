@@ -1,0 +1,3 @@
+PASS: removes the known obsolete component when unreferenced
+PASS: preserves the component when another source file imports it
+PASS: preserves files whose source no longer matches the known signature
