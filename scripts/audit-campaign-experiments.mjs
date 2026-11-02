@@ -54,8 +54,7 @@ assert.doesNotMatch(files.coach, /type CampaignHealthReport } from ['"]@\/lib\/a
 assert.match(files.test, /completion must require an actual measured value/);
 
 const pkg = JSON.parse(files.package);
-assert.equal(pkg.version, '5.8.0');
-assert.ok(isCompatibleRelease(pkg.version, '5.7.0'));
+assert.ok(isCompatibleRelease(pkg.version, '5.8.0'), `campaign experiments require v5.8.0 or later; received ${pkg.version}`);
 assert.match(pkg.scripts.build, /audit:campaign-experiments/);
 assert.match(pkg.scripts.test, /test-campaign-experiments\.mjs/);
 console.log('Campaign experiment tracker audit passed: database isolation, server authorization, controlled transitions, UI wiring and release hooks verified.');

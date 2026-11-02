@@ -1,0 +1,42 @@
+RUFFNECK SOCIAL HUB v5.9.0 — INSTALLATION
+
+PACKAGE TYPE
+This is an overlay for the existing RuffNeck Social Hub v5.8.0 project. It is not a standalone project. Copy or replace only the files listed below and preserve their exact folder paths.
+
+BEFORE APPLYING
+- Keep the current working v5.8.0 repository and all existing features.
+- Confirm that Supabase migration 0042_campaign_experiment_tracker.sql from v5.8.0 has already been applied.
+- Do not run migration 0042 again. v5.9.0 adds no database migration.
+- The package includes the v5.8.0 TypeScript declaration hotfix, so it does not depend on that separate file having been committed earlier.
+
+REPLACE THESE FILES
+- package.json
+- src/app/campaigns/campaign-experiment-tracker.tsx
+- src/app/campaigns/campaign-experiment-tracker.css
+- scripts/audit-campaign-experiments.mjs
+- scripts/test-release-compat.mjs
+
+ADD THESE FILES
+- src/lib/campaigns/campaign-experiments.d.mts
+- src/lib/campaigns/campaign-experiment-insights.mjs
+- src/lib/campaigns/campaign-experiment-insights.d.mts
+- scripts/audit-campaign-experiment-insights.mjs
+- scripts/test-campaign-experiment-insights.mjs
+
+GITHUB INSTALLATION
+Upload the five replacement files and five new files to the existing ruffneck-social-hub repository on main. Preserve the paths shown above. Commit the entire overlay together because package.json adds the new audit and test hooks.
+
+VERCEL VERIFICATION
+After GitHub receives the overlay, inspect the Vercel build. The expected sequence includes:
+- audit:campaign-experiments
+- audit:campaign-experiment-insights
+- the remaining existing integration audits
+- Next.js production compilation and TypeScript validation
+
+After deployment, open Campaigns → Campaign Intelligence and inspect the Campaign Experiment Tracker for a campaign with saved experiments. Check the overview counts, review-due flags, baseline comparison, and target status. A percentage change should display as unavailable when the baseline is zero.
+
+IMPORTANT
+- No terminal, Command Prompt or PowerShell steps are required.
+- No dependency install, environment variable or OAuth permission change is required by this overlay.
+- No database migration is added. If migration 0042 was never applied, the existing experiment tracker itself cannot load records; apply that original v5.8.0 migration once before using experiments.
+- The full repository build and live deployment have not been verified from this overlay. Use the first failing Vercel audit or compiler diagnostic as the basis for any follow-up repair.

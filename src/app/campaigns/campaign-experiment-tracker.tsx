@@ -7,6 +7,7 @@ import {
   updateCampaignExperiment,
 } from '@/app/actions/campaign-experiments';
 import { addDays } from '@/lib/campaigns/campaign-experiments.mjs';
+import { buildCampaignExperimentSummary, evaluateCampaignExperiment } from '@/lib/campaigns/campaign-experiment-insights.mjs';
 import type { CampaignAiOpportunity } from '@/lib/ai/campaign-insights';
 import './campaign-experiment-tracker.css';
 
@@ -59,6 +60,24 @@ function metricLabel(metric: string): string {
   return METRICS.find(([value]) => value === metric)?.[1] ?? metric.replaceAll('_', ' ');
 }
 
+function displaySignedValue(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return 'Not available';
+  const formatted = new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(Math.abs(value));
+  return `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatted}`;
+}
+
+function displayPercent(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return 'Not available';
+  return `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toFixed(1)}%`;
+}
+
+function targetStatusLabel(evaluation: ReturnType<typeof evaluateCampaignExperiment>): string {
+  if (!evaluation.hasActual) return 'Awaiting actual result';
+  if (!evaluation.hasTarget) return 'No target recorded';
+  const result = evaluation.targetStatus === 'achieved' ? 'Met or exceeded' : 'Below target';
+  return evaluation.provisional ? `Provisional · ${result}` : result;
+}
+
 function allowedNextStatuses(current: Experiment['status']): string[] {
   const transitions: Record<Experiment['status'], string[]> = {
     draft: ['draft', 'running', 'cancelled'],
@@ -101,6 +120,9 @@ export default function CampaignExperimentTracker({ workspaceId, campaignId, can
   }, [workspaceId, campaignId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  const today = localDate();
+  const experimentSummary = buildCampaignExperimentSummary(experiments, today);
 
   async function saveRecommendation(opportunity: CampaignAiOpportunity) {
     if (!canManage || pending || !campaignId) return;
@@ -217,6 +239,17 @@ export default function CampaignExperimentTracker({ workspaceId, campaignId, can
       {notice && <p className="aic-experiment-notice" role="status">{notice}</p>}
       {error && <p className="aic-experiment-error" role="alert">{error}</p>}
 
+      <div className="aic-experiment-insights" aria-label="Campaign experiment summary">
+        <div className="aic-experiment-insights-heading"><strong>EXPERIMENT OUTCOME OVERVIEW</strong><span>{experimentSummary.total} saved · {experimentSummary.inProgress} running or paused</span></div>
+        <div className="aic-experiment-insights-grid">
+          <article><span>In progress</span><b>{experimentSummary.inProgress}</b><small>Running and paused</small></article>
+          <article className={experimentSummary.reviewDue > 0 ? 'is-due' : ''}><span>Review due</span><b>{experimentSummary.reviewDue}</b><small>{experimentSummary.overdue} overdue</small></article>
+          <article><span>Completed</span><b>{experimentSummary.completed}</b><small>Locked results</small></article>
+          <article><span>Targets met</span><b>{experimentSummary.targetsMet} / {experimentSummary.targetsAssessed}</b><small>{experimentSummary.targetsBelow} below target</small></article>
+        </div>
+        <p>Target counts use completed experiments with both an actual value and a target. Comparisons are based on workspace-entered figures; they do not prove that an experiment caused the result.</p>
+      </div>
+
       {canManage && opportunities.length > 0 && (
         <div className="aic-experiment-recommendations">
           <strong>AI recommendations ready to track</strong>
@@ -256,7 +289,10 @@ export default function CampaignExperimentTracker({ workspaceId, campaignId, can
             <article className="aic-experiment-item" key={experiment.id}>
               <div className="aic-experiment-item-heading">
                 <div><strong>{experiment.title}</strong><span>{experiment.source === 'ai_recommendation' ? 'AI recommendation' : 'Manual'} · {metricLabel(experiment.primary_metric)}</span></div>
-                <span className={`aic-experiment-status experiment-${experiment.status}`}>{experiment.status.replaceAll('_', ' ')}</span>
+                <div className="aic-experiment-badges">
+                  {['running', 'paused'].includes(experiment.status) && experiment.review_date <= today && <span className={`aic-experiment-review-flag ${experiment.review_date < today ? 'is-overdue' : ''}`}>{experiment.review_date < today ? 'Overdue' : 'Review due'}</span>}
+                  <span className={`aic-experiment-status experiment-${experiment.status}`}>{experiment.status.replaceAll('_', ' ')}</span>
+                </div>
               </div>
               <p className="aic-experiment-hypothesis">{experiment.hypothesis}</p>
               <div className="aic-experiment-change"><b>Change to test</b>{experiment.change_to_test}</div>
@@ -266,6 +302,20 @@ export default function CampaignExperimentTracker({ workspaceId, campaignId, can
                 <span>Actual <b>{displayValue(experiment.actual_value)}</b></span>
                 <span>Review date <b>{experiment.review_date}</b></span>
               </div>
+              {(() => {
+                const evaluation = evaluateCampaignExperiment(experiment);
+                return (
+                  <div className="aic-experiment-outcome">
+                    <div className="aic-experiment-outcome-heading"><strong>MEASURED COMPARISON</strong><span>{evaluation.provisional ? 'Provisional' : 'Completed result'}</span></div>
+                    <div className="aic-experiment-outcome-grid">
+                      <span>Change vs baseline <b>{displaySignedValue(evaluation.change)}</b></span>
+                      <span>Change percentage <b>{displayPercent(evaluation.changePercent)}</b></span>
+                      <span>Target check <b>{targetStatusLabel(evaluation)}</b></span>
+                    </div>
+                    <p>{evaluation.hasBaseline && evaluation.hasActual ? 'Change is calculated as actual minus baseline. Percentage change is not shown when the baseline is zero.' : 'Enter both a baseline and actual value to calculate the change.'} This comparison does not establish causation or statistical significance.</p>
+                  </div>
+                );
+              })()}
               {experiment.result_notes && <p className="aic-experiment-result-notes">{experiment.result_notes}</p>}
               {canManage && !['completed', 'cancelled'].includes(experiment.status) ? (
                 <form className="aic-experiment-progress" onSubmit={(event) => void saveProgress(event, experiment)}>

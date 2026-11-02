@@ -1,29 +1,27 @@
-RUFFNECK SOCIAL HUB v5.8.0 — OVERLAY MANIFEST
+RUFFNECK SOCIAL HUB v5.9.0 — OVERLAY MANIFEST
 
 BASELINE
-- Existing RuffNeck Social Hub v5.7.0 project.
-- Recent baseline deployment commit referenced by the user: 7886c3f.
+- Existing RuffNeck Social Hub v5.8.0 project.
+- Campaign Experiment Tracker and Supabase migration 0042 from v5.8.0 must already exist.
 
 REPLACE
 - package.json
-- src/app/campaigns/ai-campaign-insights.tsx
-
-ADD
-- src/app/actions/campaign-experiments.ts
 - src/app/campaigns/campaign-experiment-tracker.tsx
 - src/app/campaigns/campaign-experiment-tracker.css
-- src/lib/campaigns/campaign-experiments.mjs
-- supabase/migrations/0042_campaign_experiment_tracker.sql
 - scripts/audit-campaign-experiments.mjs
-- scripts/test-campaign-experiments.mjs
+- scripts/test-release-compat.mjs
 
-DOCUMENTATION
-- README-v5.8.0.md
-- APPLY-v5.8.0.txt
-- PATCH-MANIFEST.txt
+ADD
+- src/lib/campaigns/campaign-experiments.d.mts
+- src/lib/campaigns/campaign-experiment-insights.mjs
+- src/lib/campaigns/campaign-experiment-insights.d.mts
+- scripts/audit-campaign-experiment-insights.mjs
+- scripts/test-campaign-experiment-insights.mjs
 
 NO CHANGES
+- No Supabase migration.
+- No database table or policy change.
 - No dependencies added.
-- No existing database tables are altered.
-- No OAuth scopes or provider permissions change.
-- No publishing, scheduling, messaging, reply sending or advertising workflow is introduced.
+- No OAuth/provider permission changes.
+- No automated publishing, scheduling, messaging, reply sending or advertising.
+- No changes to existing provider integrations.
