@@ -7,137 +7,175 @@ import {
   type AiProviderVariantDraft,
   type GenerateAiProviderVariantsState,
   type SaveAiProviderVariantsState,
-} from '@/app/actions/content';
+} from '@/app/actions/content-provider-variants';
+import { AI_PROVIDER_VARIANT_BODY_LIMITS, AI_PROVIDER_VARIANT_PLATFORMS, type AiProviderVariantPlatform } from '@/lib/ai/provider-variant-contract';
+import './ai-provider-variant-generator.css';
+
+type BrandOption = { id: string; name: string };
 
 const initialGenerateState: GenerateAiProviderVariantsState = { status: 'idle' };
 const initialSaveState: SaveAiProviderVariantsState = { status: 'idle' };
-const providerLabels = {
-  instagram: 'Instagram Business',
-  facebook: 'Facebook Page',
-  linkedin: 'LinkedIn Organization',
-} as const;
+const platformLabels: Record<AiProviderVariantPlatform, string> = {
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  linkedin: 'LinkedIn',
+};
 
 export default function AiProviderVariantGenerator({
   workspaceId,
-  contentId,
+  brands,
   configured,
 }: {
   workspaceId: string;
-  contentId: string;
+  brands: BrandOption[];
   configured: boolean;
 }) {
-  const [generationState, generateAction, generating] = useActionState(generateAiProviderVariants, initialGenerateState);
-  const [saveState, saveAction, saving] = useActionState(saveAiProviderVariants, initialSaveState);
-  const [drafts, setDrafts] = useState<AiProviderVariantDraft[]>([]);
-  const [savedProviders, setSavedProviders] = useState<string[]>([]);
+  const [generation, generateAction, generating] = useActionState(generateAiProviderVariants, initialGenerateState);
+  const [saving, saveAction, savingPending] = useActionState(saveAiProviderVariants, initialSaveState);
+  const [variants, setVariants] = useState<AiProviderVariantDraft[]>([]);
+  const [selected, setSelected] = useState<AiProviderVariantPlatform[]>([]);
+  const [brandId, setBrandId] = useState(brands[0]?.id ?? '');
 
   useEffect(() => {
-    if (generationState.status === 'success' && generationState.drafts) {
-      setDrafts(generationState.drafts);
-      setSavedProviders([]);
+    if (generation.status === 'success' && generation.variants) {
+      setVariants(generation.variants.map((variant) => ({ ...variant })));
+      setSelected(generation.variants.map((variant) => variant.platform));
+      setBrandId(generation.brandId ?? brands[0]?.id ?? '');
     }
-  }, [generationState.status, generationState.drafts]);
+  }, [generation.status, generation.variants, generation.brandId, brands]);
 
-  useEffect(() => {
-    if (saveState.status === 'success' && saveState.savedProviders?.length) {
-      const saved = saveState.savedProviders;
-      setSavedProviders((current) => [...new Set([...current, ...saved])]);
-      setDrafts((current) => current.filter((draft) => !saved.includes(draft.provider)));
-    }
-  }, [saveState.status, saveState.savedProviders]);
-
-  const remainingDrafts = useMemo(
-    () => drafts.filter((draft) => !savedProviders.includes(draft.provider)),
-    [drafts, savedProviders],
+  const selectedVariants = useMemo(
+    () => variants.filter((variant) => selected.includes(variant.platform)),
+    [variants, selected],
   );
+  if (!brands.length) return null;
 
-  function updateDraft(provider: AiProviderVariantDraft['provider'], field: 'name' | 'body' | 'mediaUrl', value: string) {
-    setDrafts((current) => current.map((draft) => draft.provider === provider ? { ...draft, [field]: value } : draft));
+  function updateVariant(platform: AiProviderVariantPlatform, field: 'title' | 'body', value: string) {
+    setVariants((current) => current.map((variant) => variant.platform === platform ? { ...variant, [field]: value } : variant));
+  }
+
+  function toggleSelected(platform: AiProviderVariantPlatform, checked: boolean) {
+    setSelected((current) => checked
+      ? [...current, platform]
+      : current.filter((item) => item !== platform));
   }
 
   return (
-    <details className="ai-provider-variant-generator">
-      <summary>Generate platform versions with AI</summary>
-      <div className="ai-provider-variant-body">
-        <p className="ai-provider-variant-intro">Adapt this approved master post for Instagram, Facebook and LinkedIn. The outputs are editable drafts and still require separate human review.</p>
-        {!configured ? (
-          <div className="ai-content-generator-unavailable" role="status">
-            <strong>Local AI is not configured.</strong>
-            <span>Set the existing server-side LOCAL_AI_BASE_URL and LOCAL_AI_MODEL variables to enable platform adaptation.</span>
-          </div>
-        ) : (
-          <>
-            <form action={generateAction} className="ai-provider-variant-generate-form">
-              <input type="hidden" name="workspace_id" value={workspaceId} />
-              <input type="hidden" name="content_id" value={contentId} />
-              <label>Overall writing tone
-                <select name="tone" defaultValue="professional" required>
-                  <option value="professional">Professional</option>
-                  <option value="friendly">Friendly</option>
-                  <option value="confident">Confident</option>
-                  <option value="helpful">Helpful</option>
-                  <option value="concise">Concise</option>
-                </select>
-              </label>
-              <button type="submit" className="content-secondary-button" disabled={generating}>
-                {generating ? 'Adapting approved copy…' : 'Generate 3 platform versions'}
-              </button>
-            </form>
-            {generationState.status === 'error' && <p className="ai-content-generator-message error" role="alert">{generationState.message}</p>}
-            {generationState.status === 'success' && (
-              <div className="ai-provider-variant-preview" aria-live="polite">
-                <div className="ai-provider-variant-status">
-                  <div><strong>AI adaptation preview</strong><span>{generationState.message}</span></div>
-                  {generationState.model && <code>{generationState.model}</code>}
-                </div>
-                {savedProviders.length > 0 && <p className="ai-provider-variant-saved">Saved as drafts: {savedProviders.map((provider) => providerLabels[provider as keyof typeof providerLabels]).join(', ')}. These are not approved or scheduled.</p>}
-                {remainingDrafts.length > 0 ? (
-                  <form action={saveAction} className="ai-provider-variant-save-form">
-                    <input type="hidden" name="workspace_id" value={workspaceId} />
-                    <input type="hidden" name="content_id" value={contentId} />
-                    <input type="hidden" name="variants_json" value={JSON.stringify(remainingDrafts)} />
-                    <div className="ai-provider-variant-edit-grid">
-                      {remainingDrafts.map((draft) => (
-                        <section className="ai-provider-variant-edit-card" key={draft.provider}>
-                          <div className="ai-provider-variant-edit-heading"><strong>{providerLabels[draft.provider]}</strong><span>Unapproved draft</span></div>
-                          <label>Variant name
-                            <input value={draft.name} maxLength={60} minLength={2} required onChange={(event) => updateDraft(draft.provider, 'name', event.target.value)} />
-                          </label>
-                          <label>Platform copy
-                            <textarea value={draft.body} maxLength={5000} minLength={1} rows={6} required onChange={(event) => updateDraft(draft.provider, 'body', event.target.value)} />
-                            <small>{draft.body.length.toLocaleString()} / 5,000 characters</small>
-                          </label>
-                          {draft.provider === 'linkedin' ? (
-                            <p className="ai-provider-variant-media-note">LinkedIn publishing is text-only in the current scheduler. No image will be attached.</p>
-                          ) : (
-                            <label>Public image URL (required)
-                              <input type="url" inputMode="url" value={draft.mediaUrl} maxLength={2048} required placeholder="https://public-image-url.jpg" onChange={(event) => updateDraft(draft.provider, 'mediaUrl', event.target.value)} />
-                              <small>Instagram and Facebook currently require one public HTTPS image.</small>
-                            </label>
-                          )}
-                        </section>
-                      ))}
-                    </div>
-                    <div className="ai-provider-variant-save-footer">
-                      <span>Saving creates provider-specific drafts only. Each must be submitted for review and approved before scheduling.</span>
-                      <button type="submit" className="content-primary-button" disabled={saving || remainingDrafts.length === 0}>
-                        {saving ? 'Saving drafts…' : `Save ${remainingDrafts.length} provider draft${remainingDrafts.length === 1 ? '' : 's'}`}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <p className="ai-provider-variant-complete">All generated variants have been saved as drafts. They still require review and approval.</p>
-                )}
-                {saveState.status === 'error' && <p className="ai-content-generator-message error" role="alert">{saveState.message}</p>}
-                {saveState.failedProviders?.map((failure) => (
-                  <p className="ai-provider-variant-failure" key={failure.provider}><strong>{providerLabels[failure.provider]}:</strong> {failure.reason}</p>
-                ))}
-                {saveState.status === 'success' && <p className="ai-provider-variant-saved" role="status">{saveState.message}</p>}
-              </div>
-            )}
-          </>
-        )}
+    <section className="ai-provider-variants" aria-labelledby="ai-provider-variants-title">
+      <div className="ai-provider-variants-heading">
+        <div>
+          <span className="eyebrow">PLATFORM ADAPTATION</span>
+          <h2 id="ai-provider-variants-title">AI provider variant generator</h2>
+          <p>Turn one campaign brief into separate Facebook, Instagram and LinkedIn drafts. Edit each version before saving.</p>
+        </div>
+        <span className="ai-provider-variants-safety">DRAFTS ONLY · HUMAN APPROVAL REQUIRED</span>
       </div>
-    </details>
+
+      {!configured && (
+        <div className="ai-provider-variants-notice" role="status">
+          <strong>Local AI is not configured.</strong>
+          <span>Set the server-only LOCAL_AI_BASE_URL and LOCAL_AI_MODEL variables. LOCAL_AI_API_KEY is optional for authenticated model servers.</span>
+        </div>
+      )}
+
+      <form action={generateAction} className="ai-provider-variants-form">
+        <input type="hidden" name="workspace_id" value={workspaceId} />
+        <label>Brand
+          <select name="brand_id" value={brandId} onChange={(event) => setBrandId(event.target.value)} required>
+            {brands.map((brand) => <option value={brand.id} key={brand.id}>{brand.name}</option>)}
+          </select>
+        </label>
+        <label>Campaign objective
+          <select name="objective" defaultValue="awareness" required>
+            <option value="awareness">Brand awareness</option>
+            <option value="engagement">Engagement</option>
+            <option value="education">Education</option>
+            <option value="sales">Sales or enquiries</option>
+            <option value="announcement">Announcement</option>
+          </select>
+        </label>
+        <label>Writing tone
+          <select name="tone" defaultValue="professional" required>
+            <option value="professional">Professional</option>
+            <option value="friendly">Friendly</option>
+            <option value="confident">Confident</option>
+            <option value="helpful">Helpful</option>
+            <option value="concise">Concise</option>
+          </select>
+        </label>
+        <label>Language
+          <select name="language" defaultValue="English" required>
+            <option>English</option>
+            <option>Hausa</option>
+            <option>Nigerian Pidgin</option>
+            <option>Yoruba</option>
+            <option>Igbo</option>
+            <option>French</option>
+            <option value="Use the language best suited to the campaign">Choose based on campaign</option>
+          </select>
+        </label>
+        <fieldset className="ai-provider-variants-platforms">
+          <legend>Target platforms</legend>
+          {AI_PROVIDER_VARIANT_PLATFORMS.map((platform) => (
+            <label key={platform}>
+              <input type="checkbox" name="platforms" value={platform} defaultChecked />
+              <span>{platformLabels[platform]}</span>
+            </label>
+          ))}
+          <small>These are the current scheduled-queue destinations supported by this generator.</small>
+        </fieldset>
+        <label className="ai-provider-variants-wide">Target audience (optional)
+          <input name="audience" maxLength={240} placeholder="Who should this campaign speak to?" />
+        </label>
+        <label className="ai-provider-variants-wide">Campaign brief
+          <textarea name="brief" minLength={20} maxLength={1200} rows={4} required placeholder="Describe the offer, service, announcement or idea. Include only facts the brand is authorised to publish." />
+          <small>20–1,200 characters. Do not include passwords, customer records or confidential information.</small>
+        </label>
+        <div className="ai-provider-variants-submit">
+          <span>Uses your server-configured local/OpenAI-compatible model. Generated copy is not sent to any social network.</span>
+          <button type="submit" className="content-primary-button" disabled={!configured || generating}>{generating ? 'Generating platform variants…' : 'Generate platform variants'}</button>
+        </div>
+      </form>
+
+      {generation.status === 'error' && <p className="ai-provider-variants-message error" role="alert">{generation.message}</p>}
+      {generation.status === 'success' && (
+        <div className="ai-provider-variants-results" aria-live="polite">
+          <div className="ai-provider-variants-results-heading">
+            <div><strong>Editable platform drafts</strong><span>{generation.message}</span></div>
+            {generation.model && <code>{generation.model}</code>}
+          </div>
+          <form action={saveAction}>
+            <input type="hidden" name="workspace_id" value={generation.workspaceId ?? workspaceId} />
+            <input type="hidden" name="brand_id" value={generation.brandId ?? brandId} />
+            <input type="hidden" name="variants_json" value={JSON.stringify(selectedVariants)} />
+            <div className="ai-provider-variants-card-grid">
+              {variants.map((variant) => (
+                <article className="ai-provider-variant-card" key={variant.platform}>
+                  <div className="ai-provider-variant-card-heading">
+                    <label className="ai-provider-variant-select">
+                      <input type="checkbox" checked={selected.includes(variant.platform)} onChange={(event) => toggleSelected(variant.platform, event.target.checked)} />
+                      <strong>{platformLabels[variant.platform]}</strong>
+                    </label>
+                    <span>{variant.body.length}/{AI_PROVIDER_VARIANT_BODY_LIMITS[variant.platform]}</span>
+                  </div>
+                  <label>Draft title
+                    <input value={variant.title} maxLength={145} onChange={(event) => updateVariant(variant.platform, 'title', event.target.value)} />
+                  </label>
+                  <label>Platform copy
+                    <textarea value={variant.body} maxLength={AI_PROVIDER_VARIANT_BODY_LIMITS[variant.platform]} rows={7} onChange={(event) => updateVariant(variant.platform, 'body', event.target.value)} />
+                  </label>
+                </article>
+              ))}
+            </div>
+            {saving.status === 'error' && <p className="ai-provider-variants-message error" role="alert">{saving.message}</p>}
+            {saving.status === 'success' && <p className="ai-provider-variants-message success" role="status">{saving.message}</p>}
+            <div className="ai-provider-variants-save">
+              <span>{selectedVariants.length} of {variants.length} variants selected. Saving creates separate drafts and does not submit, approve, schedule or publish them.</span>
+              <button type="submit" className="content-primary-button" disabled={savingPending || selectedVariants.length === 0}>{savingPending ? 'Saving drafts…' : `Save ${selectedVariants.length} selected draft${selectedVariants.length === 1 ? '' : 's'}`}</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </section>
   );
 }

@@ -1,0 +1,23 @@
+RUFFNECK SOCIAL HUB v5.3.0 — INSTALLATION
+
+1. Extract this ZIP into the existing RuffNeck Social Hub repository root and merge its folders.
+2. Replace package.json with the included version. It preserves the v5.2.0 package/dependency set, adds the AI variant audit/test, removes the obsolete build-time deletion step, and routes Vercel through `npm run build`.
+3. Apply `supabase/migrations/0040_ai_provider_platform_variants.sql` in Supabase SQL Editor after migration 0039. Run it once.
+4. Commit the merged files to GitHub main. Vercel should run `vercel-build` as `npm run build`.
+5. In Content Studio, open AI provider variant generator. Select a brand, objective, tone, language, platforms and campaign brief.
+6. Generate variants, edit each one, select the variants to keep, and save them as drafts.
+7. Confirm the content list shows `[FACEBOOK]`, `[INSTAGRAM]` or `[LINKEDIN]` in each saved title.
+8. Submit each draft for human review. Approval is still required before scheduling. The database rejects scheduling a targeted variant to a different provider.
+
+CONFIGURATION
+
+The feature reuses:
+- LOCAL_AI_BASE_URL
+- LOCAL_AI_MODEL
+- LOCAL_AI_API_KEY (optional)
+
+No new environment variables are required. Keep the values server-only; do not prefix them with NEXT_PUBLIC_.
+
+IMPORTANT
+
+This overlay was built against the available local v5.2.0 source snapshot. It has not been reconciled against the latest GitHub main commit, run against the live Supabase database, or deployed to Vercel. Preserve any newer package.json entries or changes made on main when merging. Do not remove the new ai-provider-variant-generator.tsx file: it is now mounted by the existing AI content assistant.
