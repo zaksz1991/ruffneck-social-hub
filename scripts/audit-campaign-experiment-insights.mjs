@@ -39,8 +39,10 @@ assert.match(files.tests, /invalid dates must not create due-review flags/);
 assert.match(files.experimentAudit, /isCompatibleRelease\(pkg\.version, '5\.8\.0'\)/);
 
 const pkg = JSON.parse(files.package);
-assert.equal(pkg.version, '5.9.0');
-assert.ok(isCompatibleRelease(pkg.version, '5.8.0'));
+assert.ok(
+  isCompatibleRelease(pkg.version, '5.9.0'),
+  'Campaign experiment insights require release 5.9.0 or newer',
+);
 assert.match(pkg.scripts.build, /audit:campaign-experiment-insights/);
 assert.match(pkg.scripts.test, /test-campaign-experiment-insights\.mjs/);
 assert.doesNotMatch(files.helper, /fetch\(|createClient\(|SUPABASE_SERVICE_ROLE_KEY/);

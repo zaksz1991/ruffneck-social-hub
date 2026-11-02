@@ -1,0 +1,20 @@
+RUFFNECK SOCIAL HUB v6.0.0 — CAMPAIGN EXPERIMENT INSIGHTS AUDIT HOTFIX
+
+Replace this one file in the existing GitHub repository:
+
+  scripts/audit-campaign-experiment-insights.mjs
+
+Use the complete replacement file from this ZIP. Preserve the path exactly.
+Do not replace package.json or any application files.
+
+Then commit the change to main and let Vercel run the existing audited build.
+
+Expected immediate result:
+  audit:campaign-experiment-insights should accept package version 6.0.0
+  while retaining 5.9.0 as the minimum compatible release.
+
+No Supabase migration or new Vercel environment variable is required.
+
+This is a focused audit hotfix, not confirmation that the entire production
+build will pass. Review the next Vercel log for any subsequent independent
+failure before applying another change.
