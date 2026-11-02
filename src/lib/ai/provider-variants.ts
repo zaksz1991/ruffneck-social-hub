@@ -4,9 +4,81 @@ import {
   parseAiProviderVariants,
   type AiProviderVariantBrief,
   type AiProviderVariantDraft,
+  type AiProviderVariantPlatform,
 } from '@/lib/ai/provider-variant-contract';
 
-export type { AiProviderVariantDraft } from '@/lib/ai/provider-variant-contract';
+export type { AiProviderVariantBrief, AiProviderVariantDraft } from '@/lib/ai/provider-variant-contract';
+export { buildAiProviderVariantMessages } from '@/lib/ai/provider-variant-contract';
+
+/**
+ * Backward-compatible response parser for callers and regression tests that
+ * import from this module. Accepts either the model's text content, a complete
+ * OpenAI-compatible chat response, or an already-decoded { variants } object.
+ * When expectedPlatforms is omitted, the platform set is inferred from the
+ * returned variants and still validated by the canonical contract parser.
+ */
+export function parseAiProviderVariantsResponse(
+  response: unknown,
+  expectedPlatforms?: AiProviderVariantPlatform[],
+): AiProviderVariantDraft[] {
+  let content: unknown = response;
+
+  if (response && typeof response === 'object' && !Array.isArray(response)) {
+    const record = response as Record<string, unknown>;
+    const choices = Array.isArray(record.choices) ? record.choices : null;
+    const firstChoice = choices?.[0];
+    const firstMessage = firstChoice && typeof firstChoice === 'object'
+      ? (firstChoice as Record<string, unknown>).message
+      : null;
+    if (firstMessage && typeof firstMessage === 'object') {
+      const messageContent = (firstMessage as Record<string, unknown>).content;
+      if (messageContent !== undefined) content = messageContent;
+    } else if (record.message && typeof record.message === 'object') {
+      const messageContent = (record.message as Record<string, unknown>).content;
+      if (messageContent !== undefined) content = messageContent;
+    } else if (typeof record.content === 'string') {
+      content = record.content;
+    } else if (Array.isArray(record.variants)) {
+      content = JSON.stringify(record);
+    }
+  }
+
+  if (typeof content !== 'string') {
+    if (content && typeof content === 'object' && !Array.isArray(content)) {
+      content = JSON.stringify(content);
+    } else {
+      throw new Error('The AI service returned an unreadable set of variants.');
+    }
+  }
+
+  let platforms = expectedPlatforms;
+  if (!platforms) {
+    let decoded: unknown;
+    const raw = content as string;
+    const normalized = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    try { decoded = JSON.parse(normalized); }
+    catch { throw new Error('The AI service did not return a valid JSON variant set.'); }
+    const variants = decoded && typeof decoded === 'object' && !Array.isArray(decoded)
+      ? (decoded as Record<string, unknown>).variants
+      : null;
+    if (!Array.isArray(variants)) {
+      throw new Error('The AI service did not return a valid JSON variant set.');
+    }
+    platforms = variants.map((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        throw new Error('The AI service returned an invalid variant.');
+      }
+      const platform = (item as Record<string, unknown>).platform;
+      if (typeof platform !== 'string') {
+        throw new Error('The AI service returned an unsupported platform variant.');
+      }
+      return platform.toLowerCase() as AiProviderVariantPlatform;
+    });
+  }
+
+  return parseAiProviderVariants(content, platforms);
+}
+
 
 export async function generateLocalAiProviderVariants(
   input: AiProviderVariantBrief & { brandVoice: unknown },

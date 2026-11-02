@@ -1,0 +1,31 @@
+RUFFNECK SOCIAL HUB — v5.3.1 PROVIDER VARIANT EXPORT COMPATIBILITY FIX
+
+This is a one-file corrective overlay for the TypeScript/internal-import failure
+reported by Vercel after commit 0969bd6.
+
+REPLACE ONLY:
+  src/lib/ai/provider-variants.ts
+
+Do not replace package.json, the AI Studio component, server actions, database
+migration 0040, or any other project files.
+
+WHAT THIS FIXES
+The existing regression test imports these public module exports:
+  - AiProviderVariantBrief
+  - buildAiProviderVariantMessages
+  - parseAiProviderVariantsResponse
+
+The provider implementation was using the contract helper internally but did
+not re-export the legacy public names. This replacement restores those exports.
+The response parser accepts raw JSON text, an OpenAI-compatible choices/message
+response, or a decoded { variants } object. It still validates all output using
+the existing canonical provider-variant contract parser.
+
+INSTALLATION
+1. Extract this ZIP.
+2. In the existing GitHub repository, navigate to src/lib/ai/.
+3. Replace provider-variants.ts with the included file.
+4. Commit the change to main.
+
+No package.json change, environment variable, or database migration is needed.
+Migration 0040 is separate and should remain in the repository.
