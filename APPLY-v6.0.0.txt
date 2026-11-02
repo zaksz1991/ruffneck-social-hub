@@ -1,0 +1,24 @@
+RUFFNECK SOCIAL HUB v6.0.0 — INSTALLATION
+
+This is an overlay for the existing RuffNeck Social Hub repository. Do not replace the repository with this ZIP. Apply the files to the existing main branch and retain all files not listed below.
+
+1. In GitHub, open zaksz1991/ruffneck-social-hub, branch main.
+2. Replace the complete package.json with the package.json in this ZIP.
+3. Add the new files and folders using the exact paths shown in PATCH-MANIFEST-v6.0.0.txt.
+4. Add the new Supabase migration 0043_billing_subscription_foundation.sql under supabase/migrations.
+5. Commit the overlay to main. Allow Vercel to build the commit.
+6. Apply Supabase migration 0043 only after confirming migration 0042_campaign_experiment_tracker.sql is already applied.
+7. Add Vercel environment variables FLW_SECRET_KEY, FLW_SECRET_HASH and NEXT_PUBLIC_APP_URL. Keep to Flutterwave test credentials first. The existing SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY is also required by the project's server-side admin client.
+8. Configure three Flutterwave monthly NGN Payment Plans, then set their numeric IDs and approved amounts in public.billing_plans. Checkout remains disabled until each paid plan has checkout_enabled=true.
+9. Configure the Flutterwave webhook URL /api/webhooks/flutterwave and the exact same secret hash as FLW_SECRET_HASH. Enable charge.completed, subscription.cancelled and webhook retries.
+10. Open /billing while signed in to a workspace. Only workspace owners/admins can begin checkout.
+
+IMPORTANT
+- The current seeded paid prices (₦5,000, ₦15,000, ₦40,000) are proposals, not approved commercial pricing.
+- Do not enable a live plan until the matching LIVE Flutterwave plan ID, amount, currency, terms and webhook have been tested and approved.
+- Payment Plan recurring subscriptions are card-only and bound to the customer's signup email.
+- Plan allowance values are displayed but are not enforced by this release. Do not market limits as enforced until the separate entitlement-enforcement work is complete.
+- A workspace with a pending billing payment cannot create another checkout until the pending payment is verified and reconciled; this avoids overlapping first-payment attempts. If Flutterwave's checkout-creation request times out, the invoice remains pending because the provider may still have created a checkout. Confirm the provider state before manually reconciling it.
+- This release does not include in-app cancellation, upgrade/downgrade, invoices as downloadable tax documents, trials, refunds or a customer self-service billing portal.
+- No card data is stored by RuffNeck.
+- Full repository tests, TypeScript build, live migration and Vercel production build remain unverified until run against the complete repository and connected services.
