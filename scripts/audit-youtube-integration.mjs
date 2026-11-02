@@ -1,6 +1,7 @@
 import { isCompatibleRelease } from './lib/release-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+
 const root = process.cwd();
 const requirements = [
   ['src/lib/integrations/youtube.ts', ['YOUTUBE_ANALYTICS_SCOPES', 'youtube.readonly', 'yt-analytics.readonly', 'youtube.upload', 'buildYouTubeAuthorizationUrl', 'normalizeYouTubeChannels', 'normalizeYouTubeAnalyticsReport', 'buildYouTubeUploadsPlaylistItemsUrl', 'normalizeYouTubePlaylistVideoIds', 'getYouTubeAnalyticsWindow', 'buildYouTubeAnalyticsUrl', 'buildYouTubeResumableUploadUrl', 'validateYouTubeVideoSourceUrl', 'validateYouTubeUploadSessionUrl', 'parseYouTubeTokenBundle']],
@@ -14,18 +15,58 @@ const requirements = [
   ['src/app/publishing/page.tsx', ['youtube_video_uploads', 'YOUTUBE_VERIFIED_MEDIA_HOSTS', '/api/integrations/youtube/upload', 'Recent YouTube uploads', 'PRIVATE UPLOAD ONLY', 'privacy_status']],
   ['src/app/channels/page.tsx', ['configuredYouTube', 'youtube_configuration', "params.connected === 'youtube'"]],
   ['src/lib/integrations/provider-registry.ts', ["id: 'youtube'", "availability: 'available'", 'YouTube Analytics API', 'private']],
-  ['supabase/migrations/0031_youtube_channel_analytics_and_private_video_uploads.sql', ['store_youtube_channel_connections', 'youtube_video_analytics_snapshots', 'record_youtube_video_analytics_snapshot', 'youtube_video_uploads', 'create_youtube_video_upload_request', 'record_youtube_video_upload_result', "'content_publish', false", "'scheduled_publish', false", 'privacy_status = \'private\'', 'auth.uid()', 'revoke insert, update, delete']],
+  ['supabase/migrations/0031_youtube_channel_analytics_and_private_video_uploads.sql', ['store_youtube_channel_connections', 'youtube_video_analytics_snapshots', 'record_youtube_video_analytics_snapshot', 'youtube_video_uploads', 'create_youtube_video_upload_request', 'record_youtube_video_upload_result', "'content_publish', false", "'scheduled_publish', false", "privacy_status = 'private'", 'auth.uid()', 'revoke insert, update, delete']],
 ];
+
+function hasOrderedBuildGates(buildScript, requiredCommands) {
+  const script = String(buildScript ?? '');
+  const commands = [...script.matchAll(/npm run ([a-z0-9:-]+)/g)].map((match) => match[1]);
+  let cursor = 0;
+  for (const expected of requiredCommands) {
+    const found = commands.indexOf(expected, cursor);
+    if (found < 0) return false;
+    cursor = found + 1;
+  }
+  const nextBuildPosition = script.indexOf('next build');
+  const lastGatePosition = script.lastIndexOf(`npm run ${requiredCommands.at(-1)}`);
+  return lastGatePosition >= 0 && nextBuildPosition > lastGatePosition;
+}
+
 const failures = [];
 for (const [relative, tokens] of requirements) {
   const file = path.join(root, relative);
-  if (!fs.existsSync(file)) { failures.push(`${relative}: missing file`); continue; }
+  if (!fs.existsSync(file)) {
+    failures.push(`${relative}: missing file`);
+    continue;
+  }
   const source = fs.readFileSync(file, 'utf8');
-  for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
+  for (const token of tokens) {
+    if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
+  }
 }
+
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0', '5.6.0', '5.7.0'].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) failures.push(`package.json: unsupported release version ${pkg.version}`);
-if (!String(pkg.scripts?.build ?? '').includes('audit:youtube && npm run audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && npm run audit:whatsapp-media && npm run audit:whatsapp-media-replies && next build')) failures.push('package.json: YouTube, Instagram and WhatsApp audits must gate next build');
-if (!String(pkg.scripts?.test ?? '').includes('npm run test:youtube')) failures.push('package.json: YouTube regression script missing from test command');
-if (failures.length) { console.error(`YouTube integration audit failed: ${failures.length} issue(s).`); for (const failure of failures) console.error(` - ${failure}`); process.exit(1); }
+if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0', '5.6.0', '5.7.0'].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) {
+  failures.push(`package.json: unsupported release version ${pkg.version}`);
+}
+const requiredBuildGates = [
+  'audit:youtube',
+  'audit:instagram-comments',
+  'audit:whatsapp',
+  'audit:whatsapp-operations',
+  'audit:whatsapp-media',
+  'audit:whatsapp-media-replies',
+];
+if (!hasOrderedBuildGates(pkg.scripts?.build, requiredBuildGates)) {
+  failures.push('package.json: YouTube, Instagram and WhatsApp audits must gate next build in order');
+}
+if (!String(pkg.scripts?.test ?? '').includes('npm run test:youtube')) {
+  failures.push('package.json: YouTube regression script missing from test command');
+}
+
+if (failures.length) {
+  console.error(`YouTube integration audit failed: ${failures.length} issue(s).`);
+  for (const failure of failures) console.error(` - ${failure}`);
+  process.exit(1);
+}
 console.log(`YouTube integration audit passed: ${requirements.length} file contracts verified.`);

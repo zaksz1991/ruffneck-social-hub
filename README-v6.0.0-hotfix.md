@@ -1,23 +1,28 @@
-# RuffNeck Social Hub v6.0.0 — Campaign Experiment Insights Audit Hotfix
+# RuffNeck Social Hub v6.0.0 — Provider Build-Audit Hotfix
 
-## Problem
+## Cause
 
-The Vercel build for commit `af52a97` reaches the `audit:campaign-experiment-insights` gate and fails because `scripts/audit-campaign-experiment-insights.mjs` requires `package.json` to equal `5.9.0` exactly. The repository package version is now `6.0.0`.
+The v6.0.0 `package.json` adds `npm run audit:billing-subscriptions` after `audit:whatsapp-media-replies` and before `next build`. Four provider audit scripts still require the older, exact, contiguous command string ending in `audit:whatsapp-media-replies && next build`. They therefore reject the valid v6.0.0 build pipeline even though every required provider audit is present and still runs before Next.js compilation.
 
 ## Correction
 
-The audit now uses the existing `isCompatibleRelease` helper and requires `5.9.0` or newer. This preserves the minimum release that introduced campaign experiment insights while allowing later compatible releases, including `6.0.0`.
+This package replaces four complete audit files:
 
-No application code, database migration, payment configuration, dependencies, or feature flags are changed.
+- `scripts/audit-linkedin-analytics.mjs`
+- `scripts/audit-tiktok-integration.mjs`
+- `scripts/audit-youtube-integration.mjs`
+- `scripts/audit-instagram-comments.mjs`
 
-## Scope
+Their source-file, security-contract, release-compatibility and regression-test checks are retained. Only the brittle contiguous build-script check is replaced. The updated checks verify that the required platform audit commands appear in the correct order and that `next build` runs after the last required platform audit. Other valid build gates, including the new billing audit, may appear between them.
 
-One-file overlay:
+## Installation
 
-` scripts/audit-campaign-experiment-insights.mjs `
+Copy the four replacement files into the existing GitHub repository, preserving the paths above. Do not replace `package.json`, application pages, database migrations, or dependencies for this hotfix.
+
+Commit the four files to `main` and allow Vercel to rebuild.
 
 ## Validation
 
-The replacement passed JavaScript syntax validation and the campaign-experiment-insights integration audit against the v5.9.0 feature source files with the package version set to `6.0.0`. The focused experiment-insights regression test also passed.
+The four replacement scripts should be syntax-checked and their ordered-gate logic tested against the v6.0.0 build script. The complete repository audit suite, tests, and production build must still be run by the project build before this release is considered verified.
 
-The full repository test suite and complete Next.js production build were not run. The hotfix has not been pushed to GitHub or deployed to Vercel.
+No Supabase migration or environment-variable change is required.

@@ -1,20 +1,16 @@
-RUFFNECK SOCIAL HUB v6.0.0 — CAMPAIGN EXPERIMENT INSIGHTS AUDIT HOTFIX
+RUFFNECK SOCIAL HUB v6.0.0 — PROVIDER BUILD-AUDIT HOTFIX
 
-Replace this one file in the existing GitHub repository:
+Replace these four files in the existing repository:
 
-  scripts/audit-campaign-experiment-insights.mjs
+scripts/audit-linkedin-analytics.mjs
+scripts/audit-tiktok-integration.mjs
+scripts/audit-youtube-integration.mjs
+scripts/audit-instagram-comments.mjs
 
-Use the complete replacement file from this ZIP. Preserve the path exactly.
-Do not replace package.json or any application files.
+Use the complete replacement files from this ZIP and preserve their folder paths.
+Do not replace package.json or any application/database files.
+Commit to GitHub main and let Vercel run the existing production build.
 
-Then commit the change to main and let Vercel run the existing audited build.
+Reason: v6.0.0 correctly adds the billing subscription audit before `next build`. Older provider audits incorrectly require `audit:whatsapp-media-replies` to be immediately adjacent to `next build`. The replacements preserve each audit's required checks while allowing additional build gates in between.
 
-Expected immediate result:
-  audit:campaign-experiment-insights should accept package version 6.0.0
-  while retaining 5.9.0 as the minimum compatible release.
-
-No Supabase migration or new Vercel environment variable is required.
-
-This is a focused audit hotfix, not confirmation that the entire production
-build will pass. Review the next Vercel log for any subsequent independent
-failure before applying another change.
+No Supabase migration, environment variable or dependency change is required.

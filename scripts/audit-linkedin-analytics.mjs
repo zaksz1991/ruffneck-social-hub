@@ -1,6 +1,7 @@
 import { isCompatibleRelease } from './lib/release-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+
 const root = process.cwd();
 const requirements = [
   ['src/lib/integrations/linkedin.ts', ["'rw_organization_admin'", "'w_organization_social'", 'normalizeLinkedInGrantedScopes', 'LINKEDIN_API_VERSION']],
@@ -14,16 +15,58 @@ const requirements = [
   ['src/lib/campaigns/intelligence.mjs', ["key === 'likes' ? value >= -MAX_METRIC_VALUE"]],
   ['src/lib/analytics/provider-insights.test.ts', ['normalizes official LinkedIn organization share statistics', 'builds official LinkedIn share and UGC-post statistics URLs']],
 ];
+
+function hasOrderedBuildGates(buildScript, requiredCommands) {
+  const script = String(buildScript ?? '');
+  const commands = [...script.matchAll(/npm run ([a-z0-9:-]+)/g)].map((match) => match[1]);
+  let cursor = 0;
+  for (const expected of requiredCommands) {
+    const found = commands.indexOf(expected, cursor);
+    if (found < 0) return false;
+    cursor = found + 1;
+  }
+  const nextBuildPosition = script.indexOf('next build');
+  const lastGatePosition = script.lastIndexOf(`npm run ${requiredCommands.at(-1)}`);
+  return lastGatePosition >= 0 && nextBuildPosition > lastGatePosition;
+}
+
 const failures = [];
 for (const [relative, tokens] of requirements) {
   const file = path.join(root, relative);
-  if (!fs.existsSync(file)) { failures.push(`${relative}: missing file`); continue; }
+  if (!fs.existsSync(file)) {
+    failures.push(`${relative}: missing file`);
+    continue;
+  }
   const source = fs.readFileSync(file, 'utf8');
-  for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
+  for (const token of tokens) {
+    if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
+  }
 }
+
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.4.0', '4.4.1', '4.5.0', '4.6.0', '4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0', '5.6.0', '5.7.0'].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) failures.push(`package.json: unsupported compatible release version ${pkg.version}`);
-if (!String(pkg.scripts?.build ?? '').includes('audit:linkedin-analytics && npm run audit:tiktok && npm run audit:youtube && npm run audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && npm run audit:whatsapp-media && npm run audit:whatsapp-media-replies && next build')) failures.push('package.json: LinkedIn, TikTok, YouTube, Instagram and WhatsApp audits must gate next build');
-if (!String(pkg.scripts?.test ?? '').includes('test-linkedin-analytics.mjs')) failures.push('package.json: LinkedIn analytics regression guard missing from test script');
-if (failures.length) { console.error(`LinkedIn analytics integration audit failed: ${failures.length} issue(s).`); for (const failure of failures) console.error(` - ${failure}`); process.exit(1); }
+if (!['4.4.0', '4.4.1', '4.5.0', '4.6.0', '4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0', '5.6.0', '5.7.0'].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) {
+  failures.push(`package.json: unsupported compatible release version ${pkg.version}`);
+}
+const requiredBuildGates = [
+  'audit:linkedin-analytics',
+  'audit:tiktok',
+  'audit:youtube',
+  'audit:instagram-comments',
+  'audit:whatsapp',
+  'audit:whatsapp-operations',
+  'audit:whatsapp-media',
+  'audit:whatsapp-media-replies',
+];
+if (!hasOrderedBuildGates(pkg.scripts?.build, requiredBuildGates)) {
+  failures.push('package.json: LinkedIn, TikTok, YouTube, Instagram and WhatsApp audits must gate next build in order');
+}
+if (!String(pkg.scripts?.test ?? '').includes('test-linkedin-analytics.mjs')) {
+  failures.push('package.json: LinkedIn analytics regression guard missing from test script');
+}
+
+if (failures.length) {
+  console.error(`LinkedIn analytics integration audit failed: ${failures.length} issue(s).`);
+  for (const failure of failures) console.error(` - ${failure}`);
+  process.exit(1);
+}
 console.log(`LinkedIn analytics integration audit passed: ${requirements.length} file contracts verified.`);

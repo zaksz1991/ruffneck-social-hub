@@ -1,6 +1,7 @@
 import { isCompatibleRelease } from './lib/release-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+
 const root = process.cwd();
 const requirements = [
   ['src/lib/integrations/instagram-comment-management.ts', ['INSTAGRAM_PUBLIC_REPLY_MAX_LENGTH', 'buildInstagramCommentReplyUrl', 'validateInstagramPublicReplyText', 'extractInstagramReplyId']],
@@ -12,17 +13,52 @@ const requirements = [
   ['supabase/migrations/0032_instagram_comment_reply_sending.sql', ['instagram_comment_reply_send_attempts', 'unique (reply_draft_id)', 'begin_instagram_comment_reply_send', 'record_instagram_comment_reply_send_result', "auth.role() is distinct from 'service_role'", 'revoke all on public.instagram_comment_reply_send_attempts']],
   ['scripts/test-instagram-comments.mjs', ['test(', 'buildInstagramCommentReplyUrl', 'safeInstagramCommentErrorCode']],
 ];
+
+function hasOrderedBuildGates(buildScript, requiredCommands) {
+  const script = String(buildScript ?? '');
+  const commands = [...script.matchAll(/npm run ([a-z0-9:-]+)/g)].map((match) => match[1]);
+  let cursor = 0;
+  for (const expected of requiredCommands) {
+    const found = commands.indexOf(expected, cursor);
+    if (found < 0) return false;
+    cursor = found + 1;
+  }
+  const nextBuildPosition = script.indexOf('next build');
+  const lastGatePosition = script.lastIndexOf(`npm run ${requiredCommands.at(-1)}`);
+  return lastGatePosition >= 0 && nextBuildPosition > lastGatePosition;
+}
+
 const failures = [];
 for (const [relative, tokens] of requirements) {
   const file = path.join(root, relative);
-  if (!fs.existsSync(file)) { failures.push(`${relative}: missing file`); continue; }
+  if (!fs.existsSync(file)) {
+    failures.push(`${relative}: missing file`);
+    continue;
+  }
   const source = fs.readFileSync(file, 'utf8');
-  for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
+  for (const token of tokens) {
+    if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
+  }
 }
+
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0', '5.6.0', '5.7.0'].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) failures.push(`package.json: unsupported release version ${pkg.version}`);
-if (!String(pkg.scripts?.build ?? '').includes('audit:instagram-comments && npm run audit:whatsapp && npm run audit:whatsapp-operations && npm run audit:whatsapp-media && npm run audit:whatsapp-media-replies && next build')) failures.push('package.json: Instagram comment and WhatsApp audits must gate next build');
-if (!String(pkg.scripts?.test ?? '').includes('npm run test:instagram-comments')) failures.push('package.json: Instagram comment tests missing from test command');
+if (!['4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0', '5.6.0', '5.7.0'].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) {
+  failures.push(`package.json: unsupported release version ${pkg.version}`);
+}
+const requiredBuildGates = [
+  'audit:instagram-comments',
+  'audit:whatsapp',
+  'audit:whatsapp-operations',
+  'audit:whatsapp-media',
+  'audit:whatsapp-media-replies',
+];
+if (!hasOrderedBuildGates(pkg.scripts?.build, requiredBuildGates)) {
+  failures.push('package.json: Instagram comment and WhatsApp audits must gate next build in order');
+}
+if (!String(pkg.scripts?.test ?? '').includes('npm run test:instagram-comments')) {
+  failures.push('package.json: Instagram comment tests missing from test command');
+}
+
 if (failures.length) {
   console.error(`Instagram comment publishing audit failed: ${failures.length} issue(s).`);
   for (const failure of failures) console.error(` - ${failure}`);
