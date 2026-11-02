@@ -11,10 +11,30 @@ const required = [
   ['supabase/migrations/0027_publishing_campaign_intelligence.sql', ['create table if not exists public.publishing_campaigns', 'create table if not exists public.campaign_content_items', 'create table if not exists public.campaign_metric_snapshots', 'publishing_campaigns_unique_utm_campaign_idx', 'clean_slug := left(raw_slug, 63) ||', 'alter table public.publishing_campaigns enable row level security', 'alter table public.campaign_content_items enable row level security', 'alter table public.campaign_metric_snapshots enable row level security', 'create or replace function public.create_publishing_campaign', 'create or replace function public.update_publishing_campaign_status', 'create or replace function public.link_content_to_campaign', 'create or replace function public.record_campaign_metric_snapshot', 'revoke insert, update, delete on public.campaign_metric_snapshots from anon, authenticated', "source text not null default 'manual' check (source = 'manual'"]],
 ];
 const failures = [];
-for (const [relative, tokens] of required) { const file = path.join(root, relative); if (!fs.existsSync(file)) { failures.push(`${relative}: missing file`); continue; } const content = fs.readFileSync(file, 'utf8'); for (const token of tokens) if (!content.includes(token)) failures.push(`${relative}: missing contract '${token}'`); }
+for (const [relative, tokens] of required) {
+  const file = path.join(root, relative);
+  if (!fs.existsSync(file)) {
+    failures.push(`${relative}: missing file`);
+    continue;
+  }
+  const content = fs.readFileSync(file, 'utf8');
+  for (const token of tokens) {
+    if (!content.includes(token)) failures.push(`${relative}: missing contract '${token}'`);
+  }
+}
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.0.0', '4.1.0', '4.2.0', '4.3.0', '4.4.0', '4.4.1', '4.5.0', '4.6.0', '4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0'].includes(pkg.version)) failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
+if (![
+  '4.0.0', '4.1.0', '4.2.0', '4.3.0', '4.4.0', '4.4.1', '4.5.0',
+  '4.6.0', '4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0',
+  '5.3.0', '5.5.0',
+].includes(pkg.version)) {
+  failures.push(`package.json: unsupported campaign-intelligence base version ${pkg.version}`);
+}
 if (!String(pkg.scripts?.build ?? '').includes('audit:campaign-intelligence')) failures.push('package.json: build does not run campaign intelligence audit');
 if (!String(pkg.scripts?.test ?? '').includes('test-campaign-intelligence.mjs')) failures.push('package.json: test does not run campaign intelligence regression guard');
-if (failures.length) { console.error(`Campaign intelligence audit failed: ${failures.length} issue(s).`); for (const failure of failures) console.error(` - ${failure}`); process.exit(1); }
+if (failures.length) {
+  console.error(`Campaign intelligence audit failed: ${failures.length} issue(s).`);
+  for (const failure of failures) console.error(` - ${failure}`);
+  process.exit(1);
+}
 console.log('Campaign intelligence integration audit passed: source contracts and release hooks verified.');

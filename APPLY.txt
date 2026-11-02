@@ -1,24 +1,18 @@
-RUFFNECK SOCIAL HUB — VERCEL BUILD REPAIR
+RUFFNECK SOCIAL HUB v5.5.0 — VERCEL BUILD HOTFIX
 
-This ZIP NOW INCLUDES package.json.
+CAUSE
+The v5.5.0 package version is not included in the existing campaign-intelligence compatibility audit allowlist. The campaign-intelligence checks therefore reject package.json before Next.js compilation begins.
 
-It contains these paths, relative to the repository root:
-  package.json
-  scripts/remove-known-stale-content-component.mjs
-  scripts/test-remove-known-stale-content-component.mjs
+CHANGE
+Replace only:
+scripts/audit-campaign-intelligence.mjs
 
-Apply using the file manager:
-1. Extract the ZIP into the main RuffNeck Social Hub project folder (the same folder that contains src, supabase and the existing package.json).
-2. Allow the included package.json to replace the existing root package.json.
-3. Allow the two files to be added under the existing scripts folder. Do not delete or replace any other project folders.
-4. Commit the changed package.json and the two scripts to GitHub main.
+Use the file at the same path in this ZIP.
 
-EXPECTED VERCEL LOG:
-  > vercel-build
-  > npm run build
+DO NOT replace package.json or any other project file. The existing package.json is already correctly versioned at 5.5.0 and already runs the campaign-intelligence audit.
 
-Then the build script runs the guarded component check, project audits and next build. If the component is still referenced or no longer matches the known obsolete signature, the cleanup refuses to delete it and reports why.
+DATABASE / ENVIRONMENT
+No SQL migration, environment variable, dependency change, or provider permission change is required.
 
-No environment variables or database migrations are required for this build configuration change.
-
-IMPORTANT: The included manifest comes from the available v5.2.0 source snapshot. If your GitHub main has additional package.json changes newer than that snapshot, preserve those additional entries while applying the vercel-build change.
+EXPECTED RESULT
+The campaign-intelligence audit should accept version 5.5.0 and continue checking its existing source, migration, build-hook, and regression-test contracts. The remaining build audits and Next.js production build will then run normally; this hotfix does not certify that those later stages pass.
