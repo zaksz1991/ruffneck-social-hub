@@ -1,3 +1,12 @@
-PASS: removes the known obsolete component when unreferenced
-PASS: preserves the component when another source file imports it
-PASS: preserves files whose source no longer matches the known signature
+Local targeted verification:
+- package.json parses successfully.
+- vercel-build is exactly: npm run build
+- cleanup script JavaScript syntax check: passed.
+- cleanup test script JavaScript syntax check: passed.
+- cleanup safety regression tests: 3 passed.
+- cleanup script run against available local source snapshot: no stale component found; no file removed.
+
+Not verified:
+- Full Next.js build against GitHub commit 2133232.
+- Vercel deployment.
+- Presence/reference status of the component in the exact deployed commit.

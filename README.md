@@ -1,9 +1,25 @@
-# RuffNeck Social Hub — Minimal Vercel Build Fix
+# RuffNeck Social Hub — Vercel build repair (complete targeted files)
 
-The deployment log shows that Vercel invokes `next build` directly through the existing `vercel-build` script. The TypeScript compiler then fails on an orphaned AI provider variant component importing four server-action exports that do not exist.
+This archive includes the complete replacement `package.json` and both required script files. It is structured relative to the repository root: `package.json` is at the archive root and the two script files are under `scripts/`.
 
-This minimal patch avoids replacing the repository's full package manifest. Add the included cleanup script and change only the `vercel-build` command as documented in `APPLY.txt`.
+## What this repairs
 
-The script fails closed: it deletes the component only if its source matches the known obsolete signature and no other source file imports or references it. Otherwise it leaves the file untouched and stops with an explicit safety message.
+The Vercel log shows that the deployed `vercel-build` script still runs `next build` directly. The included `package.json` changes `vercel-build` to `npm run build`, so the project's existing guarded pre-build checks execute before Next.js.
 
-This is a targeted build repair, not a claim that the component's intended feature has been reimplemented. The deployment must be rerun to confirm the actual repository's reference state and full TypeScript result.
+The existing build script runs `scripts/remove-known-stale-content-component.mjs` before the audits and `next build`. That script removes `src/app/content/ai-provider-variant-generator.tsx` only when all of these conditions hold:
+
+- the file exists at that exact path;
+- its source still contains the four known missing imports and the expected actions-module import;
+- no other source file imports or references that component.
+
+If any condition is not met, it preserves the file and stops with a diagnostic. It does not create placeholder AI functions or disable TypeScript checking.
+
+## Files in this archive
+
+- `package.json` — complete project package manifest for this v5.2.0 source snapshot, with `vercel-build` routed through `npm run build`.
+- `scripts/remove-known-stale-content-component.mjs` — guarded cleanup.
+- `scripts/test-remove-known-stale-content-component.mjs` — three safety regression tests.
+
+## Compatibility note
+
+This package was assembled from the available RuffNeck Social Hub v5.2.0 local source snapshot. The exact GitHub commit `2133232` was not available for a source-by-source comparison. The manifest preserves all scripts and dependencies from that snapshot; compare against newer repository changes before replacing the root manifest if any were added after that snapshot.
