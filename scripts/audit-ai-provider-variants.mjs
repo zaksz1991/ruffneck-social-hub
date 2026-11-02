@@ -5,7 +5,9 @@ const required = [
   ['src/app/content/ai-provider-variant-generator.tsx', ['generateAiProviderVariants', 'saveAiProviderVariants', 'type AiProviderVariantDraft', 'variants_json', 'HUMAN APPROVAL REQUIRED']],
   ['src/app/content/ai-content-generator.tsx', ["from './ai-provider-variant-generator'", '<AiProviderVariantGenerator']],
   ['src/lib/ai/provider-variants.ts', ['resolveLocalAiEndpoint', 'sanitizeBrandVoice', 'redirect:', 'AbortController']],
-  ['src/lib/ai/provider-variant-contract.ts', ['buildAiProviderVariantMessages', 'parseAiProviderVariants', 'facebook', 'instagram', 'linkedin']],
+  ['src/lib/ai/provider-variant-contract.ts', ['buildAiProviderVariantMessages', 'parseAiProviderVariants', 'facebook', 'instagram', 'linkedin', 'tiktok', 'youtube', 'AI_PROVIDER_VARIANT_TITLE_LIMITS']],
+  ['src/lib/ai/provider-variants.ts', ['parseAiProviderVariantsResponse', 'buildAiProviderVariantMessages', 'AiProviderVariantBrief', 'max_tokens: 4200']],
+  ['supabase/migrations/0041_ai_provider_tiktok_youtube_variants.sql', ['tiktok', 'youtube', '2,200 UTF-16-unit platform limit', '5,000-byte platform limit', 'Attach at least one media asset', "member_role not in ('owner', 'admin', 'manager', 'publisher')", 'revoke all on function public.create_content_drafts_from_ai_variants', 'revoke all on function public.schedule_approved_content']],
   ['supabase/migrations/0040_ai_provider_platform_variants.sql', ['target_platform', 'create_content_drafts_from_ai_variants', 'schedule_approved_content', 'content.ai_provider_variant_saved']],
 ];
 

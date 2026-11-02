@@ -106,7 +106,7 @@ export async function generateLocalAiProviderVariants(
         model: config.model,
         messages: buildAiProviderVariantMessages(input, sanitizeBrandVoice(input.brandVoice)),
         temperature: 0.55,
-        max_tokens: 2800,
+        max_tokens: 4200,
         stream: false,
       }),
     });

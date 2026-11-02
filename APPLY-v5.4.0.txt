@@ -1,0 +1,28 @@
+RUFFNECK SOCIAL HUB v5.4.0 — APPLY GUIDE
+
+1. Extract this ZIP into the existing RuffNeck Social Hub repository root and merge folders.
+2. Replace only these seven existing files:
+   - src/app/actions/content-provider-variants.ts
+   - src/app/content/ai-provider-variant-generator.tsx
+   - src/app/content/ai-provider-variant-generator.css
+   - src/lib/ai/provider-variant-contract.ts
+   - src/lib/ai/provider-variants.ts
+   - scripts/audit-ai-provider-variants.mjs
+   - scripts/test-ai-provider-variants.mjs
+3. Add:
+   - supabase/migrations/0041_ai_provider_tiktok_youtube_variants.sql
+4. Keep package.json unchanged. Its existing build/test scripts already call the provider-variant audit and regression test.
+5. In Supabase SQL Editor, apply migration 0041 only after migration 0040 has already completed.
+6. Commit the merged files to GitHub main. Vercel should run the existing audit pipeline and then Next.js build.
+
+EXPECTED BEHAVIOUR
+- AI Studio offers Facebook, Instagram, LinkedIn, TikTok and YouTube.
+- One brief generates separate editable text drafts for selected platforms.
+- Saving creates drafts only. Nothing is auto-approved or auto-published.
+- TikTok and YouTube drafts require media to be attached before scheduling.
+
+DO NOT
+- Replace package.json with a snapshot from this ZIP (no package.json is included).
+- Replace or delete unrelated app files, migrations, assets or environment settings.
+- Apply migration 0041 before 0040.
+- Treat the text-only AI draft as a completed TikTok or YouTube post; media is still required.

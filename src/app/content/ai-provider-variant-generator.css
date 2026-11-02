@@ -31,7 +31,7 @@
 .ai-provider-variants-results-heading strong{font-size:14px;color:var(--ink)}
 .ai-provider-variants-results-heading span{color:var(--muted);font-size:12px}
 .ai-provider-variants-results-heading code{align-self:flex-start;max-width:40%;overflow-wrap:anywhere;color:var(--muted);font-size:10px}
-.ai-provider-variants-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ai-provider-variants-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
 .ai-provider-variant-card{min-width:0;padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--canvas)}
 .ai-provider-variant-card-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .ai-provider-variant-card-heading>span{color:var(--muted);font-size:10px}

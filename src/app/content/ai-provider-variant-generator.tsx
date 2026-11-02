@@ -8,7 +8,7 @@ import {
   type GenerateAiProviderVariantsState,
   type SaveAiProviderVariantsState,
 } from '@/app/actions/content-provider-variants';
-import { AI_PROVIDER_VARIANT_BODY_LIMITS, AI_PROVIDER_VARIANT_PLATFORMS, type AiProviderVariantPlatform } from '@/lib/ai/provider-variant-contract';
+import { AI_PROVIDER_VARIANT_BODY_LIMITS, AI_PROVIDER_VARIANT_PLATFORMS, AI_PROVIDER_VARIANT_TITLE_LIMITS, type AiProviderVariantPlatform } from '@/lib/ai/provider-variant-contract';
 import './ai-provider-variant-generator.css';
 
 type BrandOption = { id: string; name: string };
@@ -19,6 +19,8 @@ const platformLabels: Record<AiProviderVariantPlatform, string> = {
   facebook: 'Facebook',
   instagram: 'Instagram',
   linkedin: 'LinkedIn',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
 };
 
 export default function AiProviderVariantGenerator({
@@ -66,7 +68,7 @@ export default function AiProviderVariantGenerator({
         <div>
           <span className="eyebrow">PLATFORM ADAPTATION</span>
           <h2 id="ai-provider-variants-title">AI provider variant generator</h2>
-          <p>Turn one campaign brief into separate Facebook, Instagram and LinkedIn drafts. Edit each version before saving.</p>
+          <p>Turn one campaign brief into platform-specific Facebook, Instagram, LinkedIn, TikTok and YouTube drafts. Edit each version before saving.</p>
         </div>
         <span className="ai-provider-variants-safety">DRAFTS ONLY · HUMAN APPROVAL REQUIRED</span>
       </div>
@@ -122,7 +124,7 @@ export default function AiProviderVariantGenerator({
               <span>{platformLabels[platform]}</span>
             </label>
           ))}
-          <small>These are the current scheduled-queue destinations supported by this generator.</small>
+          <small>TikTok drafts are captions; YouTube drafts contain a video title and description. Saving creates copy-only drafts and does not upload media or publish. Attach media and approve before scheduling TikTok or YouTube.</small>
         </fieldset>
         <label className="ai-provider-variants-wide">Target audience (optional)
           <input name="audience" maxLength={240} placeholder="Who should this campaign speak to?" />
@@ -156,10 +158,10 @@ export default function AiProviderVariantGenerator({
                       <input type="checkbox" checked={selected.includes(variant.platform)} onChange={(event) => toggleSelected(variant.platform, event.target.checked)} />
                       <strong>{platformLabels[variant.platform]}</strong>
                     </label>
-                    <span>{variant.body.length}/{AI_PROVIDER_VARIANT_BODY_LIMITS[variant.platform]}</span>
+                    <span>{variant.platform === 'youtube' ? `${new TextEncoder().encode(variant.body).length}/5000 bytes` : `${variant.body.length}/${AI_PROVIDER_VARIANT_BODY_LIMITS[variant.platform]} characters`}</span>
                   </div>
                   <label>Draft title
-                    <input value={variant.title} maxLength={145} onChange={(event) => updateVariant(variant.platform, 'title', event.target.value)} />
+                    <input value={variant.title} maxLength={AI_PROVIDER_VARIANT_TITLE_LIMITS[variant.platform]} onChange={(event) => updateVariant(variant.platform, 'title', event.target.value)} />
                   </label>
                   <label>Platform copy
                     <textarea value={variant.body} maxLength={AI_PROVIDER_VARIANT_BODY_LIMITS[variant.platform]} rows={7} onChange={(event) => updateVariant(variant.platform, 'body', event.target.value)} />

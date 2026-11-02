@@ -6,6 +6,7 @@ import { canCreateContent, isUuid, validateContentInput } from '@/lib/content/va
 import { generateLocalAiProviderVariants } from '@/lib/ai/provider-variants';
 import {
   AI_PROVIDER_VARIANT_BODY_LIMITS,
+  AI_PROVIDER_VARIANT_TITLE_LIMITS,
   AI_PROVIDER_VARIANT_PLATFORMS,
   type AiProviderVariantDraft,
   type AiProviderVariantPlatform,
@@ -56,10 +57,11 @@ function validatedVariants(raw: string): AiProviderVariantDraft[] | null {
     const platform = typeof record.platform === 'string' ? record.platform : '';
     if (!(AI_PROVIDER_VARIANT_PLATFORMS as readonly string[]).includes(platform) || seen.has(platform)) return null;
     seen.add(platform);
-    const title = typeof record.title === 'string' ? boundedText(record.title, 145) : '';
+    const title = typeof record.title === 'string' ? boundedText(record.title, AI_PROVIDER_VARIANT_TITLE_LIMITS[platform as AiProviderVariantPlatform]) : '';
     const body = typeof record.body === 'string' ? boundedText(record.body, AI_PROVIDER_VARIANT_BODY_LIMITS[platform as AiProviderVariantPlatform]) : '';
     const valid = validateContentInput(title, body);
-    if (!valid.ok || valid.value.title.length > 145 || valid.value.body.length > AI_PROVIDER_VARIANT_BODY_LIMITS[platform as AiProviderVariantPlatform]) return null;
+    if (!valid.ok || valid.value.title.length > AI_PROVIDER_VARIANT_TITLE_LIMITS[platform as AiProviderVariantPlatform] || valid.value.body.length > AI_PROVIDER_VARIANT_BODY_LIMITS[platform as AiProviderVariantPlatform]) return null;
+    if (platform === 'youtube' && (new TextEncoder().encode(valid.value.body).length > 5000 || /[<>]/.test(`${valid.value.title}${valid.value.body}`))) return null;
     variants.push({ platform: platform as AiProviderVariantPlatform, title: valid.value.title, body: valid.value.body });
   }
   return variants;
@@ -169,10 +171,10 @@ export async function saveAiProviderVariants(
 
   const targetVariants = variants.map((variant) => ({
     platform: variant.platform,
-    title: `[${variant.platform.toUpperCase()}] ${variant.title}`,
+    title: variant.platform === 'youtube' ? variant.title : `[${variant.platform.toUpperCase()}] ${variant.title}`,
     body: variant.body,
   }));
-  if (targetVariants.some((variant) => variant.title.length > 160)) {
+  if (targetVariants.some((variant) => variant.title.length > (variant.platform === 'youtube' ? 100 : 160))) {
     return { status: 'error', message: 'One or more titles are too long after adding the platform label. Shorten the title and save again.' };
   }
 
@@ -184,7 +186,10 @@ export async function saveAiProviderVariants(
   if (error) {
     console.error('[content.ai-provider-variants.save] Draft batch rejected:', { code: error.code });
     if (error.code === 'PGRST202' || error.code === '42883') {
-      return { status: 'error', message: 'The platform-variant database upgrade has not been applied. Apply migration 0040 and retry.' };
+      return { status: 'error', message: 'The platform-variant database upgrade has not been applied. Apply migrations 0040 and 0041 in order, then retry.' };
+    }
+    if (error.message?.includes('Unsupported target platform') || error.message?.includes('content_items_target_platform_check')) {
+      return { status: 'error', message: 'Migration 0041 is required for TikTok and YouTube drafts. Apply it after migration 0040, then retry.' };
     }
     return { status: 'error', message: 'The selected variants could not be saved. Confirm your workspace role and brand, then retry.' };
   }
