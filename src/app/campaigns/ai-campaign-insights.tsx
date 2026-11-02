@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { generateCampaignAiInsights } from '@/app/actions/campaign-ai-insights';
 import { buildCampaignReportCsv, campaignReportFilename } from '@/lib/reporting/campaign-report-export';
-import { buildCampaignHealthReport, type CampaignHealthReport } from '@/lib/ai/campaign-health.mjs';
+import { buildCampaignHealthReport } from '@/lib/ai/campaign-health.mjs';
 import type {
   CampaignAiInsights,
   CampaignMetricTotals,
   CampaignPerformanceSummary,
 } from '@/lib/ai/campaign-insights';
 import './ai-campaign-insights.css';
+
+type CampaignHealthReport = ReturnType<typeof buildCampaignHealthReport>;
 
 type CampaignOption = { id: string; name: string; objective: string; status: string };
 type AnalysisResult = {
