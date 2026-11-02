@@ -1,0 +1,22 @@
+RUFFNECK SOCIAL HUB v5.6.0 — EXECUTIVE CAMPAIGN REPORTING PACK
+
+1. Open the ZIP and preserve the folder paths.
+2. Replace every file listed under “Replace existing files” in README-v5.6.0.md with its matching ZIP file.
+3. Add every file listed under “Add new files” to the matching folder in the GitHub main branch.
+4. Commit the complete overlay to main and allow Vercel to build the commit.
+
+The ZIP contains complete replacement files, not snippets. Do not delete any other project files.
+
+WHAT USERS GET
+- Download CSV report from the AI Campaign Performance Coach.
+- Print / Save as PDF from the browser print dialog.
+- CSV includes campaign facts, manual metrics, official metrics, per-platform metrics, observations, experiments, cautions and review timing.
+
+DATABASE / ENVIRONMENT
+- No SQL migration.
+- No new environment variables.
+- No new dependencies.
+- No social OAuth scopes or provider permissions.
+
+RELEASE SAFETY
+The eight known version-gated audits are updated to accept package version 5.6.0. Existing checks are preserved. After Vercel runs, verify that the full build completes before treating the release as production-ready.

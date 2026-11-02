@@ -1,15 +1,21 @@
-RuffNeck Social Hub v5.5.0 — Overlay manifest
+RuffNeck Social Hub v5.6.0 — Overlay manifest
 
-Replace:
+Replace existing:
 - package.json
-- src/app/campaigns/page.tsx
-
-Add:
-- src/app/actions/campaign-ai-insights.ts
 - src/app/campaigns/ai-campaign-insights.tsx
 - src/app/campaigns/ai-campaign-insights.css
-- src/lib/ai/campaign-insights.ts
-- scripts/audit-ai-campaign-insights.mjs
-- scripts/test-ai-campaign-insights.mjs
+- scripts/audit-campaign-intelligence.mjs
+- scripts/audit-provider-analytics.mjs
+- scripts/audit-linkedin-analytics.mjs
+- scripts/audit-tiktok-integration.mjs
+- scripts/audit-youtube-integration.mjs
+- scripts/audit-instagram-comments.mjs
+- scripts/audit-whatsapp-integration.mjs
+- scripts/audit-whatsapp-media-replies.mjs
 
-No migrations. No dependency additions. No environment additions.
+Add new:
+- src/lib/reporting/campaign-report-export.ts
+- scripts/audit-campaign-report-export.mjs
+- scripts/test-campaign-report-export.mjs
+
+No SQL migrations, no new dependencies and no new environment variables.

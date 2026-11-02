@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { generateCampaignAiInsights } from '@/app/actions/campaign-ai-insights';
+import { buildCampaignReportCsv, campaignReportFilename } from '@/lib/reporting/campaign-report-export';
 import type {
   CampaignAiInsights,
   CampaignMetricTotals,
@@ -61,6 +62,23 @@ export default function AiCampaignInsights({
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
 
+  function downloadReportCsv(report: AnalysisResult) {
+    const csv = buildCampaignReportCsv(report);
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = campaignReportFilename(report.campaign.name, report.generatedAt);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function printReport() {
+    window.print();
+  }
+
   async function runAnalysis() {
     if (!campaignId || isPending) return;
     setError('');
@@ -84,7 +102,7 @@ export default function AiCampaignInsights({
     <section className="aic-card" aria-labelledby="aic-title">
       <div className="aic-heading">
         <div>
-          <span className="aic-eyebrow">AI PERFORMANCE COACH · V5.5.0</span>
+          <span className="aic-eyebrow">AI PERFORMANCE COACH · V5.6.0</span>
           <h2 id="aic-title">Turn campaign results into next actions</h2>
           <p>Use stored campaign evidence to identify patterns and design measurable, human-reviewed experiments.</p>
         </div>
@@ -127,9 +145,18 @@ export default function AiCampaignInsights({
 
       {result && (
         <div className="aic-results" aria-live="polite">
+          <div className="aic-report-banner">
+            <span>RUFFNECK SOCIAL HUB · CAMPAIGN INTELLIGENCE</span>
+            <h3>Campaign performance report</h3>
+            <p>{result.campaign.name} · {result.campaign.objective.replaceAll('_', ' ')} · {result.campaign.status}</p>
+          </div>
           <div className="aic-result-meta">
             <strong>{result.campaign.name}</strong>
             <span>Generated {new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(result.generatedAt))}</span>
+          </div>
+          <div className="aic-report-actions" role="group" aria-label="Campaign report exports">
+            <button type="button" onClick={() => downloadReportCsv(result)}>Download CSV report</button>
+            <button type="button" className="aic-print-button" onClick={printReport}>Print / Save as PDF</button>
           </div>
 
           <div className="aic-source-grid">

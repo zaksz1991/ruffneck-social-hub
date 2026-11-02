@@ -54,3 +54,29 @@
 @media(max-width:520px){.aic-card{padding:15px}.aic-heading{align-items:flex-start;flex-direction:column}.aic-heading h2{font-size:17px}.aic-badge{align-self:flex-start}.aic-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aic-rate-row,.aic-footer{align-items:flex-start;flex-direction:column}.aic-result-meta{align-items:flex-start;flex-direction:column}}
 
 .aic-platform-breakdown{margin-top:12px}.aic-platform-breakdown h3{margin:0 0 7px;color:#536a7f;font-size:9px}.aic-platform-breakdown>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.aic-platform-breakdown article{display:grid;gap:4px;padding:8px 10px;border:1px solid #e7edf1;border-radius:6px;background:#fff}.aic-platform-breakdown strong{color:#415970;font-size:8px;text-transform:capitalize}.aic-platform-breakdown span{color:#91a0ae;font-size:7px;line-height:1.5}@media(max-width:520px){.aic-platform-breakdown>div{grid-template-columns:1fr}}
+
+
+/* v5.6.0 executive reporting controls */
+.aic-report-banner{margin:0 0 12px;padding:13px 15px;border:1px solid #dce9ed;border-radius:8px;background:#f5fafb}
+.aic-report-banner>span{color:#087f91;font-size:7px;font-weight:950;letter-spacing:1px}
+.aic-report-banner h3{margin:5px 0 3px;color:#2d455c;font-family:Manrope,Arial,sans-serif;font-size:16px}
+.aic-report-banner p{margin:0;color:#8292a1;font-size:8px;text-transform:capitalize}
+.aic-report-actions{display:flex;justify-content:flex-end;gap:8px;margin:0 0 12px}
+.aic-report-actions button{min-height:32px;padding:0 11px;border:1px solid #cfe0e5;border-radius:6px;background:#fff;color:#087f91;font-size:8px;font-weight:900;cursor:pointer}
+.aic-report-actions button:hover{background:#eff8f9}
+.aic-report-actions .aic-print-button{border-color:#087f91;background:#087f91;color:#fff}
+.aic-report-actions .aic-print-button:hover{background:#076d7b}
+@media(max-width:520px){.aic-report-actions{display:grid;grid-template-columns:1fr}.aic-report-actions button{width:100%;min-height:38px}}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  html,body{background:#fff!important}
+  body *{visibility:hidden!important}
+  .aic-results,.aic-results *{visibility:visible!important}
+  .aic-results{position:fixed!important;left:0!important;top:0!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;background:#fff!important}
+  .aic-report-actions{display:none!important}
+  .aic-report-banner{padding:0 0 8px;border:0;border-bottom:1px solid #dce5ea;border-radius:0;background:#fff!important}
+  .aic-card,.aic-metric-panel,.aic-observations article,.aic-opportunities article{box-shadow:none!important;break-inside:avoid-page}
+  .aic-summary,.aic-cautions,.aic-action{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .aic-result-section,.aic-platform-breakdown{break-inside:avoid-page}
+  .aic-data-footnote,.aic-disclaimer{color:#657382!important}
+}
