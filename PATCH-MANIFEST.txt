@@ -1,28 +1,29 @@
-RuffNeck Social Hub v5.7.0 — Overlay manifest
+RUFFNECK SOCIAL HUB v5.8.0 — OVERLAY MANIFEST
 
-Replace existing:
+BASELINE
+- Existing RuffNeck Social Hub v5.7.0 project.
+- Recent baseline deployment commit referenced by the user: 7886c3f.
+
+REPLACE
 - package.json
 - src/app/campaigns/ai-campaign-insights.tsx
-- src/app/campaigns/ai-campaign-insights.css
-- src/lib/reporting/campaign-report-export.ts
-- scripts/audit-ai-campaign-insights.mjs
-- scripts/audit-campaign-report-export.mjs
-- scripts/audit-campaign-intelligence.mjs
-- scripts/audit-provider-analytics.mjs
-- scripts/audit-linkedin-analytics.mjs
-- scripts/audit-tiktok-integration.mjs
-- scripts/audit-youtube-integration.mjs
-- scripts/audit-instagram-comments.mjs
-- scripts/audit-whatsapp-integration.mjs
-- scripts/audit-whatsapp-media-replies.mjs
-- scripts/test-campaign-report-export.mjs
 
-Add new:
-- scripts/lib/release-compat.mjs
-- scripts/test-release-compat.mjs
-- src/lib/ai/campaign-health.mjs
-- src/lib/ai/campaign-health.d.mts
-- scripts/audit-campaign-health.mjs
-- scripts/test-campaign-health.mjs
+ADD
+- src/app/actions/campaign-experiments.ts
+- src/app/campaigns/campaign-experiment-tracker.tsx
+- src/app/campaigns/campaign-experiment-tracker.css
+- src/lib/campaigns/campaign-experiments.mjs
+- supabase/migrations/0042_campaign_experiment_tracker.sql
+- scripts/audit-campaign-experiments.mjs
+- scripts/test-campaign-experiments.mjs
 
-No SQL migrations, dependencies or environment variables added.
+DOCUMENTATION
+- README-v5.8.0.md
+- APPLY-v5.8.0.txt
+- PATCH-MANIFEST.txt
+
+NO CHANGES
+- No dependencies added.
+- No existing database tables are altered.
+- No OAuth scopes or provider permissions change.
+- No publishing, scheduling, messaging, reply sending or advertising workflow is introduced.

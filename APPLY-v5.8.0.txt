@@ -1,0 +1,46 @@
+RUFFNECK SOCIAL HUB v5.8.0 — INSTALLATION
+
+PACKAGE TYPE
+This is an overlay update for the RuffNeck Social Hub v5.7.0 codebase used by the recent 7886c3f deployment. It is not a standalone project archive. Keep the existing project; copy/replace only the files listed below, preserving their paths.
+
+1. APPLY THE DATABASE MIGRATION FIRST
+
+In the Supabase Dashboard:
+- Open the project's SQL Editor.
+- Create a new query.
+- Open supabase/migrations/0042_campaign_experiment_tracker.sql from this package and copy its complete contents into the query.
+- Run the query once.
+
+This migration is numbered after migration 0041. Confirm that 0041 is the latest migration already applied to this database before running it. Do not run it against a database whose migration history has already advanced beyond 0041 without first reconciling the migration sequence.
+
+2. COPY THE APPLICATION FILES
+
+Replace existing files:
+- package.json
+- src/app/campaigns/ai-campaign-insights.tsx
+
+Add new files:
+- src/app/actions/campaign-experiments.ts
+- src/app/campaigns/campaign-experiment-tracker.tsx
+- src/app/campaigns/campaign-experiment-tracker.css
+- src/lib/campaigns/campaign-experiments.mjs
+- supabase/migrations/0042_campaign_experiment_tracker.sql
+- scripts/audit-campaign-experiments.mjs
+- scripts/test-campaign-experiments.mjs
+
+Do not replace the rest of the repository. The package adds no dependency, so the existing lockfile and environment variables do not need changes.
+
+3. COMMIT THROUGH GITHUB
+
+Upload/replace the listed files in the existing ruffneck-social-hub repository on the main branch. Preserve each folder path. Commit the complete set together so package.json never points to missing scripts or source files.
+
+4. VERIFY IN VERCEL
+
+Allow Vercel to build the resulting main commit. The build pipeline now runs audit:campaign-experiments before Next.js compilation. After deployment, open Campaigns → Campaign Intelligence, select a campaign, and confirm that the Campaign experiment tracker loads. Test creating a manual draft, saving an AI opportunity as a draft (after generating analysis), updating progress, pausing/running, and completing with an actual value.
+
+5. DEPLOYMENT CAVEATS
+
+- This package's focused checks passed, but the full repository build and complete npm test suite were not run here.
+- The Supabase migration has not been executed against the live project here.
+- If the Vercel build fails, use the first failing audit/error in the log rather than changing unrelated files or downgrading the package version.
+- No terminal, Command Prompt or PowerShell steps are required for this installation.

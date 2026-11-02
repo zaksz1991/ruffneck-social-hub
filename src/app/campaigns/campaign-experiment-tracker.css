@@ -1,0 +1,55 @@
+.aic-experiment-tracker{margin-top:18px;padding:16px;border:1px solid #dbe8ed;border-radius:10px;background:#fff}
+.aic-experiment-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.aic-experiment-heading h3{margin:5px 0;color:#30475e;font-size:14px}
+.aic-experiment-heading p{max-width:700px;margin:0;color:#8594a2;font-size:9px;line-height:1.65}
+.aic-experiment-new,.aic-experiment-form-actions button,.aic-experiment-recommendations button{min-height:32px;padding:0 12px;border:1px solid #087f91;border-radius:6px;background:#087f91;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
+.aic-experiment-new:disabled,.aic-experiment-form-actions button:disabled,.aic-experiment-recommendations button:disabled{opacity:.5;cursor:not-allowed}
+.aic-experiment-notice,.aic-experiment-error{margin:10px 0;padding:8px 10px;border-radius:6px;font-size:8px;line-height:1.6}
+.aic-experiment-notice{border:1px solid #cce8dd;background:#f2faf6;color:#34745b}
+.aic-experiment-error{border:1px solid #f0ceca;background:#fff5f3;color:#a13d37}
+.aic-experiment-recommendations{margin-top:14px;padding:11px;border:1px solid #e1eaef;border-radius:8px;background:#f8fbfc}
+.aic-experiment-recommendations>strong,.aic-experiment-list-heading strong{color:#3a5067;font-size:9px}
+.aic-experiment-recommendations>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.aic-experiment-recommendations article{min-width:0;padding:10px;border:1px solid #e5edf1;border-radius:7px;background:#fff}
+.aic-experiment-recommendations article>div{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.aic-experiment-recommendations article b{color:#3a5067;font-size:8px;line-height:1.5}
+.aic-experiment-recommendations article span{color:#8998a7;font-size:7px;white-space:nowrap}
+.aic-experiment-recommendations article p{margin:7px 0;color:#7b8c9c;font-size:8px;line-height:1.6}
+.aic-experiment-recommendations button{min-height:28px;padding:0 9px;font-size:7px}
+.aic-experiment-form{display:grid;gap:9px;margin-top:12px;padding:12px;border:1px solid #dce8ed;border-radius:8px;background:#fbfdfe}
+.aic-experiment-form-heading{display:grid;gap:4px}
+.aic-experiment-form-heading strong{color:#344b62;font-size:9px}
+.aic-experiment-form-heading span{color:#8b99a7;font-size:7px}
+.aic-experiment-form label,.aic-experiment-progress label{display:grid;gap:4px;min-width:0;color:#6e8091;font-size:7px;font-weight:850}
+.aic-experiment-form input,.aic-experiment-form select,.aic-experiment-form textarea,.aic-experiment-progress input,.aic-experiment-progress select,.aic-experiment-progress textarea{width:100%;min-width:0;min-height:32px;padding:7px 8px;border:1px solid #dce6ed;border-radius:5px;background:#fff;color:#344a60;font:inherit;font-size:8px}
+.aic-experiment-form textarea,.aic-experiment-progress textarea{min-height:58px;resize:vertical;line-height:1.5}
+.aic-experiment-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.aic-experiment-form-actions{display:flex;justify-content:flex-end;gap:7px}
+.aic-experiment-form-actions .aic-experiment-secondary{border-color:#d7e2e8;background:#fff;color:#64788b}
+.aic-experiment-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;padding-bottom:7px;border-bottom:1px solid #edf1f4}
+.aic-experiment-list-heading span{color:#93a0ac;font-size:7px}
+.aic-experiment-empty,.aic-experiment-readonly,.aic-experiment-footnote{margin:9px 0 0;color:#8c9aa8;font-size:8px;line-height:1.6}
+.aic-experiment-list{display:grid;gap:9px;margin-top:9px}
+.aic-experiment-item{min-width:0;padding:11px;border:1px solid #e4ebf0;border-radius:8px;background:#fff}
+.aic-experiment-item-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.aic-experiment-item-heading>div{display:grid;gap:4px;min-width:0}
+.aic-experiment-item-heading strong{color:#354d64;font-size:9px;overflow-wrap:anywhere}
+.aic-experiment-item-heading>div span{color:#8a99a7;font-size:7px;text-transform:capitalize}
+.aic-experiment-status{padding:4px 7px;border-radius:12px;font-size:7px;font-weight:900;text-transform:uppercase;white-space:nowrap}
+.experiment-draft{background:#f0f4f7;color:#61778a}.experiment-running{background:#eaf7f3;color:#36816a}.experiment-paused{background:#fff6e8;color:#9b702d}.experiment-completed{background:#eaf3fb;color:#456f9c}.experiment-cancelled{background:#f8eeee;color:#a06b6b}
+.aic-experiment-hypothesis{margin:8px 0;color:#718496;font-size:8px;line-height:1.65}
+.aic-experiment-change{display:grid;gap:3px;margin-top:8px;padding:8px;border-radius:6px;background:#f4f8fa;color:#60758a;font-size:8px;line-height:1.6}
+.aic-experiment-change b{color:#087f91;font-size:7px;letter-spacing:.5px;text-transform:uppercase}
+.aic-experiment-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.aic-experiment-metrics span{display:grid;gap:3px;min-width:0;padding:7px;border:1px solid #edf1f4;border-radius:5px;color:#8a98a5;font-size:7px}
+.aic-experiment-metrics b{color:#435a70;font-size:8px;overflow-wrap:anywhere}
+.aic-experiment-result-notes{margin:8px 0 0;color:#6f8192;font-size:8px;line-height:1.6;white-space:pre-wrap}
+.aic-experiment-progress{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}
+.aic-experiment-progress .aic-experiment-notes-field{grid-column:1/-1}
+.aic-experiment-progress .aic-experiment-form-actions{grid-column:1/-1}
+.aic-experiment-progress .aic-experiment-form-actions button{min-width:110px}
+.aic-experiment-locked{margin:9px 0 0;color:#8c9aa8;font-size:7px}
+.aic-experiment-footnote{padding-top:8px;border-top:1px solid #edf1f4}
+@media(max-width:760px){.aic-experiment-heading{align-items:stretch;flex-direction:column}.aic-experiment-new{align-self:flex-start}.aic-experiment-recommendations>div{grid-template-columns:1fr}.aic-experiment-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aic-experiment-progress{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.aic-experiment-tracker{padding:12px}.aic-experiment-form-grid,.aic-experiment-progress{grid-template-columns:1fr}.aic-experiment-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.aic-experiment-item-heading{align-items:flex-start;flex-direction:column}.aic-experiment-status{align-self:flex-start}}
+@media print{.aic-experiment-tracker{display:none!important}}

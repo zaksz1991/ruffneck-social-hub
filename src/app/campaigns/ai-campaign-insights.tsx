@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { generateCampaignAiInsights } from '@/app/actions/campaign-ai-insights';
 import { buildCampaignReportCsv, campaignReportFilename } from '@/lib/reporting/campaign-report-export';
 import { buildCampaignHealthReport } from '@/lib/ai/campaign-health.mjs';
+import CampaignExperimentTracker from './campaign-experiment-tracker';
 import type {
   CampaignAiInsights,
+  CampaignAiOpportunity,
   CampaignMetricTotals,
   CampaignPerformanceSummary,
 } from '@/lib/ai/campaign-insights';
@@ -105,7 +107,7 @@ export default function AiCampaignInsights({
     <section className="aic-card" aria-labelledby="aic-title">
       <div className="aic-heading">
         <div>
-          <span className="aic-eyebrow">AI PERFORMANCE COACH · V5.7.0</span>
+          <span className="aic-eyebrow">AI PERFORMANCE COACH · V5.8.0</span>
           <h2 id="aic-title">Turn campaign results into next actions</h2>
           <p>Use stored campaign evidence to identify patterns and design measurable, human-reviewed experiments.</p>
         </div>
@@ -240,6 +242,12 @@ export default function AiCampaignInsights({
         </div>
       )}
 
+      <CampaignExperimentTracker
+        workspaceId={workspaceId}
+        campaignId={campaignId}
+        canManage={canGenerate}
+        opportunities={result && result.campaign.id === campaignId ? result.insights.opportunities : []}
+      />
       <p className="aic-disclaimer">AI output is advisory and may be wrong. Review the underlying metrics before acting. This feature does not publish content, schedule posts, send replies, launch ads, or change campaign settings.</p>
     </section>
   );
