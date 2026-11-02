@@ -1,0 +1,47 @@
+RUFFNECK SOCIAL HUB — V5.5.0 UPGRADE
+AI CAMPAIGN PERFORMANCE COACH
+
+OVERLAY CONTENT
+
+Replace these existing files with the matching files in this ZIP:
+1. package.json
+2. src/app/campaigns/page.tsx
+
+Add these new files at the exact paths shown:
+3. src/app/actions/campaign-ai-insights.ts
+4. src/app/campaigns/ai-campaign-insights.tsx
+5. src/app/campaigns/ai-campaign-insights.css
+6. src/lib/ai/campaign-insights.ts
+7. scripts/audit-ai-campaign-insights.mjs
+8. scripts/test-ai-campaign-insights.mjs
+
+Do not delete or replace any other project files. The replacement campaign page preserves the existing campaign setup, provider sync, portfolio, UTM links, content linking, metric snapshots and status controls, with the new coach panel added below provider sync.
+
+DATABASE
+
+No SQL migration is required. This upgrade reads the existing campaign_metric_snapshots and provider_analytics_snapshots tables. Do not run a new SQL script for this release.
+
+ENVIRONMENT
+
+No new environment variable is required. The feature reuses the server-side settings already listed in .env.example:
+- LOCAL_AI_BASE_URL
+- LOCAL_AI_MODEL
+- LOCAL_AI_API_KEY (optional)
+
+Set LOCAL_AI_BASE_URL and LOCAL_AI_MODEL in the deployment server environment to enable the feature. Keep LOCAL_AI_API_KEY server-only. Do not create NEXT_PUBLIC_ versions of these variables.
+
+For Vercel, the configured inference endpoint must be reachable from Vercel over HTTPS. A local computer's localhost address or private home/office LAN address is not reachable from Vercel's cloud runtime. The panel remains disabled until the server-side AI settings are present.
+
+PERMISSIONS AND BEHAVIOUR
+
+- AI analysis is available to workspace owner, admin, manager and analyst roles.
+- The server action checks the authenticated user and workspace membership again. Hiding the button is not the security boundary.
+- Manual and official provider metrics remain separate.
+- The feature is read-only and does not publish, schedule, upload, send, launch ads or modify campaigns.
+- No social platform permissions or provider integrations are changed.
+
+VALIDATION INCLUDED IN THIS OVERLAY
+
+The focused campaign-insights test and audit were run successfully against the files in this ZIP. The full repository test suite and complete Next.js/Vercel build were not run because this is an overlay, not a checkout of the full repository with its installed dependencies.
+
+After adding the files to the existing main branch, use the repository's normal deployment workflow and inspect the Vercel build output. A successful focused test in this ZIP does not by itself prove that the complete project build or production AI endpoint is working.

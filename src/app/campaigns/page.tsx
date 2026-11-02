@@ -9,6 +9,7 @@ import {
 } from '@/app/actions/campaigns';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { aggregateSnapshots, buildTrackedUrl } from '@/lib/campaigns/intelligence.mjs';
+import AiCampaignInsights from './ai-campaign-insights';
 import './campaigns.css';
 
 type Workspace = { id: string; name: string };
@@ -46,7 +47,6 @@ type MetricSnapshot = {
   updated_at: string;
 };
 type ProviderMetricSnapshot = MetricSnapshot & { provider: string; fetched_at: string };
-
 const OBJECTIVES: Record<string, string> = {
   awareness: 'Brand awareness', engagement: 'Engagement', traffic: 'Website traffic',
   lead_generation: 'Lead generation', sales: 'Sales', community: 'Community growth', announcement: 'Announcement',
@@ -58,7 +58,6 @@ const PROVIDER_LABELS: Record<string, string> = {
 const SOURCES = ['facebook', 'instagram', 'linkedin', 'tiktok', 'youtube', 'x', 'whatsapp'];
 const number = (value: number) => new Intl.NumberFormat('en').format(Number.isFinite(value) ? value : 0);
 const shortDate = (value: string) => new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date(`${value.slice(0, 10)}T00:00:00.000Z`));
-
 const notices: Record<string, string> = {
   input: 'Check the selected workspace, brand and campaign details.',
   name: 'Campaign names must contain 2–120 characters.',
@@ -91,7 +90,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-
   const { data: membershipRows } = await supabase.from('workspace_members').select('workspace_id,role').eq('user_id', user.id);
   const memberships = (membershipRows ?? []) as Array<{ workspace_id: string; role: string }>;
   const workspaceIds = memberships.map((item) => item.workspace_id);
@@ -105,7 +103,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   const canManage = ['owner', 'admin', 'manager'].includes(role);
   const canRecordMetrics = ['owner', 'admin', 'manager', 'publisher', 'analyst'].includes(role);
   const canSyncProviderMetrics = ['owner', 'admin', 'manager', 'analyst'].includes(role);
-
   let brands: Brand[] = [];
   let campaigns: Campaign[] = [];
   let contentItems: ContentItem[] = [];
@@ -115,7 +112,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
   let metricSnapshots: MetricSnapshot[] = [];
   let providerMetricSnapshots: ProviderMetricSnapshot[] = [];
   let loadError = false;
-
   if (workspace) {
     const [brandResult, campaignResult, contentResult, linkResult, jobResult, accountResult, metricsResult, providerMetricsResult] = await Promise.all([
       supabase.from('brands').select('id,name').eq('workspace_id', workspace.id).order('name'),
@@ -137,7 +133,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
     metricSnapshots = (metricsResult.data ?? []) as MetricSnapshot[];
     providerMetricSnapshots = (providerMetricsResult.data ?? []).map((row: Omit<ProviderMetricSnapshot, 'leads' | 'conversions'>) => ({ ...row, leads: 0, conversions: 0 })) as ProviderMetricSnapshot[];
   }
-
   const brandNames = new Map(brands.map((brand) => [brand.id, brand.name]));
   const contentById = new Map(contentItems.map((item) => [item.id, item]));
   const accountById = new Map(accounts.map((account) => [account.id, account]));
@@ -150,18 +145,15 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
         <nav aria-label="Workspace navigation"><Link href="/">Overview</Link><Link href="/content">Content Studio</Link><Link href="/publishing">Publishing Queue</Link><span>Campaigns</span><Link href="/analytics">Analytics</Link><Link href="/channels">Channels</Link></nav>
         <Link href="/" className="campaign-back">Back to dashboard</Link>
       </header>
-
       <section className="campaign-main">
         <div className="campaign-heading">
           <div><span className="eyebrow">PLAN · PUBLISH · MEASURE</span><h1>Campaign intelligence</h1><p>Organise content by campaign, create tagged landing-page links and record verified publishing performance.</p></div>
           <div className="campaign-workspace"><small>ACTIVE WORKSPACE</small><strong>{workspace?.name ?? 'No workspace available'}</strong><span>{role.toUpperCase()}</span></div>
         </div>
-
         {workspaces.length > 1 && <div className="campaign-workspaces"><span>Switch workspace</span>{workspaces.map((item) => <Link key={item.id} href={`/campaigns?workspace=${item.id}`} className={item.id === workspace?.id ? 'selected' : ''}>{item.name}</Link>)}</div>}
         {params.error && <p className="campaign-notice error">{notices[params.error] ?? 'The requested campaign operation failed.'}</p>}
         {params.saved && <p className="campaign-notice success">{successNotices[params.saved] ?? 'Campaign information updated.'}</p>}
         {params.synced !== undefined && <p className="campaign-notice success">Official provider sync finished: {number(Number(params.synced) || 0)} destinations updated, {number(Number(params.failed) || 0)} failed and {number(Number(params.skipped) || 0)} skipped. Data was fetched from provider APIs and is separate from manual snapshots.</p>}
-
         {!workspace ? <section className="campaign-empty"><h2>No workspace available</h2><p>Create or join a workspace before planning campaigns.</p><Link href="/">Return to workspace setup</Link></section> : <>
           <div className="campaign-summary">
             <article><span>Campaigns</span><strong>{campaigns.length}</strong><small>Workspace total, capped at 100 displayed</small></article>
@@ -169,7 +161,6 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
             <article><span>Linked content</span><strong>{campaignLinks.length}</strong><small>Content-to-campaign links</small></article>
             <article><span>Published destinations</span><strong>{publishedJobs.filter((job) => campaignLinks.some((link) => link.content_id === job.content_id)).length}</strong><small>Provider-confirmed queue results</small></article>
           </div>
-
           <section className="campaign-create-card provider-sync-card">
             <div className="campaign-section-title"><div><span className="eyebrow">OFFICIAL PLATFORM DATA</span><h2>Sync provider insights</h2><p>Fetch official post-level metrics from connected Facebook Pages, Instagram professional accounts and LinkedIn organization Pages. Only successful published posts already linked to a campaign are included.</p></div><span className="campaign-pill">HUMAN TRIGGERED</span></div>
             <div className="provider-sync-status">
@@ -178,10 +169,16 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               <span>{accounts.filter((account) => account.provider === 'linkedin' && account.capabilities?.insights === true && account.granted_scopes?.includes('rw_organization_admin') && account.capabilities?.organization_role === 'ADMINISTRATOR').length} LinkedIn accounts ready</span>
               <span>{accounts.filter((account) => ['facebook','instagram','linkedin'].includes(account.provider) && account.connection_state !== 'connected').length} disconnected accounts</span>
             </div>
-            {canSyncProviderMetrics ? <form action={syncProviderCampaignAnalytics} className="provider-sync-form"><input type="hidden" name="workspace_id" value={workspace.id}/><small>Each run processes up to five recent published destinations. Repeating a sync on the same day updates that destination's snapshot. Existing manual entries remain separate.</small><button type="submit">Sync official insights</button></form> : <p className="campaign-muted">Your {role} role can view campaign reports but cannot initiate provider API synchronisation.</p>}
+            {canSyncProviderMetrics ? <form action={syncProviderCampaignAnalytics} className="provider-sync-form"><input type="hidden" name="workspace_id" value={workspace.id}/><small>Each run processes up to five recent published destinations. Repeating a sync on the same day updates that destination's snapshot.
+            Existing manual entries remain separate.</small><button type="submit">Sync official insights</button></form> : <p className="campaign-muted">Your {role} role can view campaign reports but cannot initiate provider API synchronisation.</p>}
             <p className="provider-sync-footnote">Each provider requires its own approved insights permission. Facebook additionally requires the Page ANALYZE or MANAGE task. LinkedIn organization post statistics require Community Management API access, rw_organization_admin and an approved administrator role; existing LinkedIn connections must reconnect through Channels to grant this scope. LinkedIn reports organic post statistics only; saves are not supplied by this endpoint.</p>
           </section>
-
+          <AiCampaignInsights
+            workspaceId={workspace.id}
+            campaigns={campaigns.map(({ id, name, objective, status }) => ({ id, name, objective, status }))}
+            canGenerate={canSyncProviderMetrics}
+            configured={Boolean(process.env.LOCAL_AI_BASE_URL?.trim() && process.env.LOCAL_AI_MODEL?.trim())}
+          />
           {canOperate && brands.length > 0 && <section className="campaign-create-card">
             <div className="campaign-section-title"><div><span className="eyebrow">CAMPAIGN SETUP</span><h2>Create a campaign</h2><p>Set an objective, date range and optional HTTPS landing page.</p></div><span className="campaign-pill">HUMAN CONTROLLED</span></div>
             <form action={createPublishingCampaign} className="campaign-create-form">
@@ -195,11 +192,9 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
               <div className="campaign-form-footer"><small>Creates a planned campaign. It does not publish content or launch advertisements.</small><button type="submit">Create campaign</button></div>
             </form>
           </section>}
-
           {loadError && <div className="campaign-notice warning"><strong>Some campaign data could not be loaded.</strong> Confirm migrations 0027, 0028 and 0029 are applied and your workspace role has read access. Existing rows are not replaced with sample values.</div>}
           {!canOperate && <p className="campaign-readonly-note">Your {role} role has read-only campaign access. Campaign creation and content linking are restricted to authorised publishing roles.</p>}
           {brands.length === 0 && <div className="campaign-empty"><h2>Add a brand first</h2><p>Campaigns are attached to one brand within the active workspace.</p><Link href="/brands">Open brands &amp; clients</Link></div>}
-
           <section className="campaign-list-section">
             <div className="campaign-section-title"><div><span className="eyebrow">WORKSPACE CAMPAIGNS</span><h2>Campaign portfolio</h2><p>Manual and official provider metrics are reported separately. Each total uses the latest snapshot per published destination.</p></div><span className="campaign-count">{campaigns.length} CAMPAIGNS</span></div>
             {campaigns.length === 0 ? <div className="campaign-empty"><h3>No campaigns created</h3><p>Create a campaign to group approved content and measure published destinations.</p></div> : <div className="campaign-list">
@@ -234,16 +229,15 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       <div><span>Likes / reactions</span><strong>{number(providerTotals.likes)}</strong></div>
                       <div><span>Post clicks</span><strong>{number(providerTotals.clicks)}</strong></div>
                     </div>
-                    <p className="campaign-muted">{latestProviderFetch ? `Latest successful provider fetch: ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(latestProviderFetch))}.` : 'No official API insights have been synced for this campaign yet.'} Meta views and LinkedIn impressions use provider-specific definitions. LinkedIn metrics are organic organization-post share statistics only; its unique impressions are summed per post, not deduplicated people, and the endpoint does not provide saves or paid/ad results.</p>
+                    <p className="campaign-muted">{latestProviderFetch ? `Latest successful provider fetch: ${new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(latestProviderFetch))}.` : 'No official API insights have been synced for this campaign yet.'} Meta views and LinkedIn impressions use provider-specific definitions.
+                    LinkedIn metrics are organic organization-post share statistics only; its unique impressions are summed per post, not deduplicated people, and the endpoint does not provide saves or paid/ad results.</p>
                   </div>
-
                   <div className="campaign-content-block"><div className="campaign-subheading"><strong>Campaign content</strong><span>{linkedContent.length} linked items</span></div>
                     {linkedContent.length ? <div className="campaign-content-list">{linkedContent.map((item) => <div key={item.id}><span>{item.title || 'Untitled content'}</span><small>{item.status.replaceAll('_', ' ')}</small></div>)}</div> : <p className="campaign-muted">No content linked yet.</p>}
                     {canOperate && campaign.status !== 'completed' && <form action={linkContentToCampaign} className="campaign-link-form"><input type="hidden" name="workspace_id" value={workspace.id}/><input type="hidden" name="campaign_id" value={campaign.id}/><select name="content_id" required defaultValue=""><option value="" disabled>Select same-brand content to link</option>{linkedOptions.map((item) => <option value={item.id} key={item.id}>{item.title || 'Untitled content'} · {item.status.replaceAll('_', ' ')}</option>)}</select><button type="submit" disabled={linkedOptions.length === 0}>Link content</button></form>}
                   </div>
-
-                  {campaign.landing_page_url && <div className="campaign-utm-block"><div className="campaign-subheading"><strong>Tracked landing-page links</strong><span>UTM tags · organic social</span></div><p>Use the matching link in each platform post. Website analytics must be configured separately to measure visits and conversions.</p><div className="campaign-utm-list">{trackedSources.map((item) => <a key={item.source} href={item.href} target="_blank" rel="noopener noreferrer"><span>{PROVIDER_LABELS[item.source] ?? item.source}</span><small>Open tagged link ↗</small></a>)}</div></div>}
-
+                  {campaign.landing_page_url && <div className="campaign-utm-block"><div className="campaign-subheading"><strong>Tracked landing-page links</strong><span>UTM tags · organic social</span></div><p>Use the matching link in each platform post.
+                  Website analytics must be configured separately to measure visits and conversions.</p><div className="campaign-utm-list">{trackedSources.map((item) => <a key={item.source} href={item.href} target="_blank" rel="noopener noreferrer"><span>{PROVIDER_LABELS[item.source] ?? item.source}</span><small>Open tagged link ↗</small></a>)}</div></div>}
                   <div className="campaign-snapshot-block"><div className="campaign-subheading"><strong>Performance snapshots</strong><span>{totals.destinationsTracked} destinations tracked</span></div>
                     {snapshots.length ? <p className="campaign-muted">Latest snapshot per destination is used. {snapshots.length} stored snapshot records are available; totals above exclude superseded snapshots.</p> : <p className="campaign-muted">No performance metrics recorded. Add metrics from the platform's native insights after a post is published.</p>}
                     {canRecordMetrics && eligibleJobs.length > 0 && <details className="campaign-snapshot-details"><summary>Record or update a snapshot</summary><form action={recordCampaignMetricSnapshot} className="campaign-snapshot-form">
@@ -254,14 +248,14 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                       <div className="campaign-form-footer"><small>Entering a date already recorded replaces that destination's snapshot for the same day. Source is labelled manual.</small><button type="submit">Save snapshot</button></div>
                     </form></details>}
                   </div>
-
                   {canManage && <form action={updatePublishingCampaignStatus} className="campaign-status-form"><input type="hidden" name="workspace_id" value={workspace.id}/><input type="hidden" name="campaign_id" value={campaign.id}/><label>Campaign status<select name="status" defaultValue={campaign.status}>{Object.entries(STATUS_LABELS).map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label><button type="submit">Update status</button></form>}
                 </article>;
               })}
             </div>}
           </section>
         </>}
-        <p className="campaign-footnote">Manual snapshots are entered by workspace members. Official provider snapshots are fetched from connected Facebook, Instagram or LinkedIn APIs and stored separately. LinkedIn reports organic organization-post statistics only; it does not supply saves, paid/ad metrics, website leads or conversions in this integration. Metric definitions vary by provider. UTM links label traffic sources but do not themselves collect analytics. Each campaign displays the latest snapshot per published destination; current page limits are 100 campaigns, 250 content items, 1,000 published jobs, 5,000 manual snapshots and 2,500 provider snapshots per workspace.</p>
+        <p className="campaign-footnote">Manual snapshots are entered by workspace members. Official provider snapshots are fetched from connected Facebook, Instagram or LinkedIn APIs and stored separately. LinkedIn reports organic organization-post statistics only; it does not supply saves, paid/ad metrics, website leads or conversions in this integration. Metric definitions vary by provider. UTM links label traffic sources but do not themselves collect analytics.
+        Each campaign displays the latest snapshot per published destination; current page limits are 100 campaigns, 250 content items, 1,000 published jobs, 5,000 manual snapshots and 2,500 provider snapshots per workspace.</p>
       </section>
     </main>
   );
