@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { inferFlutterwaveEnvironment } from '@/lib/billing/flutterwave-environment.mjs';
 import { isNumericFlutterwaveId, isRuffNeckBillingReference, isSafeFlutterwaveCheckoutUrl } from '@/lib/billing/billing-rules.mjs';
 
 type CheckoutDetails = {
@@ -11,6 +12,7 @@ type CheckoutDetails = {
   currency: string;
   plan_name: string;
   provider_plan_id: string;
+  provider_mode: 'test' | 'live';
 };
 
 function billingRedirect(workspaceId: string, result: string): never {
@@ -39,8 +41,10 @@ export async function startWorkspaceSubscriptionCheckout(formData: FormData): Pr
 
   const secretKey = process.env.FLW_SECRET_KEY;
   const secretHash = process.env.FLW_SECRET_HASH;
+  const providerMode = inferFlutterwaveEnvironment(secretKey);
   const appUrlRaw = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-  if (!secretKey || !secretHash || !appUrlRaw) billingRedirect(workspaceId, 'provider_setup');
+  if (!secretKey || !secretHash || !providerMode || !appUrlRaw) billingRedirect(workspaceId, 'provider_setup');
+
   let appUrl: URL;
   try {
     appUrl = new URL(appUrlRaw);
@@ -53,18 +57,23 @@ export async function startWorkspaceSubscriptionCheckout(formData: FormData): Pr
     target_workspace_id: workspaceId,
     target_plan_code: planCode,
     target_customer_email: user.email,
+    target_provider_mode: providerMode,
   });
   if (error || !data || typeof data !== 'object') {
     const errorMessage = String(error?.message ?? '').toLowerCase();
-    const code = error?.code === '42501' ? 'permission' : errorMessage.includes('already pending') ? 'pending_checkout' : error?.code === '55000' ? 'not_configured' : 'checkout_start';
+    const code = error?.code === '42501' ? 'permission'
+      : errorMessage.includes('already pending') ? 'pending_checkout'
+      : error?.code === '55000' ? 'not_configured'
+      : 'checkout_start';
     billingRedirect(workspaceId, code);
   }
 
   const details = data as CheckoutDetails;
   const amount = Number(details.amount);
   const planId = Number(details.provider_plan_id);
-  if (!isRuffNeckBillingReference(details.reference) || !Number.isFinite(amount) || amount <= 0 ||
-      !/^[A-Z]{3}$/.test(details.currency) || !Number.isSafeInteger(planId) || planId <= 0 || !isNumericFlutterwaveId(details.provider_plan_id)) {
+  if (details.provider_mode !== providerMode || !isRuffNeckBillingReference(details.reference) ||
+      !Number.isSafeInteger(amount) || amount <= 0 || amount > 2_147_483_647 || !/^[A-Z]{3}$/.test(details.currency) ||
+      !Number.isSafeInteger(planId) || planId <= 0 || !isNumericFlutterwaveId(details.provider_plan_id)) {
     billingRedirect(workspaceId, 'checkout_start');
   }
 
@@ -79,7 +88,7 @@ export async function startWorkspaceSubscriptionCheckout(formData: FormData): Pr
       cache: 'no-store',
       body: JSON.stringify({
         tx_ref: details.reference,
-        amount: amount.toFixed(2),
+        amount,
         currency: details.currency,
         payment_plan: planId,
         redirect_url: `${appUrl.origin}/api/billing/flutterwave/callback`,
@@ -89,6 +98,7 @@ export async function startWorkspaceSubscriptionCheckout(formData: FormData): Pr
           description: `${details.plan_name} workspace subscription`,
         },
       }),
+      signal: AbortSignal.timeout(20_000),
     });
     const payload: unknown = await response.json();
     if (response.ok && payload && typeof payload === 'object') {

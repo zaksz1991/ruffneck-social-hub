@@ -1,0 +1,129 @@
+RUFFNECK SOCIAL HUB v6.1.1 — INSTALLATION GUIDE
+Flutterwave setup centre and Test/Live payment-plan separation
+
+IMPORTANT BASELINE
+This is an overlay prepared against the public GitHub main branch version 6.1.0 (the latest checked repository baseline). Do not apply it over a newer project version without reconciling package.json and the existing billing files first. It is not a full project ZIP.
+
+A. ADD THESE NEW FILES
+
+src/app/actions/flutterwave-setup.ts
+src/app/platform/billing-setup/page.tsx
+src/lib/billing/flutterwave-environment.mjs
+src/lib/billing/flutterwave-environment.d.mts
+src/lib/billing/platform-admin.mjs
+src/lib/billing/platform-admin.d.mts
+scripts/audit-flutterwave-setup.mjs
+scripts/test-flutterwave-setup.mjs
+supabase/migrations/0046_flutterwave_environment_plan_ids.sql
+
+B. REPLACE THESE EXISTING FILES COMPLETELY
+
+package.json
+src/app/actions/billing.ts
+src/app/billing/page.tsx
+
+Do not replace these existing files; the patch is designed to retain them:
+
+src/app/api/webhooks/flutterwave/route.ts
+src/app/api/billing/flutterwave/callback/route.ts
+src/lib/billing/flutterwave.ts
+src/lib/supabase/admin.ts
+src/lib/supabase/server.ts
+scripts/audit-billing-subscriptions.mjs
+
+C. SUPABASE
+
+1. Open Supabase Dashboard → SQL Editor.
+2. Confirm billing foundation migration 0043 is already applied.
+3. If migration 0044 or 0045 exists in your project, preserve its normal migration history and confirm it is applied as appropriate for the current repository.
+4. Open the included file supabase/migrations/0046_flutterwave_environment_plan_ids.sql, copy its complete SQL into a new SQL Editor query, and run it.
+5. Confirm the query completed successfully. Do not manually create the columns or functions if the migration succeeded.
+
+D. VERCEL ENVIRONMENT VARIABLES
+
+Open Vercel Dashboard → RuffNeck Social Hub project → Settings → Environment Variables.
+
+Set these variables on Preview and Production separately:
+
+FLW_SECRET_KEY
+FLW_SECRET_HASH
+NEXT_PUBLIC_APP_URL
+BILLING_PLATFORM_ADMIN_EMAILS
+
+Keep the existing server-side Supabase variable:
+SUPABASE_SERVICE_ROLE_KEY
+(or the already-used fallback SUPABASE_SERVICE_KEY)
+
+Preview values:
+- FLW_SECRET_KEY = Flutterwave TEST secret key.
+- FLW_SECRET_HASH = the TEST webhook secret hash.
+- NEXT_PUBLIC_APP_URL = the HTTPS Preview deployment URL you use for testing.
+
+Production values:
+- FLW_SECRET_KEY = Flutterwave LIVE secret key.
+- FLW_SECRET_HASH = the LIVE webhook secret hash.
+- NEXT_PUBLIC_APP_URL = https://ruffneck-social-hub.vercel.app (or the production domain configured for this project).
+
+BILLING_PLATFORM_ADMIN_EMAILS must contain the exact email address used to sign into RuffNeck. Multiple addresses can be comma-separated.
+
+Never put secret keys or webhook hashes in GitHub, source code, a NEXT_PUBLIC_ variable, screenshots, or chat.
+
+E. REDEPLOY AND OPEN THE SETUP CENTRE
+
+1. After adding the files and saving the environment variables, commit the changes to GitHub main through GitHub's website.
+2. Wait for Vercel to deploy the commit. This package's full production build has not been run in this working environment; inspect the Vercel result before treating it as deployed.
+3. Sign into RuffNeck using an email address listed in BILLING_PLATFORM_ADMIN_EMAILS.
+4. Open:
+   https://ruffneck-social-hub.vercel.app/platform/billing-setup
+   For Preview testing, use the Preview deployment's own URL followed by /platform/billing-setup.
+5. Check the displayed mode. A Preview/Test deployment should show TEST. Production with the Live key should show LIVE.
+6. The status panel should show the key prefix recognised, webhook hash present, HTTPS app URL, service-role key detected, and billing plans loaded.
+7. Press “Test Flutterwave & Supabase connection”. A success message means the API key can read the Flutterwave payment-plan endpoint and the service-role client can read the new database columns. This is a read-only test.
+
+F. CREATE OR VERIFY PAYMENT PLANS
+
+1. Review the Starter, Professional and Agency price, currency and interval in the setup table.
+2. Do not continue until you approve those exact database prices.
+3. Tick the price-confirmation checkbox and press “Create or verify TEST payment plans” while using the Test key.
+4. The setup process creates missing Flutterwave plans or reuses an exact matching existing plan. It verifies the amount, currency, interval, active status and returned plan ID before saving the ID in Supabase.
+5. Repeat in Production with the Live key to create or verify Live payment plans.
+6. No customer is charged by this operation.
+
+G. CONFIGURE FLUTTERWAVE WEBHOOKS
+
+Open the Flutterwave dashboard for the same environment as the current deployment:
+
+Settings → Webhooks
+
+Webhook URL:
+https://ruffneck-social-hub.vercel.app/api/webhooks/flutterwave
+
+For Preview, use the matching Preview deployment host instead of the production host.
+
+Configure the secret hash to exactly match FLW_SECRET_HASH in that Vercel environment. Test and Live can have different hashes. Enable the relevant charge/payment and subscription cancellation events, enable retries where available, save, and use the dashboard's test event tool if available.
+
+The payment callback is different from the webhook:
+https://ruffneck-social-hub.vercel.app/api/billing/flutterwave/callback
+
+RuffNeck supplies this callback in its hosted checkout request; do not enter it in the webhook URL field.
+
+H. VERIFY BEFORE ACCEPTING REAL PAYMENTS
+
+1. Complete a full test checkout using Flutterwave Test credentials and a test payment method.
+2. Confirm the customer returns to RuffNeck.
+3. Confirm RuffNeck independently verifies transaction ID, reference, amount, currency, customer email and payment-plan ID before activating the subscription.
+4. Confirm the billing history and workspace plan update correctly.
+5. Send/test webhook events and confirm accepted events are recorded once, duplicate deliveries do not double-activate a subscription, and failed/cancelled events update the expected state.
+6. Only after the Test flow works should you configure Live credentials, Live plan IDs and Live webhook, then complete a carefully controlled Live verification.
+
+WHAT THIS PATCH DOES NOT DO
+
+- It does not read or set your Vercel variables from this chat.
+- It does not log into your Flutterwave dashboard.
+- It does not know or store your actual secret keys.
+- It does not approve your Flutterwave merchant account.
+- It does not guarantee a successful payment before the Test flow is run.
+- It does not charge customers while provisioning payment-plan records.
+
+VALIDATION LIMITATIONS
+Focused helper tests, integration audit, JavaScript syntax checks and TypeScript/TSX syntax transpilation passed. Full repository npm test, full project typecheck, full Vercel build, live migration execution, provider API calls and end-to-end test payments have not been run.

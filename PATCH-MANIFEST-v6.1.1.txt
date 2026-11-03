@@ -1,0 +1,46 @@
+RUFFNECK SOCIAL HUB v6.1.1 — PATCH MANIFEST
+
+NEW
+- src/app/actions/flutterwave-setup.ts
+- src/app/platform/billing-setup/page.tsx
+- src/lib/billing/flutterwave-environment.mjs
+- src/lib/billing/flutterwave-environment.d.mts
+- src/lib/billing/platform-admin.mjs
+- src/lib/billing/platform-admin.d.mts
+- scripts/audit-flutterwave-setup.mjs
+- scripts/test-flutterwave-setup.mjs
+- supabase/migrations/0046_flutterwave_environment_plan_ids.sql
+
+REPLACED
+- package.json
+- src/app/actions/billing.ts
+- src/app/billing/page.tsx
+
+PRESERVED (NOT INCLUDED AS REPLACEMENTS)
+- Existing Flutterwave webhook route
+- Existing Flutterwave payment callback route
+- Existing transaction verification and subscription processing helper
+- Existing Supabase server/admin clients
+- Existing billing foundation migration 0043
+- Existing subscription entitlement migration 0044
+- Existing agency/client migration if migration 0045 is present in the repository
+
+PACKAGE VERSION
+6.1.1
+
+PATCH PURPOSE
+- Add protected admin setup page for checking/configuring Flutterwave.
+- Separate Test and Live provider payment plan IDs.
+- Provision or verify payment plan records via server-side Flutterwave API calls.
+- Protect provider plan ID writes through a service-role-only database function.
+- Serialize payment-plan provisioning per environment with an expiring service-role-only lock.
+- Prevent Test/Live plan ID crossover at checkout.
+- Invalidate provider plan IDs automatically when a billing price, currency or interval is changed.
+- Fix server-action redirect control flow.
+- Add focused regression tests and integration audit.
+
+NO SECRETS INCLUDED
+No Flutterwave secret key, webhook hash, Supabase service-role key, or customer information is included in this package.
+
+STATUS
+Prepared overlay. Focused tests and syntax checks passed. Full repository build, database execution, provider connection and end-to-end payments remain unverified.
