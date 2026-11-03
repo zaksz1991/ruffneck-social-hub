@@ -1,7 +1,6 @@
 import { isCompatibleRelease } from './lib/release-compat.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
-
 const root = process.cwd();
 const requirements = [
   ['src/lib/integrations/tiktok.ts', ["'user.info.basic', 'video.list', 'video.upload'", 'buildTikTokAuthorizationUrl', 'normalizeTikTokGrantedScopes', 'normalizeTikTokVideos', 'validateTikTokVideoSourceUrl', '/v2/video/list/', '/v2/post/publish/inbox/video/init/', '/v2/post/publish/status/fetch/']],
@@ -15,7 +14,6 @@ const requirements = [
   ['src/lib/integrations/provider-registry.ts', ["id: 'tiktok'", "availability: 'available'", 'inbox', 'does not directly publish']],
   ['supabase/migrations/0030_tiktok_video_analytics_and_inbox_uploads.sql', ['store_tiktok_account_connection', 'tiktok_video_analytics_snapshots', "auth.role() is distinct from 'service_role'", 'tiktok_inbox_uploads', 'create_tiktok_inbox_upload', 'resolve_unknown_tiktok_inbox_upload', 'consent_confirmed', 'video.list', 'video.upload', 'target_resolution is null or target_resolution not in', "status in ('initiating','send_to_user_inbox','processing_download','publish_complete','unknown')", "'content_publish', false", "'direct_post_enabled', false", 'auth.uid()', 'member_read', 'revoke insert, update, delete']],
 ];
-
 function hasOrderedBuildGates(buildScript, requiredCommands) {
   const script = String(buildScript ?? '');
   const commands = [...script.matchAll(/npm run ([a-z0-9:-]+)/g)].map((match) => match[1]);
@@ -29,7 +27,6 @@ function hasOrderedBuildGates(buildScript, requiredCommands) {
   const lastGatePosition = script.lastIndexOf(`npm run ${requiredCommands.at(-1)}`);
   return lastGatePosition >= 0 && nextBuildPosition > lastGatePosition;
 }
-
 const failures = [];
 for (const [relative, tokens] of requirements) {
   const file = path.join(root, relative);
@@ -38,13 +35,10 @@ for (const [relative, tokens] of requirements) {
     continue;
   }
   const source = fs.readFileSync(file, 'utf8');
-  for (const token of tokens) {
-    if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
-  }
+  for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
 }
-
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!['4.4.0', '4.4.1', '4.5.0', '4.6.0', '4.7.0', '4.8.0', '4.9.0', '5.0.0', '5.1.0', '5.2.0', '5.3.0', '5.5.0', '5.6.0', '5.7.0'].includes(pkg.version) && !isCompatibleRelease(pkg.version, '5.6.0')) {
+if (!isCompatibleRelease(pkg.version, '5.6.0')) {
   failures.push(`package.json: unsupported compatible release version ${pkg.version}`);
 }
 const requiredBuildGates = [
@@ -62,7 +56,6 @@ if (!hasOrderedBuildGates(pkg.scripts?.build, requiredBuildGates)) {
 if (!String(pkg.scripts?.test ?? '').includes('test-tiktok-integration.mjs')) {
   failures.push('package.json: TikTok regression script missing from test command');
 }
-
 if (failures.length) {
   console.error(`TikTok integration audit failed: ${failures.length} issue(s).`);
   for (const failure of failures) console.error(` - ${failure}`);
