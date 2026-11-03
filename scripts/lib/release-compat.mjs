@@ -4,7 +4,6 @@ function parseVersion(value) {
   if (!match) return null;
   return [Number(match[1]), Number(match[2]), Number(match[3])];
 }
-
 export function isCompatibleRelease(version, minimum = '5.6.0') {
   const current = parseVersion(version);
   const floor = parseVersion(minimum);

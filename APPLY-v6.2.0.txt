@@ -1,0 +1,63 @@
+RUFFNECK SOCIAL HUB v6.2.0 — INSTALLATION
+
+IMPORTANT
+This ZIP is an overlay for the existing RuffNeck Social Hub GitHub repository. It is not a standalone application. Do not delete the existing repository or replace it with the ZIP contents.
+
+1. ADD THESE NEW FILES TO GITHUB MAIN
+
+- src/app/actions/agency-clients.ts
+- src/app/agency/clients/page.tsx
+- src/lib/agency/client-management.mjs
+- src/lib/agency/client-management.d.mts
+- supabase/migrations/0045_agency_client_management.sql
+- scripts/test-agency-client-management.mjs
+- scripts/audit-agency-client-management.mjs
+
+2. REPLACE THESE COMPLETE FILES
+
+- package.json
+- src/app/billing/page.tsx
+- src/app/billing/usage/page.tsx
+- scripts/audit-billing-subscriptions.mjs
+- scripts/test-release-compat.mjs
+- scripts/lib/release-compat.mjs (replace with the compatible shared helper included in this ZIP)
+
+The billing audit replacement is included because the supplied v6.1.0 Vercel log failed on an exact package-version assertion that still required 6.0.0. The replacement keeps the billing audit checks and accepts compatible releases from 6.0.0 onward.
+
+3. APPLY THE SUPABASE MIGRATION
+
+In Supabase Dashboard:
+
+- Open the RuffNeck project.
+- Open SQL Editor.
+- Confirm migrations 0043 and 0044 have already completed successfully.
+- Open the ZIP file `supabase/migrations/0045_agency_client_management.sql`.
+- Copy the entire SQL file into a new SQL Editor query.
+- Run it once and confirm Supabase reports success.
+
+Do not apply migration 0045 before migrations 0043 and 0044.
+
+4. OPEN THE NEW CLIENT PORTFOLIO
+
+Use the workspace ID already used by the application:
+
+`/agency/clients?workspace=<workspace-id>`
+
+The Plans & Billing page also contains a Manage agency clients link. Owners, admins and managers can use the portfolio. Other workspace roles are denied.
+
+5. WHAT IS ENFORCED
+
+- The plan's `max_client_workspaces` field is enforced against non-closed agency client records.
+- Prospect, onboarding, active and paused records consume a slot.
+- Closed records do not consume a slot.
+- Reopening a closed record checks the allowance again.
+- Database RPCs recheck the signed-in user's workspace role. Direct browser table writes are not granted.
+- Notes are append-only through the protected RPC.
+
+6. IMPORTANT SCOPE LIMITS
+
+This release is an agency-side client directory. It does not invite clients into RuffNeck, share separate client workspaces, expose client social accounts, provide client post approvals or implement client billing. Do not describe these functions as available yet.
+
+7. BUILD STATUS
+
+Focused tests, integration audit, JavaScript syntax and TSX syntax transpilation passed for the files in this overlay. The complete repository test suite, live migration and full Vercel production build were not run in this package-preparation environment. Use the next Vercel deployment and the Supabase SQL Editor result as the final integration checks.

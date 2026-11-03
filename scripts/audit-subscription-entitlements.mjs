@@ -68,16 +68,33 @@ const usagePage = read('src/app/billing/usage/page.tsx');
 assert.ok(usagePage.includes("rpc('get_workspace_entitlement_snapshot'"), 'usage page must read the protected entitlement snapshot');
 assert.ok(usagePage.includes('normalizeEntitlementSnapshot'), 'usage page must normalise untrusted snapshot data');
 assert.ok(usagePage.includes('0044_subscription_entitlement_enforcement.sql'), 'usage page must explain missing migration');
-assert.ok(usagePage.includes('AI inbox replies, AI triage and campaign-insight generation are also not included'), 'usage page must explain AI functions not yet metered');
+assert.ok(usagePage.includes('AI inbox replies, AI triage and campaign-insight generation are not included'), 'usage page must explain AI functions not yet metered');
+assert.ok(usagePage.includes('get_agency_client_usage_snapshot'), 'usage page must load the managed-client plan usage introduced in v6.2.0');
+assert.ok(usagePage.includes('Managed client accounts'), 'usage page must display managed-client allowance');
 
 const billingPage = read('src/app/billing/page.tsx');
 assert.ok(billingPage.includes('/billing/usage?workspace='), 'billing page must link to usage dashboard');
 assert.ok(billingPage.includes('migration 0044'), 'billing page must describe the enforcement migration');
-assert.ok(billingPage.includes('client-workspace allowance remains informational'), 'billing page must disclose the client-workspace limitation');
+assert.ok(billingPage.includes('managed client-account records are counted against the plan allowance after migration 0045'), 'billing page must disclose managed-client enforcement');
+assert.ok(billingPage.includes('/agency/clients?workspace='), 'billing page must link to the agency client portfolio');
+
+const clientMigration = read('supabase/migrations/0045_agency_client_management.sql');
+assert.ok(clientMigration.includes('create table if not exists public.agency_clients'), 'agency client records must be stored in their own workspace-scoped table');
+assert.ok(clientMigration.includes('get_effective_workspace_billing_plan'), 'managed client allowance must use the effective subscription plan');
+assert.ok(clientMigration.includes('max_client_workspaces'), 'managed client capacity must use the plan catalogue allowance');
+assert.ok(clientMigration.includes('pg_advisory_xact_lock'), 'client capacity changes must serialize to prevent concurrent over-allocation');
+assert.ok(clientMigration.includes('create or replace function public.get_agency_client_usage_snapshot'), 'client capacity must be exposed through a protected usage RPC');
+assert.ok(clientMigration.includes('revoke all on table public.agency_clients from public, anon, authenticated'), 'client records must not be directly writable by browser roles');
+const clientPage = read('src/app/agency/clients/page.tsx');
+assert.ok(clientPage.includes('createAgencyClient'), 'agency client management route must support client creation');
+assert.ok(clientPage.includes('updateAgencyClientStatus'), 'agency client management route must support status lifecycle');
+const clientActions = read('src/app/actions/agency-clients.ts');
+assert.ok(clientActions.includes('create_agency_client'), 'client creation must use the protected database RPC');
+assert.ok(clientActions.includes('add_agency_client_note'), 'internal notes must use the protected append-only RPC');
 
 const helper = read('src/lib/billing/entitlement-rules.mjs');
 for (const symbol of ['usagePercent', 'remainingUsage', 'normalizeEntitlementSnapshot', 'entitlementDeniedMessage']) {
   assert.ok(helper.includes(`function ${symbol}`), `billing helper must export ${symbol}`);
 }
 
-console.log('Subscription entitlement integration audit passed: release hooks, database enforcement, protected usage ledger, AI action metering and billing UI verified.');
+console.log('Subscription entitlement integration audit passed: release hooks, database enforcement, protected usage ledger, AI action metering, managed-client capacity and billing UI verified.');
