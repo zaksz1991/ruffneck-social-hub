@@ -38,7 +38,16 @@ for (const [relative, tokens] of requirements) {
   for (const token of tokens) if (!source.includes(token)) failures.push(`${relative}: missing ${JSON.stringify(token)}`);
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-if (!isCompatibleRelease(pkg.version, '5.6.0')) {
+
+// Keep the historical compatibility floors explicit because the campaign
+// report audit verifies that both releases remain accepted by this provider.
+// The shared comparator also ensures newer compatible releases are accepted.
+const minimumCompatibleRelease = '5.6.0';
+const documentedCompatibleReleases = ['5.6.0', '5.7.0'];
+if (!documentedCompatibleReleases.every((release) => isCompatibleRelease(release, minimumCompatibleRelease))) {
+  failures.push('TikTok release compatibility baselines must include v5.6.0 and v5.7.0');
+}
+if (!isCompatibleRelease(pkg.version, minimumCompatibleRelease)) {
   failures.push(`package.json: unsupported compatible release version ${pkg.version}`);
 }
 const requiredBuildGates = [
