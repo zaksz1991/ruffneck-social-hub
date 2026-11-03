@@ -1,0 +1,63 @@
+RUFFNECK SOCIAL HUB v6.1.0 — INSTALLATION
+
+IMPORTANT
+This is an overlay for the existing RuffNeck Social Hub GitHub repository. It is not a complete standalone repository. Do not delete the existing project or replace the entire repository with this ZIP.
+
+A. ADD / REPLACE THESE FILES IN GITHUB MAIN
+
+Replace existing files:
+- package.json
+- src/app/actions/content.ts
+- src/app/actions/content-provider-variants.ts
+- src/app/billing/page.tsx
+
+Add new files:
+- src/app/billing/usage/page.tsx
+- src/lib/billing/entitlement-rules.mjs
+- src/lib/billing/entitlement-rules.d.mts
+- scripts/test-subscription-entitlements.mjs
+- scripts/audit-subscription-entitlements.mjs
+- supabase/migrations/0044_subscription_entitlement_enforcement.sql
+
+Preserve every other existing repository file. The ZIP keeps the normal repository folder paths so each file can be uploaded or replaced in GitHub's web interface.
+
+B. APPLY THE DATABASE MIGRATION
+
+1. Open the RuffNeck Supabase project.
+2. Open SQL Editor.
+3. Confirm migration 0043_billing_subscription_foundation.sql has already been applied successfully.
+4. Open the ZIP's supabase/migrations/0044_subscription_entitlement_enforcement.sql file.
+5. Copy the complete SQL file into a new SQL Editor query and run it once.
+6. Confirm Supabase reports success before deploying the application changes.
+
+Do not run migration 0044 before migration 0043.
+
+C. WHAT CHANGES AFTER THE MIGRATION
+
+Enforced limits:
+- connected social accounts;
+- brands;
+- workspace team members;
+- monthly AI content drafts and platform-variant batches.
+
+Existing resources are not deleted. New additions that exceed a workspace's effective plan limit are rejected by the database. AI generation requests are checked before generation and successful generations are recorded. Failed generation attempts release their reservation.
+
+D. WHERE TO VIEW USAGE
+
+Open Plans & Billing, then select "View current plan usage and remaining limits".
+Direct route:
+/billing/usage?workspace=<workspace-id>
+
+E. IMPORTANT LIMITATIONS
+
+- The client-workspace cap is informational only. A client-workspace relationship model has not yet been implemented.
+- AI inbox replies, AI triage, campaign insights and other AI features are not metered by this release.
+- AI usage resets by UTC calendar month.
+- Paid plan checkout remains disabled until prices are approved and Flutterwave payment-plan IDs are configured.
+- This release does not modify OAuth scopes or add external provider permissions.
+
+F. BUILD AND TEST
+
+The build pipeline now runs audit:subscription-entitlements before Next.js production compilation. The full npm test pipeline runs the new focused entitlement test and audit.
+
+The overlay's focused checks have passed. The full repository test suite, production build and live Supabase migration have NOT been verified from this package-preparation environment. Use the Vercel deployment result and Supabase SQL Editor result as the final deployment checks.

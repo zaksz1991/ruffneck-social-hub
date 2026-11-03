@@ -1,0 +1,46 @@
+RUFFNECK SOCIAL HUB v6.1.0 PATCH MANIFEST
+
+RELEASE: 6.1.0
+BASE: Existing RuffNeck Social Hub v6.0.0 repository on main
+TYPE: Overlay patch (not standalone)
+NEW SUPABASE MIGRATION: 0044_subscription_entitlement_enforcement.sql
+
+REPLACE
+1. package.json
+2. src/app/actions/content.ts
+3. src/app/actions/content-provider-variants.ts
+4. src/app/billing/page.tsx
+
+ADD
+5. src/app/billing/usage/page.tsx
+6. src/lib/billing/entitlement-rules.mjs
+7. src/lib/billing/entitlement-rules.d.mts
+8. scripts/test-subscription-entitlements.mjs
+9. scripts/audit-subscription-entitlements.mjs
+10. supabase/migrations/0044_subscription_entitlement_enforcement.sql
+
+NO OTHER FILES ARE TO BE REMOVED OR REPLACED.
+
+DATABASE ORDER
+0042_campaign_experiment_tracker.sql (from prior release)
+0043_billing_subscription_foundation.sql (v6.0.0)
+0044_subscription_entitlement_enforcement.sql (v6.1.0)
+
+SCOPE
+- Database-enforced connected social account, brand and team-member caps.
+- Monthly metering for AI content draft generation and AI provider-variant batches.
+- Authenticated workspace usage dashboard.
+- Build audit and test hooks.
+
+EXCLUSIONS
+- Client-workspace limits are informational only.
+- AI inbox replies, AI triage, campaign insights and other AI actions are not metered.
+- Paid checkout remains disabled pending approved prices and Flutterwave recurring-plan setup.
+
+VALIDATION
+- Focused helper tests: PASS.
+- Subscription entitlement static integration audit: PASS.
+- Modified TS/TSX transpilation: PASS.
+- Full repo npm test: NOT RUN.
+- Full Next.js production build: NOT RUN.
+- Live Supabase migration: NOT RUN.
