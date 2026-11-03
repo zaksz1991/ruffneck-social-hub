@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isCompatibleRelease } from './lib/release-compat.mjs';
-
 const files = {
   migration: await readFile('supabase/migrations/0043_billing_subscription_foundation.sql', 'utf8'),
   action: await readFile('src/app/actions/billing.ts', 'utf8'),
@@ -14,7 +13,6 @@ const files = {
   package: await readFile('package.json', 'utf8'),
   test: await readFile('scripts/test-billing-subscriptions.mjs', 'utf8'),
 };
-
 assert.match(files.migration, /create table if not exists public\.billing_plans/);
 assert.match(files.migration, /create table if not exists public\.workspace_subscriptions/);
 assert.match(files.migration, /create table if not exists public\.billing_payments/);
@@ -50,7 +48,6 @@ assert.match(files.migration, /payment_row\.workspace_id, payment_row\.created_b
 assert.match(files.migration, /payment_row\.provider_plan_id,[\s\S]*payment_row\.customer_email/);
 assert.match(files.migration, /grant select, insert, update on table public\.billing_webhook_events to service_role/i);
 assert.match(files.migration, /billing\.subscription_activated/);
-
 assert.match(files.action, /supabase\.auth\.getUser\(\)/);
 assert.match(files.action, /workspace_members/);
 assert.match(files.action, /\['owner', 'admin'\]/);
@@ -97,9 +94,10 @@ assert.match(files.page, /Previous payment needs verification/);
 assert.match(files.rules, /checkout\.flutterwave\.com/);
 assert.match(files.declaration, /isSafeFlutterwaveCheckoutUrl/);
 assert.match(files.test, /moneyMatches/);
-
 const pkg = JSON.parse(files.package);
-assert.equal(pkg.version, '6.0.0');
+// Billing foundation remains compatible with v6.0.0 and all later releases.
+// The former exact equality rejected v6.1.0 despite the compatibility helper
+// already being imported and used by the audit.
 assert.ok(isCompatibleRelease(pkg.version, '6.0.0'));
 assert.match(pkg.scripts.build, /audit:billing-subscriptions/);
 assert.match(pkg.scripts.test, /test-billing-subscriptions\.mjs/);
