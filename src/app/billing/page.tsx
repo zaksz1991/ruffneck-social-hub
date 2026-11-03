@@ -125,7 +125,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           {!subscription && <span className="billing-free-badge">FREE TIER</span>}
         </section>
 
-        <div className="billing-usage-link"><Link href={`/billing/usage?workspace=${workspace.id}`}>View current plan usage and remaining limits →</Link>{canManagePlatformBilling && <Link href="/platform/billing-setup">Configure Flutterwave payments →</Link>}</div>
+        <div className="billing-usage-link"><Link href={`/billing/usage?workspace=${workspace.id}`}>View current plan usage and remaining limits →</Link><Link href={`/agency/clients?workspace=${workspace.id}`}>Manage agency clients →</Link>{canManagePlatformBilling && <Link href="/platform/billing-setup">Configure Flutterwave payments →</Link>}</div>
 
         <section className="billing-section-head"><div><span className="billing-eyebrow">CHOOSE YOUR CAPACITY</span><h2>Plans for every stage</h2><p>Prices shown in Nigerian naira. The first release uses editable launch-price proposals.</p></div></section>
         <section className="billing-plan-grid">
@@ -143,7 +143,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 <div><span>Connected social accounts</span><strong>{plan.max_connected_accounts}</strong></div>
                 <div><span>Brands</span><strong>{plan.max_brands}</strong></div>
                 <div><span>Team members</span><strong>{plan.max_team_members}</strong></div>
-                <div><span>Client workspaces</span><strong>{plan.max_client_workspaces}</strong></div>
+                <div><span>Managed client accounts</span><strong>{plan.max_client_workspaces}</strong></div>
                 <div><span>AI generations / month</span><strong>{plan.monthly_ai_generations.toLocaleString('en-NG')}</strong></div>
               </div>
               {isCurrent ? <div className="billing-plan-state">Your workspace is on this plan.</div>
@@ -159,7 +159,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         </section>
 
         {hasPendingPayment && <p className="billing-notice warning">A checkout is still marked pending. Do not start another payment until its final status has been confirmed in Flutterwave and recorded here.</p>}
-        <p className="billing-disclaimer"><strong>Plan allowances:</strong> After Supabase migration 0044 is applied, connected social account, brand and team-member limits are enforced when new resources are added. Monthly AI usage is enforced for AI content drafts and multi-platform content-variant batches. Existing resources remain available; new additions beyond a plan allowance are blocked. AI inbox replies, AI triage and campaign insights are not included in this meter yet, and the client-workspace allowance remains informational until client-workspace relationships are implemented. Paid checkout is available only when the matching Test or Live Flutterwave payment-plan ID is configured for the deployment environment. Test and Live plan IDs are stored separately so test credentials cannot initiate Live plans. Flutterwave recurring payment plans are card-only and are tied to the billing email used at signup.</p>
+        <p className="billing-disclaimer"><strong>Plan allowances:</strong> After Supabase migration 0044 is applied, connected social account, brand and team-member limits are enforced when new resources are added. Monthly AI usage is enforced for AI content drafts and multi-platform content-variant batches. Existing resources remain available; new additions beyond a plan allowance are blocked. AI inbox replies, AI triage and campaign insights are not included in this meter yet. managed client-account records are counted against the plan allowance after migration 0045. These are agency-side client records only; this directory does not grant access to a client's separate workspace or social accounts. Paid checkout is available only when the matching Test or Live Flutterwave payment-plan ID is configured for the deployment environment. Test and Live plan IDs are stored separately so test credentials cannot initiate Live plans. Flutterwave recurring payment plans are card-only and are tied to the billing email used at signup.</p>
 
         <section className="billing-history">
           <div className="billing-section-head"><div><span className="billing-eyebrow">PAYMENT RECORDS</span><h2>Recent billing activity</h2><p>Only workspace members can view this history. Owners and admins can initiate plan changes.</p></div></div>

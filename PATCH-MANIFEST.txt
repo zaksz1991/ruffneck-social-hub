@@ -1,27 +1,16 @@
-RUFFNECK SOCIAL HUB v5.9.0 — OVERLAY MANIFEST
+Replace:
+  src/app/billing/page.tsx
 
-BASELINE
-- Existing RuffNeck Social Hub v5.8.0 project.
-- Campaign Experiment Tracker and Supabase migration 0042 from v5.8.0 must already exist.
+Preserved from v6.1.1 billing page:
+  - Flutterwave test/live environment inference
+  - Test/live plan ID selection
+  - Platform billing administrator setup link
+  - Secure checkout gating and pending-payment protection
+  - Workspace billing history and subscription display
 
-REPLACE
-- package.json
-- src/app/campaigns/campaign-experiment-tracker.tsx
-- src/app/campaigns/campaign-experiment-tracker.css
-- scripts/audit-campaign-experiments.mjs
-- scripts/test-release-compat.mjs
+Added:
+  - Managed client accounts allowance label
+  - Managed-client enforcement disclosure after migration 0045
+  - Workspace-scoped link to /agency/clients
 
-ADD
-- src/lib/campaigns/campaign-experiments.d.mts
-- src/lib/campaigns/campaign-experiment-insights.mjs
-- src/lib/campaigns/campaign-experiment-insights.d.mts
-- scripts/audit-campaign-experiment-insights.mjs
-- scripts/test-campaign-experiment-insights.mjs
-
-NO CHANGES
-- No Supabase migration.
-- No database table or policy change.
-- No dependencies added.
-- No OAuth/provider permission changes.
-- No automated publishing, scheduling, messaging, reply sending or advertising.
-- No changes to existing provider integrations.
+No database migration, dependencies, environment variables, or audit scripts changed.

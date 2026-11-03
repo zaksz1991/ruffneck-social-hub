@@ -1,0 +1,12 @@
+RUFFNECK SOCIAL HUB v6.1.1 — BILLING DISCLOSURE HOTFIX
+
+1. Open the ZIP and locate src/app/billing/page.tsx.
+2. In GitHub, open the repository path src/app/billing/page.tsx.
+3. Replace the entire file with the supplied file. Do not paste only a snippet.
+4. Commit the replacement to main and allow Vercel to deploy.
+
+No SQL migration or Vercel environment-variable change is part of this hotfix.
+
+Expected result: audit:subscription-entitlements should pass the managed-client disclosure and agency-client navigation assertions. Other build stages remain subject to the deployment result.
+
+Full production build not verified here.
