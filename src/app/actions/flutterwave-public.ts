@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { inferFlutterwavePublicKeyEnvironment, isValidFlutterwavePlanId } from '@/lib/billing/flutterwave-public-key.mjs';
 import { isPlatformBillingAdmin } from '@/lib/billing/platform-admin.mjs';
+import { validateManualPaymentApproval } from '@/lib/billing/manual-approval.mjs';
 
 const SETUP_PATH = '/platform/billing-setup';
 const REVIEW_PATH = '/platform/billing-review';
@@ -82,12 +83,16 @@ export async function saveManualFlutterwavePlanId(formData: FormData): Promise<v
 
 export async function confirmManualFlutterwavePayment(formData: FormData): Promise<void> {
   const user = await requirePlatformBillingAdmin();
-  if (formData.get('confirm_provider_dashboard') !== 'yes') redirect(`${REVIEW_PATH}?result=confirmation_required`);
   const transactionId = String(formData.get('provider_transaction_id') ?? '').trim();
   const note = String(formData.get('review_note') ?? '').trim();
-  if (!/^\d{1,30}$/.test(transactionId) || note.length < 20 || note.length > 2000) {
-    redirect(`${REVIEW_PATH}?result=invalid_review`);
-  }
+  const validationError = validateManualPaymentApproval({
+    transactionId,
+    confirmation: formData.get('confirm_provider_dashboard'),
+    phrase: formData.get('approval_phrase'),
+    note,
+  });
+  if (validationError === 'confirmation_required') redirect(`${REVIEW_PATH}?result=confirmation_required`);
+  if (validationError) redirect(`${REVIEW_PATH}?result=invalid_review`);
   if (!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)) {
     redirect(`${REVIEW_PATH}?result=missing_service_role`);
   }

@@ -1,63 +1,40 @@
-RUFFNECK SOCIAL HUB v6.2.0 — INSTALLATION
+RUFFNECK SOCIAL HUB v6.2.0 — APPLY INSTRUCTIONS
+Flutterwave billing operations, webhook visibility and manual approval hardening
 
-IMPORTANT
-This ZIP is an overlay for the existing RuffNeck Social Hub GitHub repository. It is not a standalone application. Do not delete the existing repository or replace it with the ZIP contents.
+BASELINE
+This patch targets RuffNeck Social Hub v6.1.3 on the main branch, including the v6.1.2 Public-Key/manual-review integration and v6.1.3 billing review console. Do not apply over a different billing implementation or an older branch.
 
-1. ADD THESE NEW FILES TO GITHUB MAIN
+GITHUB FILES
+1. Download and extract the ZIP.
+2. Add the two new files:
+   - scripts/audit-flutterwave-operations.mjs
+   - scripts/test-flutterwave-operations.mjs
+   - src/lib/billing/manual-approval.mjs
+   - src/lib/billing/manual-approval.d.mts
+3. Replace the complete files listed in PATCH-MANIFEST-v6.2.0.txt.
+4. The replacement package.json is based on v6.1.3. If you added any custom npm scripts after v6.1.3, merge those custom scripts rather than discarding them.
+5. Commit the files to main through GitHub's web interface. Inspect the resulting Vercel deployment log.
 
-- src/app/actions/agency-clients.ts
-- src/app/agency/clients/page.tsx
-- src/lib/agency/client-management.mjs
-- src/lib/agency/client-management.d.mts
-- supabase/migrations/0045_agency_client_management.sql
-- scripts/test-agency-client-management.mjs
-- scripts/audit-agency-client-management.mjs
+WHAT CHANGES
+- Reworks the Flutterwave setup page status wording so a present key/hash is not described as proof of an active merchant connection.
+- Adds a read-only webhook activity panel using the existing server-side billing_webhook_events journal: authenticated event count for 24 hours, processing failures, retryable/incomplete events and the latest six event outcomes.
+- Displays only event type, outcome and timestamps. It does not expose transaction/customer data, secret hashes or service-role credentials.
+- Tightens the payment-plan ID field to the numeric, JavaScript-safe range accepted by the server.
+- Requires a platform billing administrator to tick the provider-dashboard attestation, type APPROVE exactly and enter a 20–2,000 character review note containing the exact transaction ID before the approval server action can call the protected database function.
+- Replaces the billing subscription audit's brittle regex-source-text check with executable runtime checks for both standard and explicitly tagged V3 Live Public Key formats. This prevents equivalent regex spellings from breaking the build again.
 
-2. REPLACE THESE COMPLETE FILES
+SUPABASE
+No SQL migration is required. The feature reads the existing billing_webhook_events table from migration 0043 and preserves the protected payment-review table/function from migration 0047. Do not re-run earlier migrations.
 
-- package.json
-- src/app/billing/page.tsx
-- src/app/billing/usage/page.tsx
-- scripts/audit-billing-subscriptions.mjs
-- scripts/test-release-compat.mjs
-- scripts/lib/release-compat.mjs (replace with the compatible shared helper included in this ZIP)
+VERCEL / FLUTTERWAVE
+- No new environment variables are required.
+- Keep NEXT_PUBLIC_FLW_PUBLIC_KEY and FLW_SECRET_HASH as already configured.
+- Keep the Supabase service-role key server-side only.
+- This release does not require or invent FLW_SECRET_KEY.
+- The webhook activity panel is passive: it reports events RuffNeck has received after the verif-hash check. It cannot prove Flutterwave is configured to send every notification and cannot generate a provider-side test event.
 
-The billing audit replacement is included because the supplied v6.1.0 Vercel log failed on an exact package-version assertion that still required 6.0.0. The replacement keeps the billing audit checks and accepts compatible releases from 6.0.0 onward.
+PAYMENT SAFETY
+A webhook hash authenticates the sender; it does not verify the charge. Customer redirects and webhook events still do not activate subscriptions. The platform administrator must independently compare the transaction ID, successful status, amount, currency, customer email, transaction reference and payment-plan ID in Flutterwave Dashboard. Only then should the transaction be approved in RuffNeck. The new typed phrase and audit note make accidental approval harder; they do not replace provider verification.
 
-3. APPLY THE SUPABASE MIGRATION
-
-In Supabase Dashboard:
-
-- Open the RuffNeck project.
-- Open SQL Editor.
-- Confirm migrations 0043 and 0044 have already completed successfully.
-- Open the ZIP file `supabase/migrations/0045_agency_client_management.sql`.
-- Copy the entire SQL file into a new SQL Editor query.
-- Run it once and confirm Supabase reports success.
-
-Do not apply migration 0045 before migrations 0043 and 0044.
-
-4. OPEN THE NEW CLIENT PORTFOLIO
-
-Use the workspace ID already used by the application:
-
-`/agency/clients?workspace=<workspace-id>`
-
-The Plans & Billing page also contains a Manage agency clients link. Owners, admins and managers can use the portfolio. Other workspace roles are denied.
-
-5. WHAT IS ENFORCED
-
-- The plan's `max_client_workspaces` field is enforced against non-closed agency client records.
-- Prospect, onboarding, active and paused records consume a slot.
-- Closed records do not consume a slot.
-- Reopening a closed record checks the allowance again.
-- Database RPCs recheck the signed-in user's workspace role. Direct browser table writes are not granted.
-- Notes are append-only through the protected RPC.
-
-6. IMPORTANT SCOPE LIMITS
-
-This release is an agency-side client directory. It does not invite clients into RuffNeck, share separate client workspaces, expose client social accounts, provide client post approvals or implement client billing. Do not describe these functions as available yet.
-
-7. BUILD STATUS
-
-Focused tests, integration audit, JavaScript syntax and TSX syntax transpilation passed for the files in this overlay. The complete repository test suite, live migration and full Vercel production build were not run in this package-preparation environment. Use the next Vercel deployment and the Supabase SQL Editor result as the final integration checks.
+VALIDATION
+The ZIP includes focused runtime tests and a static integration audit. Run the full project npm test and confirm the Vercel production build after applying. The full repository test suite, full Next.js build, live webhook delivery, actual Supabase state and live payment flow have not been executed in this environment.

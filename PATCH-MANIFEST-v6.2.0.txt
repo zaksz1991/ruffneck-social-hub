@@ -1,61 +1,23 @@
-RUFFNECK SOCIAL HUB v6.2.0 PATCH MANIFEST
-
-RELEASE: 6.2.0
-BASE: Existing RuffNeck Social Hub v6.1.0 repository on main
-TYPE: Overlay patch — not standalone
-NEW DATABASE MIGRATION: 0045_agency_client_management.sql
-
-ADD
-1. src/app/actions/agency-clients.ts
-2. src/app/agency/clients/page.tsx
-3. src/lib/agency/client-management.mjs
-4. src/lib/agency/client-management.d.mts
-5. supabase/migrations/0045_agency_client_management.sql
-6. scripts/test-agency-client-management.mjs
-7. scripts/audit-agency-client-management.mjs
+RUFFNECK SOCIAL HUB v6.2.0 — PATCH MANIFEST
 
 REPLACE
-1. package.json
-2. src/app/billing/page.tsx
-3. src/app/billing/usage/page.tsx
-4. scripts/audit-billing-subscriptions.mjs
-5. scripts/test-release-compat.mjs
-6. scripts/lib/release-compat.mjs
+- package.json
+- scripts/audit-billing-subscriptions.mjs
+- src/app/platform/billing-setup/page.tsx
+- src/app/platform/billing-review/page.tsx
+- src/app/actions/flutterwave-public.ts
+- src/lib/billing/flutterwave-public-key.mjs
 
-NEW ROUTE
-/agency/clients?workspace=<workspace-id>
+ADD
+- scripts/audit-flutterwave-operations.mjs
+- scripts/test-flutterwave-operations.mjs
+- src/lib/billing/manual-approval.mjs
+- src/lib/billing/manual-approval.d.mts
 
-DATABASE ORDER
-0043_billing_subscription_foundation.sql
-0044_subscription_entitlement_enforcement.sql
-0045_agency_client_management.sql
+DATABASE
+- No migration required.
+- Uses existing billing_webhook_events (migration 0043) and manual-review workflow (migration 0047).
 
-SCOPE
-- Agency-side managed client directory.
-- Client contact and service profile.
-- Status lifecycle with close/reopen behavior.
-- Monthly retainer and currency records.
-- Start and next-review dates.
-- Private append-only internal notes.
-- Manager-only RLS and protected RPCs.
-- Database-enforced max_client_workspaces allowance for non-closed records.
-- Billing and usage dashboard navigation.
-
-NOT INCLUDED
-- Client user invitations or login portal.
-- Access to separate client workspaces or social accounts.
-- Client-side post approvals.
-- Agency-to-client workspace delegation.
-- Client billing/invoices.
-- White-label portal.
-
-VALIDATION
-- Focused unit tests: PASS.
-- Integration/security audit: PASS.
-- JavaScript syntax: PASS.
-- TypeScript/TSX syntax transpilation: PASS.
-- Package JSON parse: PASS.
-- ZIP integrity: PASS.
-- Full repository npm test: NOT RUN.
-- Full Next.js production build: NOT RUN.
-- Live Supabase migration: NOT RUN.
+ENVIRONMENT
+- No new environment variables.
+- No secret values changed or exposed.
