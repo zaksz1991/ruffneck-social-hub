@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isCompatibleRelease } from './lib/release-compat.mjs';
-import { inferFlutterwavePublicKeyEnvironment } from '../src/lib/billing/flutterwave-public-key.mjs';
+import {
+  inferFlutterwavePublicKeyEnvironment,
+  normalizeFlutterwaveWebhookCharge,
+  matchesExpectedFlutterwaveInvoice,
+} from '../src/lib/billing/flutterwave-public-key.mjs';
 
 const files = {
   foundation: await readFile('supabase/migrations/0043_billing_subscription_foundation.sql', 'utf8'),
@@ -53,16 +57,47 @@ assert.match(files.action, /\['owner', 'admin'\]/);
 assert.doesNotMatch(files.action, /FLW_SECRET_KEY/);
 assert.doesNotMatch(files.action, /api\.flutterwave\.com/);
 
-// Check supported V3 key formats semantically. Standard Live keys omit the
-// _LIVE marker; explicitly tagged Live keys remain accepted for compatibility.
-// A source-text assertion for the literal `FLWPUBK_LIVE-` incorrectly rejected
-// the valid optional-marker expression used by the key parser.
-assert.match(files.helper, /FLWPUBK_TEST-/);
-assert.match(files.helper, /FLWPUBK\(\?_LIVE\)\?-/);
+// Verify supported Flutterwave V3 public-key formats through the parser's
+// runtime contract. Do not match the source text of its regular expression:
+// equivalent regex spellings (for example, a non-capturing group) must not
+// break the release audit.
 assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_TEST-example-X'), 'test');
 assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK-example-X'), 'live');
 assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_LIVE-example-X'), 'live');
+assert.equal(inferFlutterwavePublicKeyEnvironment(' FLWPUBK-example-X '), 'live');
 assert.equal(inferFlutterwavePublicKeyEnvironment('FLWSECK_LIVE-example-X'), null);
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_TEST-example'), null);
+assert.equal(inferFlutterwavePublicKeyEnvironment(''), null);
+
+// Exercise the webhook normalizer and invoice matcher as executable contracts.
+const sampleCharge = normalizeFlutterwaveWebhookCharge({
+  id: '123456',
+  tx_ref: 'ruffneck-test-reference',
+  status: 'successful',
+  amount: 1250,
+  currency: 'ngn',
+  customer: { email: 'Billing@Example.com' },
+  plan: { id: 42 },
+  created_at: '2026-11-04T04:00:00.000Z',
+});
+assert.ok(sampleCharge, 'valid Flutterwave webhook charge must normalize');
+assert.equal(sampleCharge.providerTransactionId, '123456');
+assert.equal(sampleCharge.customerEmail, 'billing@example.com');
+assert.equal(sampleCharge.currency, 'NGN');
+assert.equal(sampleCharge.providerPlanId, '42');
+assert.equal(matchesExpectedFlutterwaveInvoice(sampleCharge, {
+  amount: 1250,
+  currency: 'NGN',
+  customerEmail: 'billing@example.com',
+  providerPlanId: '42',
+}), true);
+assert.equal(matchesExpectedFlutterwaveInvoice(sampleCharge, {
+  amount: 1251,
+  currency: 'NGN',
+  customerEmail: 'billing@example.com',
+  providerPlanId: '42',
+}), false);
+assert.equal(normalizeFlutterwaveWebhookCharge({ status: 'successful' }), null);
 
 assert.match(files.helper, /normalizeFlutterwaveWebhookCharge/);
 assert.match(files.helper, /matchesExpectedFlutterwaveInvoice/);
