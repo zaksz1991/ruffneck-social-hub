@@ -1,0 +1,28 @@
+RUFFNECK SOCIAL HUB v6.3.0 — COMBINED PATCH MANIFEST
+
+ADD
+- scripts/audit-flutterwave-operations.mjs
+- scripts/test-flutterwave-operations.mjs
+- scripts/audit-missing-webhook-reconciliation.mjs
+- scripts/test-missing-webhook-reconciliation.mjs
+- src/app/actions/flutterwave-reconciliation.ts
+- src/app/platform/billing-reconcile/page.tsx
+- src/lib/billing/manual-approval.mjs
+- src/lib/billing/manual-approval.d.mts
+- src/lib/billing/missing-webhook-reconciliation.mjs
+- src/lib/billing/missing-webhook-reconciliation.d.mts
+- supabase/migrations/0048_flutterwave_missing_webhook_reconciliation.sql
+
+REPLACE
+- package.json
+- scripts/audit-billing-subscriptions.mjs
+- src/lib/billing/flutterwave-public-key.mjs
+- src/app/actions/flutterwave-public.ts
+- src/app/platform/billing-setup/page.tsx
+- src/app/platform/billing-review/page.tsx
+
+DATABASE
+- Apply migration 0048 once, after 0047.
+
+BASELINE
+- v6.1.3 main-branch billing setup with Public-Key checkout and migration 0047.

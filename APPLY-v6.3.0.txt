@@ -1,0 +1,52 @@
+RUFFNECK SOCIAL HUB v6.3.0 — COMBINED APPLY INSTRUCTIONS
+Combined billing upgrade from v6.1.3
+
+BASELINE
+This package targets the v6.1.3 main-branch billing baseline. It includes the v6.2.0 billing operations changes and the v6.3.0 missing-webhook reconciliation feature in one overlay. Do not apply it if GitHub main has moved to a newer or different billing implementation without reconciling the changed files first.
+
+1. SUPABASE FIRST
+- Confirm migrations 0043_billing_subscription_foundation.sql, 0046_flutterwave_environment_plan_ids.sql and 0047_flutterwave_public_key_manual_review.sql are already applied.
+- Open Supabase Dashboard → SQL Editor.
+- Run the complete file `supabase/migrations/0048_flutterwave_missing_webhook_reconciliation.sql` from this ZIP once.
+- Confirm success before deploying the new review page, which reads the new provenance fields. Do not rerun 0043, 0046 or 0047.
+
+2. GITHUB FILES
+Extract this ZIP and add the following files:
+- scripts/audit-flutterwave-operations.mjs
+- scripts/test-flutterwave-operations.mjs
+- scripts/audit-missing-webhook-reconciliation.mjs
+- scripts/test-missing-webhook-reconciliation.mjs
+- src/app/actions/flutterwave-reconciliation.ts
+- src/app/platform/billing-reconcile/page.tsx
+- src/lib/billing/manual-approval.mjs
+- src/lib/billing/manual-approval.d.mts
+- src/lib/billing/missing-webhook-reconciliation.mjs
+- src/lib/billing/missing-webhook-reconciliation.d.mts
+- supabase/migrations/0048_flutterwave_missing_webhook_reconciliation.sql
+
+Replace these complete files:
+- package.json
+- scripts/audit-billing-subscriptions.mjs
+- src/lib/billing/flutterwave-public-key.mjs
+- src/app/actions/flutterwave-public.ts
+- src/app/platform/billing-setup/page.tsx
+- src/app/platform/billing-review/page.tsx
+
+The package.json replacement preserves the v6.1.3 script set represented by this release line and adds v6.2/v6.3 audits. Merge any additional custom npm scripts that were added after the v6.1.3 baseline instead of deleting them.
+
+Commit the changes to GitHub main through the website, then inspect Vercel's full build result.
+
+3. CONFIGURATION
+No new Vercel environment variables are added. Keep the existing `NEXT_PUBLIC_FLW_PUBLIC_KEY`, `FLW_SECRET_HASH`, `BILLING_PLATFORM_ADMIN_EMAILS`, `NEXT_PUBLIC_APP_URL`/`NEXT_PUBLIC_SITE_URL`, and server-side Supabase service-role key. Do not create a fake `FLW_SECRET_KEY`.
+
+4. NEW OPERATING FLOW
+- Billing setup: `/platform/billing-setup` shows the passive webhook journal and setup status.
+- Payment review: `/platform/billing-review` keeps the existing filtered review and separate `APPROVE` action.
+- Missing initial-payment webhook: `/platform/billing-reconcile` allows only a platform billing administrator to enter transaction details copied from Flutterwave Dashboard. The database locks the pending RuffNeck invoice and requires exact reference, amount, currency, email and payment-plan matches.
+- The new reconciliation record is pending only. Open the normal review queue and complete the separate approval process after checking the transaction in Flutterwave Dashboard again.
+
+LIMITS
+Do not use missing-webhook reconciliation for recurring renewals, refunded/reversed payments, failed or pending provider charges, missing plan IDs, mismatched invoice values or invoices that are no longer pending. The reconciliation form never activates a subscription.
+
+VALIDATION
+The ZIP contains focused tests and static audits. The complete repository npm test, full production build, actual remote migration and live Flutterwave transaction remain to be verified after installation.

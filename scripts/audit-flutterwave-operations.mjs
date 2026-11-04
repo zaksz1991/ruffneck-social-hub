@@ -12,7 +12,7 @@ const [setupPage, reviewPage, action, webhook, foundation, manualReviewMigration
 ]);
 const pkg = JSON.parse(pkgText);
 
-assert.equal(pkg.version, '6.2.0', 'release package version must be 6.2.0');
+assert.equal(pkg.version, '6.3.0', 'release package version must be 6.3.0');
 assert.match(setupPage, /billing_webhook_events/);
 assert.match(setupPage, /received_at/);
 assert.match(setupPage, /outcome/);
