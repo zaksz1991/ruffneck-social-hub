@@ -1,0 +1,16 @@
+RUFFNECK SOCIAL HUB v6.1.3 — PATCH MANIFEST
+
+ADD
+- src/lib/billing/review-filters.mjs
+- src/lib/billing/review-filters.d.mts
+- scripts/test-billing-review-console.mjs
+- scripts/audit-billing-review-console.mjs
+
+REPLACE
+- src/app/platform/billing-review/page.tsx
+- package.json
+
+NO DATABASE MIGRATION
+No environment-variable changes.
+No dependency changes.
+No changes to payment activation policy or Flutterwave webhook verification.

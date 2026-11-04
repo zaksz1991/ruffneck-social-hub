@@ -1,0 +1,37 @@
+RUFFNECK SOCIAL HUB v6.1.3 — APPLY INSTRUCTIONS
+Billing Review Console
+
+BASELINE
+This overlay targets the repository's v6.1.2 baseline. Confirm GitHub main is on package version 6.1.2 before applying. Do not apply to an older or different branch snapshot.
+
+GITHUB FILES
+1. Extract this ZIP.
+2. Add the two new files under src/lib/billing/:
+   - review-filters.mjs
+   - review-filters.d.mts
+3. Add the two new scripts under scripts/:
+   - test-billing-review-console.mjs
+   - audit-billing-review-console.mjs
+4. Replace the complete file:
+   - src/app/platform/billing-review/page.tsx
+5. Replace package.json with the included v6.1.3 version. It preserves the v6.1.2 build and test scripts and adds only the billing review test/audit hooks. If you have made custom script changes outside that baseline, merge those rather than deleting them.
+6. Commit to main and inspect the Vercel build log.
+
+DATABASE / VERCEL
+- No database migration is required.
+- No new environment variables are required.
+- Existing migration 0047 must already be applied for the manual payment review page to work.
+- Keep FLW_SECRET_HASH, NEXT_PUBLIC_FLW_PUBLIC_KEY and Supabase server keys as already configured. Do not change secret values as part of this upgrade.
+
+WHAT CHANGES
+- Status summary cards and status filter.
+- Exact search by transaction ID, invoice reference or customer email.
+- Pagination, 25 records per page.
+- Strictly validated search input and safe database equality filters.
+- Existing manual approval requirements remain unchanged.
+
+VALIDATION
+The package contains a pure unit test and integration audit. Run the project's full `npm test`, then confirm the full Vercel production build. This package has not been built against your live GitHub workspace in this environment.
+
+PAYMENT SAFETY
+This release does not create transactions, charge customers, call Flutterwave, or activate subscriptions automatically. The V3 Live Secret Key remains required for automated transaction verification. Manual approvals still require the administrator to inspect the transaction in Flutterwave Dashboard.
