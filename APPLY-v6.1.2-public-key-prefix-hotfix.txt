@@ -1,0 +1,41 @@
+RUFFNECK SOCIAL HUB v6.1.2 — FLUTTERWAVE LIVE PUBLIC-KEY PREFIX HOTFIX
+
+ROOT CAUSE
+The v6.1.2 public-key detector only recognised FLWPUBK_LIVE-...-X for Live keys.
+Flutterwave's standard V3 Live public-key format is FLWPUBK-...-X, while Test keys
+are explicitly marked FLWPUBK_TEST-...-X. The old detector therefore rejected a
+standard Live Public Key even when NEXT_PUBLIC_FLW_PUBLIC_KEY was present in Vercel.
+
+REPLACE THESE FOUR COMPLETE FILES ON GITHUB main
+1. src/lib/billing/flutterwave-public-key.mjs
+2. scripts/test-flutterwave-setup.mjs
+3. scripts/audit-flutterwave-setup.mjs
+4. src/app/platform/billing-setup/page.tsx
+
+WHAT THE PATCH DOES
+- Recognises standard V3 Live keys: FLWPUBK-...-X.
+- Retains compatibility with explicitly tagged Live keys: FLWPUBK_LIVE-...-X.
+- Keeps Test keys distinct: FLWPUBK_TEST-...-X.
+- Rejects an incomplete prefix or a key missing the final -X.
+- Updates setup-page instructions so users are not told the wrong Live prefix.
+- Adds direct positive/negative assertions to the build-time Flutterwave setup audit.
+- Does not change any payment, webhook, manual-review, database or secret-key behaviour.
+
+VERCEL
+Do not rename or replace NEXT_PUBLIC_FLW_PUBLIC_KEY if it already contains the complete
+Public Key copied from Flutterwave. Do not paste the key into chat or GitHub. After the
+four files are committed to main, allow Vercel to create a new Production deployment.
+Next.js reads NEXT_PUBLIC_* values at build time, so a fresh deployment is required.
+
+AFTER DEPLOYMENT
+1. Sign in using an email listed in BILLING_PLATFORM_ADMIN_EMAILS.
+2. Open https://ruffneck-social-hub.vercel.app/platform/billing-setup
+3. The status should change to LIVE KEY DETECTED if the variable contains a complete
+   standard Live key matching FLWPUBK-...-X (or the accepted FLWPUBK_LIVE-...-X form).
+4. This only detects the key's format. It does not prove that Flutterwave has activated
+   the key or that a payment has succeeded.
+
+NO DATABASE MIGRATION
+No Supabase migration, Vercel variable rename, secret rotation or dependency change is
+required for this correction. Keep the existing FLW_SECRET_HASH and Supabase service-role
+key unchanged.

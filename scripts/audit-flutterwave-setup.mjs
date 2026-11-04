@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isCompatibleRelease } from './lib/release-compat.mjs';
+import { inferFlutterwavePublicKeyEnvironment } from '../src/lib/billing/flutterwave-public-key.mjs';
 
 const [environment, environmentTypes, setupPage, reviewPage, action, webhook, migration, billingPage, pkgText] = await Promise.all([
   readFile('src/lib/billing/flutterwave-public-key.mjs', 'utf8'),
@@ -16,7 +17,11 @@ const [environment, environmentTypes, setupPage, reviewPage, action, webhook, mi
 const pkg = JSON.parse(pkgText);
 assert.ok(isCompatibleRelease(pkg.version, '6.1.1'), 'Flutterwave setup overlay must target v6.1.1 or later');
 assert.match(environment, /FLWPUBK_TEST-/);
-assert.match(environment, /FLWPUBK_LIVE-/);
+assert.match(environment, /FLWPUBK(?:_LIVE)?-/);
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_TEST-a-valid-looking-test-key-X'), 'test');
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK-a-valid-looking-live-key-X'), 'live', 'recognise Flutterwave V3 standard Live public key format');
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_LIVE-a-valid-looking-live-key-X'), 'live', 'retain explicitly tagged Live key compatibility');
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK-'), null, 'reject a prefix without a complete key');
 assert.match(environment, /matchesExpectedFlutterwaveInvoice/);
 assert.match(environmentTypes, /inferFlutterwavePublicKeyEnvironment/);
 assert.match(setupPage, /NEXT_PUBLIC_FLW_PUBLIC_KEY/);

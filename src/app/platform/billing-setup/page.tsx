@@ -105,7 +105,7 @@ export default async function FlutterwaveSetupPage({ searchParams }: { searchPar
 
       <section className="flw-instructions">
         <h2>1. Configure Vercel environment variables</h2>
-        <div className="flw-env-row"><code>NEXT_PUBLIC_FLW_PUBLIC_KEY</code><span>Your V3 Live Public Key (starts with FLWPUBK_LIVE-). For Preview/Test deployments, configure a separate Test Public Key.</span></div>
+        <div className="flw-env-row"><code>NEXT_PUBLIC_FLW_PUBLIC_KEY</code><span>Your complete V3 Live Public Key (usually starts with FLWPUBK- and ends with -X; some account variants may use FLWPUBK_LIVE-). Test keys start with FLWPUBK_TEST-. Do not enter only the prefix.</span></div>
         <div className="flw-env-row"><code>FLW_SECRET_HASH</code><span>A strong random value you create. Save exactly the same value in Flutterwave Webhooks and Vercel.</span></div>
         <div className="flw-env-row"><code>NEXT_PUBLIC_APP_URL</code><span>https://ruffneck-social-hub.vercel.app</span></div>
         <div className="flw-env-row"><code>BILLING_PLATFORM_ADMIN_EMAILS</code><span>The comma-separated email address(es) authorised to configure plans and manually approve payments.</span></div>

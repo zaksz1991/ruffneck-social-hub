@@ -1,0 +1,12 @@
+RUFFNECK SOCIAL HUB v6.1.2 — PATCH MANIFEST
+
+REPLACE (complete files)
+- src/lib/billing/flutterwave-public-key.mjs
+- scripts/test-flutterwave-setup.mjs
+- scripts/audit-flutterwave-setup.mjs
+- src/app/platform/billing-setup/page.tsx
+
+NO OTHER FILES ARE CHANGED.
+NO SUPABASE MIGRATION IS REQUIRED.
+NO ENVIRONMENT VARIABLE RENAME IS REQUIRED.
+NO DEPENDENCIES ARE ADDED.

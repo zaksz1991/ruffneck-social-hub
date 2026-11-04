@@ -7,8 +7,12 @@
 export function inferFlutterwavePublicKeyEnvironment(publicKey) {
   if (typeof publicKey !== 'string') return null;
   const value = publicKey.trim();
+  // Flutterwave V3 Test keys carry the explicit _TEST marker. Standard
+  // V3 Live public keys use FLWPUBK-...-X (without a _LIVE segment). Some
+  // dashboard/account variants may include _LIVE, so accept both live forms.
+  // Test detection must run first so a Test key can never be classified Live.
   if (/^FLWPUBK_TEST-.+-X$/.test(value)) return 'test';
-  if (/^FLWPUBK_LIVE-.+-X$/.test(value)) return 'live';
+  if (/^FLWPUBK(?:_LIVE)?-.+-X$/.test(value)) return 'live';
   return null;
 }
 

@@ -7,8 +7,12 @@ import {
 } from '../src/lib/billing/flutterwave-public-key.mjs';
 
 assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_TEST-example-X'), 'test');
-assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_LIVE-example-X'), 'live');
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK-example-X'), 'live', 'standard V3 Live public keys do not include a _LIVE marker');
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK_LIVE-example-X'), 'live', 'retain compatibility with explicitly tagged Live keys');
+assert.equal(inferFlutterwavePublicKeyEnvironment(' FLWPUBK-example-X '), 'live', 'surrounding whitespace is trimmed');
 assert.equal(inferFlutterwavePublicKeyEnvironment('FLWSECK_LIVE-example-X'), null);
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK-'), null, 'a prefix alone is not a complete key');
+assert.equal(inferFlutterwavePublicKeyEnvironment('FLWPUBK-example'), null, 'a key without the required suffix is rejected');
 assert.equal(inferFlutterwavePublicKeyEnvironment(''), null);
 assert.equal(inferFlutterwavePublicKeyEnvironment(null), null);
 
