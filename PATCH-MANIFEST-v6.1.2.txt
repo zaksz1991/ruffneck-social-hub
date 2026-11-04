@@ -1,0 +1,43 @@
+RUFFNECK SOCIAL HUB v6.1.2 — PATCH MANIFEST
+
+REPLACE
+- package.json
+- src/app/actions/billing.ts
+- src/app/actions/flutterwave-setup.ts
+- src/app/api/billing/flutterwave/callback/route.ts
+- src/app/api/webhooks/flutterwave/route.ts
+- src/app/billing/page.tsx
+- src/app/billing/flutterwave-checkout-button.tsx
+- src/app/platform/billing-setup/page.tsx
+- scripts/audit-billing-subscriptions.mjs
+- scripts/audit-flutterwave-setup.mjs
+- scripts/test-flutterwave-setup.mjs
+
+ADD
+- src/app/actions/flutterwave-public.ts
+- src/app/platform/billing-review/page.tsx
+- src/lib/billing/flutterwave-public-key.mjs
+- src/lib/billing/flutterwave-public-key.d.mts
+- supabase/migrations/0047_flutterwave_public_key_manual_review.sql
+
+INCLUDE / KEEP COMPATIBLE WITH THE EXISTING V6.1.1 SETUP HELPERS
+- src/lib/billing/flutterwave-environment.mjs
+- src/lib/billing/flutterwave-environment.d.mts
+- src/lib/billing/platform-admin.mjs
+- src/lib/billing/platform-admin.d.mts
+- scripts/lib/release-compat.mjs
+
+DATABASE DEPENDENCIES (ALREADY APPLIED IN THE V6.1.1 BASELINE)
+- 0043_billing_subscription_foundation.sql
+- 0046_flutterwave_environment_plan_ids.sql
+
+OTHER EXISTING PLATFORM MIGRATIONS ARE NOT REPLACED BY THIS ZIP.
+- Migration 0047 adds the protected manual payment-review queue and approval function.
+
+BEHAVIOUR SAFEGUARDS
+- No FLW_SECRET_KEY is required for Inline checkout.
+- No Flutterwave API transaction-verification call is made in Public-Key-only mode.
+- Browser redirects never activate subscriptions.
+- Webhook receipt never activates subscriptions.
+- Successful initial payments and recurring renewals require administrator review.
+- Plan-ID mapping is an administrator attestation, not an API-verified plan lookup.

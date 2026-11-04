@@ -1,0 +1,64 @@
+RUFFNECK SOCIAL HUB v6.1.2 — APPLY INSTRUCTIONS
+Flutterwave V3 Public-Key checkout + manual payment review
+
+BASELINE
+This overlay targets the current RuffNeck v6.1.1 billing setup. It preserves the existing billing catalogue, agency-client disclosure and subscription usage navigation.
+
+IMPORTANT LIMITATION
+The Public Key can open Flutterwave Inline checkout. Without the V3 Live Secret Key, the app cannot call Flutterwave's server-side transaction verification endpoint. For that reason, successful payments and recurring renewals are queued for manual verification in the Flutterwave merchant dashboard. A webhook or customer redirect alone never activates access.
+
+A. GITHUB FILES
+1. Download and extract this ZIP.
+2. In GitHub, open repository zaksz1991/ruffneck-social-hub, branch main.
+3. Add the new files and replace the listed files at exactly the paths shown in PATCH-MANIFEST-v6.1.2.txt.
+4. The package.json is a complete replacement based on the currently deployed v6.1.1 package script set, with version 6.1.2 and the new billing/setup audits and tests included. Preserve any additional scripts you may have added outside that baseline; merge them rather than deleting project-specific scripts.
+5. Commit the changes to main. Vercel will start a deployment.
+
+B. SUPABASE MIGRATION
+1. Confirm that migrations 0043_billing_subscription_foundation.sql and 0046_flutterwave_environment_plan_ids.sql have already been applied.
+2. Open Supabase → SQL Editor.
+3. Open supabase/migrations/0047_flutterwave_public_key_manual_review.sql from this ZIP.
+4. Paste the complete SQL into a new SQL Editor query and run it once.
+5. Confirm the query succeeds before using the payment review page.
+6. Do not re-run migrations 0043, 0044, 0045 or 0046 as part of this overlay.
+
+C. VERCEL ENVIRONMENT VARIABLES
+In Vercel → RuffNeck Social Hub → Settings → Environment Variables, configure Production:
+
+NEXT_PUBLIC_FLW_PUBLIC_KEY = the full V3 Live Public Key (starts FLWPUBK_LIVE-)
+FLW_SECRET_HASH = a strong random string you generate and keep private
+NEXT_PUBLIC_APP_URL = https://ruffneck-social-hub.vercel.app (optional if your existing NEXT_PUBLIC_SITE_URL already has this exact address)
+BILLING_PLATFORM_ADMIN_EMAILS = the RuffNeck platform administrator login email
+SUPABASE_SERVICE_ROLE_KEY = keep the existing server-side value; do not expose it publicly
+
+Do NOT put the Public Key in FLW_SECRET_KEY. Do NOT add a made-up Secret Key. This interim mode does not use V4 Client ID/Client Secret credentials.
+
+D. FLUTTERWAVE LIVE WEBHOOK
+In Flutterwave Dashboard → Settings → Webhooks → Live:
+- URL: https://ruffneck-social-hub.vercel.app/api/webhooks/flutterwave
+- Secret hash: exactly the same random value as FLW_SECRET_HASH in Vercel
+- Enable V3 webhooks
+- Enable webhook retries
+- Enable resend webhook from dashboard
+- Save the configuration
+
+E. LIVE PAYMENT PLANS
+1. In Flutterwave Dashboard, open Payments → Payment Plans.
+2. Create one recurring plan for each paid RuffNeck plan. Use the exact price, currency and interval shown in `/platform/billing-setup`.
+3. Review the current prices before creating Live plans. The seeded catalogue currently shows Starter NGN 5,000 monthly, Professional NGN 15,000 monthly and Agency NGN 40,000 monthly; those are stored proposals and may need approval.
+4. Copy each numeric Flutterwave Payment Plan ID.
+5. After deployment, sign into RuffNeck using an email listed in BILLING_PLATFORM_ADMIN_EMAILS and open:
+   https://ruffneck-social-hub.vercel.app/platform/billing-setup
+6. Enter the matching plan ID for each plan, tick the confirmation that the provider amount/currency/interval match, and save.
+
+Saving a plan ID does not charge a customer. In this no-Secret-Key mode, RuffNeck cannot automatically query Flutterwave to verify the plan; the admin confirms the plan details manually.
+
+F. PAYMENT OPERATIONS
+- Customer billing: https://ruffneck-social-hub.vercel.app/billing
+- Provider setup: https://ruffneck-social-hub.vercel.app/platform/billing-setup
+- Manual successful-payment review: https://ruffneck-social-hub.vercel.app/platform/billing-review
+
+After each successful payment, open the review queue, find the same transaction in Flutterwave Dashboard → Transactions, and compare transaction ID, successful status, amount, currency, customer email, transaction reference and Payment Plan ID. Approve only when every value matches. Recurring renewal notifications also require manual review.
+
+G. VERIFICATION
+The ZIP includes focused helper tests and integration audits. The complete repository test suite, full production build, actual Supabase migration and a real Flutterwave Live payment have not been run from this environment. Review the Vercel deployment log after committing and do not enable customer checkout until the build passes and the webhook/plan mappings are configured.

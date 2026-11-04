@@ -1,104 +1,87 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { isCompatibleRelease } from './lib/release-compat.mjs';
+
 const files = {
-  migration: await readFile('supabase/migrations/0043_billing_subscription_foundation.sql', 'utf8'),
+  foundation: await readFile('supabase/migrations/0043_billing_subscription_foundation.sql', 'utf8'),
+  environmentMigration: await readFile('supabase/migrations/0046_flutterwave_environment_plan_ids.sql', 'utf8'),
+  manualReviewMigration: await readFile('supabase/migrations/0047_flutterwave_public_key_manual_review.sql', 'utf8'),
   action: await readFile('src/app/actions/billing.ts', 'utf8'),
-  helper: await readFile('src/lib/billing/flutterwave.ts', 'utf8'),
-  rules: await readFile('src/lib/billing/billing-rules.mjs', 'utf8'),
-  declaration: await readFile('src/lib/billing/billing-rules.d.mts', 'utf8'),
-  page: await readFile('src/app/billing/page.tsx', 'utf8'),
+  helper: await readFile('src/lib/billing/flutterwave-public-key.mjs', 'utf8'),
+  helperTypes: await readFile('src/lib/billing/flutterwave-public-key.d.mts', 'utf8'),
   callback: await readFile('src/app/api/billing/flutterwave/callback/route.ts', 'utf8'),
   webhook: await readFile('src/app/api/webhooks/flutterwave/route.ts', 'utf8'),
-  package: await readFile('package.json', 'utf8'),
-  test: await readFile('scripts/test-billing-subscriptions.mjs', 'utf8'),
+  checkoutButton: await readFile('src/app/billing/flutterwave-checkout-button.tsx', 'utf8'),
+  reviewAction: await readFile('src/app/actions/flutterwave-public.ts', 'utf8'),
+  packageText: await readFile('package.json', 'utf8'),
 };
-assert.match(files.migration, /create table if not exists public\.billing_plans/);
-assert.match(files.migration, /create table if not exists public\.workspace_subscriptions/);
-assert.match(files.migration, /create table if not exists public\.billing_payments/);
-assert.match(files.migration, /create table if not exists public\.billing_webhook_events/);
-assert.match(files.migration, /alter table public\.workspace_subscriptions enable row level security/i);
-assert.match(files.migration, /alter table public\.billing_payments enable row level security/i);
-assert.match(files.migration, /for select to authenticated using/i);
-assert.match(files.migration, /workspace_members m[\s\S]*m\.user_id = auth\.uid\(\)/);
-assert.match(files.migration, /revoke all on table public\.billing_payments from public, anon, authenticated/i);
-assert.match(files.migration, /checkout_enabled boolean not null default false/i);
-assert.match(files.migration, /where bp\.workspace_id = target_workspace_id and bp\.status = 'pending'/i);
-assert.match(files.migration, /flutterwave_payment_plan_id text/i);
-assert.match(files.migration, /create_workspace_billing_checkout/);
-assert.match(files.migration, /activate_workspace_billing_payment/);
-assert.match(files.migration, /record_workspace_subscription_renewal/);
-assert.match(files.migration, /cancel_workspace_subscription_from_provider/);
-assert.match(files.migration, /mark_workspace_subscription_past_due_from_provider/);
-assert.match(files.migration, /target_failed_at timestamptz/);
-assert.match(files.migration, /target_failed_at > s\.last_payment_at/);
-assert.match(files.migration, /target_paid_at <= subscription_row\.last_payment_at/);
-assert.match(files.migration, /subscription_id = activated_subscription_id, paid_at = target_paid_at/);
-assert.match(files.migration, /already settled by a different provider transaction/);
-assert.doesNotMatch(files.migration, /mark_workspace_billing_checkout_failed/);
-assert.match(files.migration, /security definer[\s\S]*set search_path = ''/i);
-assert.match(files.migration, /auth\.role\(\) <> 'service_role'/);
-assert.match(files.migration, /grant execute on function public\.activate_workspace_billing_payment\(text, text, timestamptz\) to service_role/i);
-assert.match(files.migration, /grant execute on function public\.record_workspace_subscription_renewal\(uuid, text, text, numeric, text, timestamptz\) to service_role/i);
-assert.match(files.migration, /grant execute on function public\.create_workspace_billing_checkout\(uuid, text, text\) to authenticated/i);
-assert.match(files.migration, /created_by uuid references auth\.users\(id\)/i);
-assert.match(files.migration, /provider_plan_id text not null check/i);
-assert.match(files.migration, /billing_interval text not null check \(billing_interval in \('monthly','yearly'\)\)/i);
-assert.match(files.migration, /payment_row\.workspace_id, payment_row\.created_by, 'billing\.subscription_activated'/);
-assert.match(files.migration, /payment_row\.provider_plan_id,[\s\S]*payment_row\.customer_email/);
-assert.match(files.migration, /grant select, insert, update on table public\.billing_webhook_events to service_role/i);
-assert.match(files.migration, /billing\.subscription_activated/);
-assert.match(files.action, /supabase\.auth\.getUser\(\)/);
+const pkg = JSON.parse(files.packageText);
+assert.ok(isCompatibleRelease(pkg.version, '6.1.1'), 'public-key checkout overlay must be based on v6.1.1 or later');
+
+for (const required of [
+  'create table if not exists public.billing_plans',
+  'create table if not exists public.workspace_subscriptions',
+  'create table if not exists public.billing_payments',
+  'create table if not exists public.billing_webhook_events',
+  'alter table public.billing_payments enable row level security',
+  'create_workspace_billing_checkout',
+  'activate_workspace_billing_payment',
+]) assert.ok(files.foundation.toLowerCase().includes(required.toLowerCase()), `billing foundation must contain ${required}`);
+assert.match(files.environmentMigration, /flutterwave_test_plan_id/);
+assert.match(files.environmentMigration, /flutterwave_live_plan_id/);
+assert.match(files.environmentMigration, /create or replace function public\.set_flutterwave_plan_for_billing/);
+
+assert.match(files.manualReviewMigration, /create table if not exists public\.flutterwave_manual_payment_reviews/);
+assert.match(files.manualReviewMigration, /enable row level security/i);
+assert.match(files.manualReviewMigration, /revoke all on table public\.flutterwave_manual_payment_reviews from public, anon, authenticated/i);
+assert.match(files.manualReviewMigration, /grant select, insert, update on table public\.flutterwave_manual_payment_reviews to service_role/i);
+assert.match(files.manualReviewMigration, /create or replace function public\.approve_flutterwave_manual_payment_review/);
+assert.match(files.manualReviewMigration, /auth\.role\(\) <> 'service_role'/);
+assert.match(files.manualReviewMigration, /target_review_note/);
+assert.match(files.manualReviewMigration, /activate_workspace_billing_payment/);
+assert.match(files.manualReviewMigration, /record_workspace_subscription_renewal/);
+assert.match(files.manualReviewMigration, /manual_dashboard_verification/);
+
+assert.match(files.action, /NEXT_PUBLIC_FLW_PUBLIC_KEY/);
+assert.match(files.action, /FLW_SECRET_HASH/);
+assert.match(files.action, /create_workspace_billing_checkout/);
 assert.match(files.action, /workspace_members/);
 assert.match(files.action, /\['owner', 'admin'\]/);
-assert.match(files.action, /create_workspace_billing_checkout/);
-assert.match(files.action, /https:\/\/api\.flutterwave\.com\/v3\/payments/);
-assert.match(files.action, /process\.env\.FLW_SECRET_HASH/);
-assert.match(files.action, /payment_plan: planId/);
-assert.match(files.action, /isSafeFlutterwaveCheckoutUrl/);
-assert.match(files.action, /checkout_pending_review/);
-assert.doesNotMatch(files.action, /mark_workspace_billing_checkout_failed/);
-assert.doesNotMatch(files.action, /SUPABASE_SERVICE_ROLE_KEY/);
-assert.match(files.helper, /transactions\/\$\{encodeURIComponent\(transactionId\)\}\/verify/);
-assert.match(files.helper, /verified\.tx_ref !== reference/);
-assert.match(files.helper, /moneyMatches\(verified\.amount, payment\.amount\)/);
-assert.match(files.helper, /activate_workspace_billing_payment/);
-assert.match(files.helper, /target_paid_at: paidAt\.toISOString\(\)/);
-assert.match(files.helper, /record_workspace_subscription_renewal/);
-assert.match(files.helper, /in\('status', \['active', 'past_due'\]\)/);
-assert.match(files.helper, /flw_renewal_\$\{transactionId\}/);
-assert.match(files.helper, /eq\('provider_plan_id', planId\)/);
-assert.match(files.helper, /subscriptionQuery\.limit\(2\)/);
-assert.match(files.helper, /initialPayment\.status !== 'successful'/);
-assert.match(files.helper, /The RuffNeck checkout reference does not exist/);
-assert.match(files.helper, /target_paid_at: paidAt\.toISOString\(\)/);
-assert.match(files.helper, /verifiedEmail !== payment\.customer_email/);
-assert.match(files.helper, /target_failed_at: failedAt\.toISOString\(\)/);
-assert.match(files.helper, /initialPayment\.status === 'pending'/);
-assert.match(files.helper, /initialPayment\.status !== 'successful'/);
-assert.match(files.helper, /expectedPlanId = initialPayment\.provider_plan_id/);
-assert.match(files.helper, /verifiedEmail !== expectedEmail/);
-assert.match(files.helper, /String\(verified\.payment_plan \?\? verified\.plan_id\) !== payment\.provider_plan_id/);
-assert.match(files.helper, /cancel_workspace_subscription_from_provider/);
+assert.doesNotMatch(files.action, /FLW_SECRET_KEY/);
+assert.doesNotMatch(files.action, /api\.flutterwave\.com/);
+assert.match(files.helper, /FLWPUBK_TEST-/);
+assert.match(files.helper, /FLWPUBK_LIVE-/);
+assert.match(files.helper, /normalizeFlutterwaveWebhookCharge/);
+assert.match(files.helper, /matchesExpectedFlutterwaveInvoice/);
+assert.match(files.helperTypes, /FlutterwaveManualCharge/);
+
+assert.match(files.checkoutButton, /checkout\.flutterwave\.com\/v3\.js/);
+assert.match(files.checkoutButton, /public_key:/);
+assert.match(files.checkoutButton, /payment_plan:/);
+assert.match(files.checkoutButton, /redirect_url:/);
+assert.match(files.checkoutButton, /remains pending until the payment is checked/);
+
 assert.match(files.webhook, /verif-hash/);
 assert.match(files.webhook, /timingSafeEqual/);
 assert.match(files.webhook, /billing_webhook_events/);
-assert.match(files.webhook, /duplicate/);
-assert.match(files.webhook, /charge\.completed/);
-assert.match(files.webhook, /subscription\.cancelled/);
-assert.match(files.callback, /verifyAndActivateBillingPayment/);
-assert.match(files.page, /startWorkspaceSubscriptionCheckout/);
-assert.match(files.page, /Plan allowances/);
-assert.match(files.page, /checkout setup pending/i);
-assert.match(files.page, /Previous payment needs verification/);
-assert.match(files.rules, /checkout\.flutterwave\.com/);
-assert.match(files.declaration, /isSafeFlutterwaveCheckoutUrl/);
-assert.match(files.test, /moneyMatches/);
-const pkg = JSON.parse(files.package);
-// Billing foundation remains compatible with v6.0.0 and all later releases.
-// The former exact equality rejected v6.1.0 despite the compatibility helper
-// already being imported and used by the audit.
-assert.ok(isCompatibleRelease(pkg.version, '6.0.0'));
+assert.match(files.webhook, /flutterwave_manual_payment_reviews/);
+assert.match(files.webhook, /queued_for_manual_review/);
+assert.match(files.webhook, /cancelFlutterwaveSubscription/);
+assert.doesNotMatch(files.webhook, /processFlutterwaveCharge/);
+assert.doesNotMatch(files.webhook, /processFlutterwaveFailedCharge/);
+assert.doesNotMatch(files.webhook, /activate_workspace_billing_payment/);
+
+assert.match(files.callback, /payment_review/);
+assert.doesNotMatch(files.callback, /verifyAndActivateBillingPayment/);
+assert.doesNotMatch(files.callback, /activate_workspace_billing_payment/);
+assert.match(files.reviewAction, /isPlatformBillingAdmin/);
+assert.match(files.reviewAction, /approve_flutterwave_manual_payment_review/);
+assert.match(files.reviewAction, /confirm_provider_dashboard/);
+
 assert.match(pkg.scripts.build, /audit:billing-subscriptions/);
-assert.match(pkg.scripts.test, /test-billing-subscriptions\.mjs/);
-console.log('Billing subscriptions integration audit passed: tenant RLS, owner/admin authorization, provider verification, webhook integrity, idempotency and release hooks verified.');
+assert.match(pkg.scripts.build, /audit:flutterwave-setup/);
+assert.match(pkg.scripts.build, /audit:subscription-entitlements/);
+assert.ok(pkg.scripts.build.indexOf('audit:billing-subscriptions') < pkg.scripts.build.indexOf('next build'));
+assert.ok(pkg.scripts.test.includes('test-billing-subscriptions.mjs'));
+assert.ok(pkg.scripts.test.includes('test-flutterwave-setup.mjs'));
+console.log('Billing subscriptions audit passed: authenticated workspace checkout, Public-Key mode, protected manual review, webhook integrity, no unverified auto-activation and release hooks verified.');
