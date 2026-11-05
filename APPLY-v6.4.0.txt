@@ -1,0 +1,73 @@
+RUFFNECK SOCIAL HUB v6.4.0 — APPLY INSTRUCTIONS
+Payment Collections Analytics + combined Flutterwave Billing Operations
+
+BASELINE
+This release package is self-contained as an overlay for the v6.1.3 billing-review-console baseline. It bundles the v6.2.0 billing-operation hardening, v6.3.0 missing-webhook reconciliation, and the new v6.4.0 read-only collections analytics page. It is not a full copy of the entire application repository. Do not apply over a later/different billing implementation without reconciling changed files.
+
+1. SUPABASE FIRST
+The package contains migration 0048_flutterwave_missing_webhook_reconciliation.sql.
+- Confirm migrations 0043_billing_subscription_foundation.sql, 0046_flutterwave_environment_plan_ids.sql and 0047_flutterwave_public_key_manual_review.sql are already applied.
+- Check whether 0048_flutterwave_missing_webhook_reconciliation.sql is already applied.
+- If it is not applied, open Supabase Dashboard → SQL Editor, paste the complete included migration 0048 and run it once.
+- If 0048 is already applied from v6.3.0, do not run it again.
+- Confirm success before deploying the billing reconciliation page.
+No additional database migration is required for the v6.4.0 analytics feature.
+
+2. GITHUB FILES
+Extract the ZIP and add the new files at their exact repository paths:
+- scripts/audit-flutterwave-operations.mjs
+- scripts/test-flutterwave-operations.mjs
+- scripts/audit-missing-webhook-reconciliation.mjs
+- scripts/test-missing-webhook-reconciliation.mjs
+- scripts/audit-billing-collections-analytics.mjs
+- scripts/test-billing-collections-analytics.mjs
+- src/app/actions/flutterwave-reconciliation.ts
+- src/app/platform/billing-reconcile/page.tsx
+- src/app/platform/billing-analytics/page.tsx
+- src/app/api/platform/billing-analytics/export/route.ts
+- src/lib/billing/manual-approval.mjs
+- src/lib/billing/manual-approval.d.mts
+- src/lib/billing/missing-webhook-reconciliation.mjs
+- src/lib/billing/missing-webhook-reconciliation.d.mts
+- src/lib/billing/collections-analytics.mjs
+- src/lib/billing/collections-analytics.d.mts
+- src/lib/billing/collections-server.ts
+- supabase/migrations/0048_flutterwave_missing_webhook_reconciliation.sql
+
+Replace these complete files:
+- package.json
+- scripts/audit-billing-subscriptions.mjs
+- src/lib/billing/flutterwave-public-key.mjs
+- src/app/actions/flutterwave-public.ts
+- src/app/platform/billing-setup/page.tsx
+- src/app/platform/billing-review/page.tsx
+
+The replacement package.json is version 6.4.0 and carries forward the v6.3.0 build/test script set plus the new analytics test and audit hooks. Preserve any project-specific npm scripts added after that baseline by merging them into this package file; do not remove them.
+
+Commit the changes to GitHub main through the website. Inspect the complete Vercel build log before treating the release as deployed.
+
+3. CONFIGURATION
+No new Vercel environment variables are required. Keep the existing:
+- NEXT_PUBLIC_FLW_PUBLIC_KEY
+- FLW_SECRET_HASH
+- BILLING_PLATFORM_ADMIN_EMAILS
+- NEXT_PUBLIC_APP_URL or NEXT_PUBLIC_SITE_URL
+- server-side Supabase service-role key
+
+Do not create a fake FLW_SECRET_KEY. Do not expose the Supabase service-role key or webhook hash through a NEXT_PUBLIC_ variable, source code, screenshots or GitHub.
+
+4. NEW COLLECTIONS ANALYTICS
+After deployment, open:
+https://ruffneck-social-hub.vercel.app/platform/billing-analytics
+
+The page is restricted to platform billing administrators. It offers 30-, 90- and 365-day reporting windows, review-state counts, approved payment totals grouped separately by currency, collection trends, source counts for webhooks vs manual reconciliation, and a downloadable CSV.
+The page and export endpoint are read-only. The CSV is capped at 10,000 newest rows and excludes customer email, workspace IDs, card data and review notes. A cap indicator is returned when more rows exist.
+
+Only records with review_status=approved, provider_status=successful and invoice_match=true are counted as collections. Pending and needs-attention amounts are displayed separately, not counted as money collected. Different currencies are never added together.
+
+5. PAYMENT-SAFETY BOUNDARY
+The existing v3 Public-Key/manual-review model remains in force. A webhook, redirect or missing-webhook reconciliation record does not activate a subscription. A platform billing administrator must independently inspect the payment in Flutterwave Dashboard and complete the separate APPROVE process.
+Missing-webhook reconciliation is limited to successful initial payments that exactly match a still-pending RuffNeck invoice. Do not use it for recurring renewals, failed/pending charges, refunds, reversals or mismatched invoices.
+
+6. VALIDATION STATUS
+The package includes focused analytics tests and an integration audit. During package preparation, those focused tests/audits and TypeScript/TSX syntax transpilation were run. The full repository npm test, complete Next.js production build, remote Supabase state, Vercel deployment and live Flutterwave transaction were not run from this environment. Confirm them against the actual GitHub/Vercel/Supabase project before enabling live customer checkout.
