@@ -67,7 +67,7 @@ export default async function WorkspaceSubscriptionManagementPage({ searchParams
     <div style={{ maxWidth: 880, margin: '0 auto' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
         <Link href="/billing" style={{ color: '#176b9a' }}>← Back to billing</Link>
-        <Link href="/billing/usage" style={{ color: '#176b9a' }}>Usage and entitlements</Link>
+        <nav style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}><Link href="/billing/history" style={{ color: '#176b9a' }}>Billing history</Link><Link href="/billing/usage" style={{ color: '#176b9a' }}>Usage and entitlements</Link></nav>
       </header>
       <span style={{ display: 'block', marginTop: 28, color: '#1479a8', fontSize: 11, letterSpacing: 1.5, fontWeight: 800 }}>WORKSPACE BILLING</span>
       <h1 style={{ fontSize: 'clamp(30px, 5vw, 42px)', margin: '8px 0' }}>Subscription management</h1>

@@ -1,0 +1,45 @@
+RUFFNECK SOCIAL HUB v6.7.0 — CONSOLIDATED PATCH MANIFEST
+
+BASELINE
+Last confirmed deployment shared in this conversation: v6.4.0 at Git commit b4dc17f. This consolidated package carries forward the v6.4.0 billing overlay and includes the v6.5.0, v6.6.0 and v6.7.0 billing upgrades.
+
+NEW IN v6.5.0 (CARRIED FORWARD)
+- src/app/actions/subscription-lifecycle.ts
+- src/app/billing/subscription/page.tsx
+- src/app/platform/billing-lifecycle/page.tsx
+- src/lib/billing/subscription-lifecycle.mjs
+- src/lib/billing/subscription-lifecycle.d.mts
+- scripts/test-subscription-lifecycle.mjs
+- scripts/audit-subscription-lifecycle.mjs
+- supabase/migrations/0049_subscription_lifecycle_management.sql
+
+NEW IN v6.6.0 (CARRIED FORWARD)
+- src/app/api/cron/subscription-lifecycle/route.ts
+- src/lib/billing/lifecycle-cron.mjs
+- src/lib/billing/lifecycle-cron.d.mts
+- scripts/test-subscription-lifecycle-cron.mjs
+- scripts/audit-subscription-lifecycle-cron.mjs
+- supabase/migrations/0050_daily_subscription_lifecycle_processor.sql
+- vercel.json (daily 03:00 UTC cron; merge the single crons entry if the repo already has Vercel configuration)
+
+NEW IN v6.7.0
+- src/app/billing/history/page.tsx
+- src/app/api/billing/history/export/route.ts
+- src/lib/billing/workspace-history.mjs
+- src/lib/billing/workspace-history.d.mts
+- src/lib/billing/workspace-history-server.ts
+- scripts/test-workspace-billing-history.mjs
+- scripts/audit-workspace-billing-history.mjs
+
+REPLACED / UPDATED
+- package.json (release 6.7.0; preserves 6.4–6.6 billing scripts/audits and adds billing-history checks)
+- src/app/billing/subscription/page.tsx (adds Billing history navigation)
+- v6.5/v6.6 billing lifecycle pages and audits carried forward as complete replacements from those overlays
+
+DATABASE MIGRATIONS INCLUDED
+- 0048_flutterwave_missing_webhook_reconciliation.sql (from v6.4.0)
+- 0049_subscription_lifecycle_management.sql
+- 0050_daily_subscription_lifecycle_processor.sql
+Check Supabase migration history and apply only missing migrations, in numerical order.
+
+NO NEW SQL MIGRATION IN v6.7.0 ITSELF.
