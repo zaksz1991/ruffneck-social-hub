@@ -9,39 +9,29 @@ const errors: Record<string, string> = {
   service: 'The authentication service could not be reached. Try again later.',
 };
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string; next?: string }>;
-}) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const params = await searchParams;
-
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <Link className="auth-brand" href="/">
-          <img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" />
-        </Link>
+        <Link className="auth-brand" href="/"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" /></Link>
         <p className="eyebrow">SECURE WORKSPACE ACCESS</p>
         <h1>Welcome back.</h1>
         <p className="muted">Sign in to manage your brands, publishing workflow and team operations.</p>
-        {params.error && (
-          <p className="form-alert" role="alert">
-            {errors[params.error] ?? 'Sign-in failed. Try again.'}
-          </p>
-        )}
+        {params.error && <p className="form-alert" role="alert">{errors[params.error] ?? 'Sign-in failed. Try again.'}</p>}
         <form action={signIn} className="auth-form">
-          {params.next?.startsWith('/invite/') && !params.next.startsWith('//') && <input type="hidden" name="next" value={params.next}/>}
+          {params.next?.startsWith('/invite/') && !params.next.startsWith('//') && !params.next.includes('\\') && <input type="hidden" name="next" value={params.next} />}
           <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
           <label>Password<input name="password" type="password" autoComplete="current-password" required /></label>
           <button type="submit">Sign in securely</button>
         </form>
         <p className="auth-foot">New to RuffNeck Social Hub? <Link href="/signup">Create an account</Link></p>
+        <p className="auth-foot"><Link href="/organizations">View capabilities for organisations</Link></p>
       </section>
       <aside className="auth-aside">
         <span>CONTROLLED SOCIAL OPERATIONS</span>
         <h2>One operating layer for every brand.</h2>
-        <p>Official integrations. Tenant-level access controls. Human-governed automation.</p>
+        <p>Official integrations. Tenant-level access controls. Human-governed AI.</p>
       </aside>
     </main>
   );

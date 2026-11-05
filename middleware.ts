@@ -6,6 +6,7 @@ export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return response;
+
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
@@ -16,12 +17,22 @@ export async function middleware(request: NextRequest) {
       },
     },
   });
+
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const publicPath = path === '/login' || path === '/signup' || path.startsWith('/auth/') || path.startsWith('/invite/') || path === '/api/integrations/instagram/callback';
+  const publicPath = path === '/login' ||
+    path === '/signup' ||
+    path.startsWith('/auth/') ||
+    path.startsWith('/invite/') ||
+    path === '/organizations' ||
+    path.startsWith('/organizations/') ||
+    path === '/api/integrations/instagram/callback';
+
   if (!user && !publicPath) return NextResponse.redirect(new URL('/login', request.url));
   if (user && (path === '/login' || path === '/signup')) return NextResponse.redirect(new URL('/', request.url));
   return response;
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)'] };
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest).*)'],
+};

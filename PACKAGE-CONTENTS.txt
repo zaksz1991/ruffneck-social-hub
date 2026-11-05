@@ -1,28 +1,27 @@
-RuffNeck Social Hub v5.3.0 package contents
+RUFFNECK SOCIAL HUB v6.7.0 — ORGANISATION READINESS
 
-package.json
-CHANGELOG.md
-scripts/audit-ai-provider-variants.mjs
-scripts/test-ai-provider-variants.mjs
-scripts/audit-campaign-intelligence.mjs
-scripts/audit-instagram-comments.mjs
-scripts/audit-linkedin-analytics.mjs
-scripts/audit-provider-analytics.mjs
-scripts/audit-tiktok-integration.mjs
-scripts/audit-whatsapp-integration.mjs
-scripts/audit-whatsapp-media-replies.mjs
-scripts/audit-youtube-integration.mjs
-scripts/test-whatsapp-media.mjs
-scripts/test-whatsapp-operations.mjs
-src/app/actions/content-provider-variants.ts
-src/app/content/ai-content-generator.tsx
-src/app/content/ai-provider-variant-generator.tsx
-src/app/content/ai-provider-variant-generator.css
-src/lib/ai/provider-variant-contract.ts
-src/lib/ai/provider-variants.ts
-supabase/migrations/0040_ai_provider_platform_variants.sql
-README-v5.3.0-AI-Provider-Variants.md
-RELEASE-NOTES-v5.3.0.md
-RELEASE-MANIFEST-v5.3.0.md
-VERIFICATION-v5.3.0.md
-APPLY-v5.3.0.txt
+This is a source overlay for the existing repository, not a complete application export.
+
+New route:
+  /organizations
+
+Reworked authenticated landing/dashboard:
+  /
+
+Login page adds public organization-overview link:
+  /login
+
+Core product truth source:
+  src/lib/product/organization-capabilities.mjs
+
+Documentation:
+  docs/ORGANIZATION-CAPABILITY-MATRIX-v6.7.0.md
+  docs/ORGANIZATION-DEMO-GUIDE-v6.7.0.md
+  docs/ORGANIZATION-READINESS-AUDIT-v6.7.0.md
+
+Security:
+  SECURITY.md
+  .github/dependabot.yml
+  .github/workflows/codeql.yml
+
+No migration, dependency, new secret or paid service is introduced.

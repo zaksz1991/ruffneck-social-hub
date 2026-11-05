@@ -2,54 +2,34 @@ import Link from 'next/link';
 import { signOut } from '@/app/actions/auth';
 import { createBrand, createWorkspace, renameBrand } from '@/app/actions/workspaces';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import styles from './home.module.css';
 
 type Workspace = { id: string; name: string; created_at: string };
 type Brand = { id: string; workspace_id: string; name: string; timezone: string; created_at: string };
 
-function Icon({ name, size = 18 }: { name: string; size?: number }) {
-  const paths: Record<string, string> = {
-    grid: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z',
-    layers: 'm12 3 9 5-9 5-9-5 9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5',
-    users: 'M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M20 8v6 M23 11h-6',
-    calendar: 'M8 2v4 M16 2v4 M3 10h18 M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z',
-    inbox: 'M4 4h16l2 11h-6l-2 3h-4l-2-3H2L4 4Z M2 15h6l2 3h4l2-3h6',
-    spark: 'm12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3Z M19 14l1.1 2.9L23 18l-2.9 1.1L19 22l-1.1-2.9L15 18l2.9-1.1L19 14Z',
-    chart: 'M3 3v18h18 M8 15l4-4 3 3 6-7',
-    settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 2.9-.2-.1a1.7 1.7 0 0 0-1.9.3l-.1.1h-3.4l-.1-.2a1.7 1.7 0 0 0-1.6-1.1 1.7 1.7 0 0 0-1.6 1.1l-.1.2H5.7l-.1-.1a1.7 1.7 0 0 0-1.9-.3l-.2.1-1.7-2.9.1-.1A1.7 1.7 0 0 0 2.2 15l-.1-.2v-3.4l.2-.1a1.7 1.7 0 0 0 .3-1.9l-.1-.1 1.7-2.9.2.1a1.7 1.7 0 0 0 1.9-.3l.1-.1h3.4l.1.2a1.7 1.7 0 0 0 1.6 1.1 1.7 1.7 0 0 0 1.6-1.1l.1-.2h3.4l.1.1a1.7 1.7 0 0 0 1.9.3l.2-.1 1.7 2.9-.1.1a1.7 1.7 0 0 0-.3 1.9l.1.1v3.4l-.2.2Z',
-    share: 'M18 8a3 3 0 1 0-2.8-4 M6 14a3 3 0 1 0 0 6 M18 22a3 3 0 1 0 0-6 M8.6 13.5l6.8-4 M8.6 16.5l6.8 4',
-    search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z M21 21l-4.3-4.3',
-    bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',
-    arrow: 'M5 12h14 M13 6l6 6-6 6',
-    plus: 'M12 5v14 M5 12h14',
-    check: 'm5 12 4 4L19 6',
-  };
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.grid} /></svg>;
-}
-
-const navGroups = [
-  { label: 'WORKSPACE', items: [['Overview', 'grid', 'overview'], ['Brands & clients', 'layers', 'brands'], ['Team access', 'users', 'team']] },
-  { label: 'PUBLISH & ENGAGE', items: [['Content calendar', 'calendar', 'publishing'], ['Campaign planner', 'chart', 'campaigns'], ['Unified inbox', 'inbox', 'inbox'], ['Customer CRM', 'users', 'customers'], ['AI automation', 'spark', 'automation']] },
-  { label: 'INSIGHTS', items: [['Publishing analytics', 'chart', 'analytics'], ['Connected channels', 'share', 'channels']] },
-];
-
 export default async function Home({ searchParams }: { searchParams: Promise<{ workspace?: string; error?: string; saved?: string }> }) {
   const params = await searchParams;
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    return <main className="setup-screen"><section><img src="/brand/ruffneck-symbol.svg" alt="RuffNeck" width="54" height="54"/><p className="eyebrow">RUFFNECK SOCIAL HUB</p><h1>Connect your workspace database</h1><p>Set the Supabase project URL and public anon key in the hosting environment, then apply the database migrations.</p></section></main>;
+    return <main className={styles.content}><section className={styles.panel}><p className={styles.eyebrow}>RUFFNECK SOCIAL HUB</p><h1>Connect the workspace database</h1><p className={styles.panelIntro}>Configure the Supabase project URL and public anon key, then apply the required database migrations.</p><Link className={styles.button} href="/organizations">View the organization overview</Link></section></main>;
   }
 
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <main className="auth-gate"><div className="gate-card"><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" className="gate-logo"/><span className="eyebrow">YOUR SOCIAL OPERATIONS, CONNECTED</span><h1>Sign in to continue</h1><p>Your workspace data is available only to authenticated members.</p><Link className="button-primary" href="/login">Open sign in <Icon name="arrow" size={16}/></Link></div><div className="gate-footer">OFFICIAL INTEGRATIONS · SECURE WORKSPACES · HUMAN-GOVERNED AI</div></main>;
+  if (!user) return <main className={styles.content}><section className={styles.panel}><img src="/brand/ruffneck-logo.svg" alt="RuffNeck Social Hub" width="190" height="auto"/><p className={styles.eyebrow}>YOUR SOCIAL OPERATIONS, CONNECTED</p><h1>Sign in to continue</h1><p className={styles.panelIntro}>Workspace data is available only to authenticated members. Explore the public organization overview before signing in.</p><div className={styles.headingActions}><Link className={styles.button} href="/login">Open sign in</Link><Link className={styles.buttonAlt} href="/organizations">For organizations</Link></div></section></main>;
 
-  const { data: workspaceRows } = await supabase.from('workspaces').select('id,name,created_at').order('created_at', { ascending: true });
+  const { data: workspaceRows, error: workspaceError } = await supabase.from('workspaces').select('id,name,created_at').order('created_at', { ascending: true });
   const workspaces = (workspaceRows ?? []) as Workspace[];
-  const activeWorkspace = workspaces.find((w) => w.id === params.workspace) ?? workspaces[0];
-  const { data: memberRow } = activeWorkspace ? await supabase.from('workspace_members').select('role').eq('workspace_id', activeWorkspace.id).eq('user_id', user.id).maybeSingle() : { data: null };
+  const activeWorkspace = workspaces.find((workspace) => workspace.id === params.workspace) ?? workspaces[0];
+  const { data: memberRow } = activeWorkspace
+    ? await supabase.from('workspace_members').select('role').eq('workspace_id', activeWorkspace.id).eq('user_id', user.id).maybeSingle()
+    : { data: null };
   const role = memberRow?.role ?? 'member';
   const canManage = role === 'owner' || role === 'admin';
-  const { data: brandRows } = activeWorkspace ? await supabase.from('brands').select('id,workspace_id,name,timezone,created_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: true }) : { data: [] };
+  const { data: brandRows } = activeWorkspace
+    ? await supabase.from('brands').select('id,workspace_id,name,timezone,created_at').eq('workspace_id', activeWorkspace.id).order('created_at', { ascending: true })
+    : { data: [] };
   const brands = (brandRows ?? []) as Brand[];
+
   let connectedChannelCount = 0;
   let queuedPublishingCount = 0;
   let channelCountAvailable = true;
@@ -64,40 +44,113 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ w
     channelCountAvailable = !channelMetric.error;
     publishingCountAvailable = !publishingMetric.error;
   }
+
+  const displayName = typeof user.user_metadata?.full_name === 'string' && user.user_metadata.full_name.trim()
+    ? user.user_metadata.full_name.trim().split(/\s+/)[0]
+    : (user.email ?? 'there').split('@')[0];
   const errorMessages: Record<string, string> = {
-    'workspace-name': 'Workspace names must contain 2–120 characters.', 'workspace-create': 'Workspace creation failed. Confirm migration 0003 has been applied.',
-    'brand-input': 'Enter a valid brand name.', 'brand-create': 'Brand creation failed. Only workspace owners and admins can add brands.', 'brand-update': 'Brand update failed. Only workspace owners and admins can rename brands.',
+    'workspace-name': 'Workspace names must contain 2–120 characters.',
+    'workspace-create': 'Workspace creation failed. Confirm migration 0003 has been applied.',
+    'brand-input': 'Enter a valid brand name.',
+    'brand-create': 'Brand creation failed. Only workspace owners and admins can add brands.',
+    'brand-update': 'Brand update failed. Only workspace owners and admins can rename brands.',
   };
 
-  return <main className="app-shell">
-    <aside className="sidebar">
-      <Link href="/" className="brand-lockup"><img src="/brand/ruffneck-logo-inverse.svg" alt="RuffNeck Social Hub"/><span className="brand-plan">SOCIAL OPERATIONS</span></Link>
-      <div className="workspace-switcher"><span className="switcher-label">CURRENT WORKSPACE</span><div className="workspace-avatar">{(activeWorkspace?.name ?? 'R').slice(0,1).toUpperCase()}</div><div className="switcher-copy"><strong>{activeWorkspace?.name ?? 'No workspace yet'}</strong><small>{role.toUpperCase()}</small></div><span className="chevron">⌄</span></div>
-      <nav className="side-nav">{navGroups.map((group) => <div className="nav-group" key={group.label}><p>{group.label}</p>{group.items.map(([label, icon, target]) => target === 'campaigns' ? <Link href={`/campaigns?workspace=${activeWorkspace?.id ?? ''}`} className="nav-link" key={target}><Icon name={icon}/><span>{label}</span></Link> : target === 'inbox' ? <Link href="/inbox" className="nav-link" key={target}><Icon name={icon}/><span>{label}</span></Link> : target === 'customers' ? <Link href={`/inbox/customers?workspace=${activeWorkspace?.id ?? ''}`} className="nav-link" key={target}><Icon name={icon}/><span>{label}</span></Link> : target === 'team' ? <Link href="/team" className="nav-link" key={target}><Icon name={icon}/><span>{label}</span></Link> : target === 'channels' ? <Link href="/channels" className="nav-link" key={target}><Icon name={icon}/><span>{label}</span></Link> : target === 'analytics' ? <Link href="/analytics" className="nav-link" key={target}><Icon name={icon}/><span>{label}</span></Link> : <a href={`#${target}`} className={target === 'overview' ? 'nav-link active' : 'nav-link'} key={target}><Icon name={icon}/><span>{label}</span>{target === 'inbox' && <i className="nav-dot"/>}</a>)}</div>)}</nav>
-      <div className="sidebar-bottom"><div className="help-card"><div className="help-icon"><Icon name="spark"/></div><strong>Make every post count.</strong><p>Your operating hub for every brand, channel and conversation.</p><a href="#automation">Explore automation <Icon name="arrow" size={13}/></a></div><Link href="#settings" className="nav-link"><Icon name="settings"/><span>Settings</span></Link><div className="sidebar-user"><div className="user-avatar">{(user.email ?? 'U').slice(0,1).toUpperCase()}</div><div><strong>{user.email}</strong><small>Workspace member</small></div><form action={signOut}><button type="submit" aria-label="Sign out">↗</button></form></div></div>
-    </aside>
-    <section className="dashboard">
-      <header className="topbar"><div className="breadcrumb"><span>Workspace</span><b>/</b><strong>Overview</strong></div><div className="top-actions"><label className="search-box"><Icon name="search" size={17}/><input aria-label="Search" placeholder="Search anything..."/><kbd>⌘ K</kbd></label><button className="icon-button" aria-label="Notifications"><Icon name="bell"/></button><div className="top-user">{(user.email ?? 'U').slice(0,1).toUpperCase()}</div></div></header>
-      <div className="page-content">
-        <div className="page-heading"><div><span className="eyebrow">YOUR CONTROL ROOM</span><h1>Good morning.</h1><p>Here’s what’s happening across your social operations.</p></div><div className="heading-actions"><span className="live-status"><i/> Workspace secure</span><Link className="button-secondary" href="/content"><Icon name="calendar" size={16}/> Content Studio</Link><Link className="button-secondary" href="/publishing"><Icon name="calendar" size={16}/> Publishing Queue</Link><Link className="button-secondary" href={`/campaigns?workspace=${activeWorkspace?.id ?? ''}`}><Icon name="chart" size={16}/> Campaigns</Link><Link className="button-secondary" href="/team"><Icon name="users" size={16}/> Team</Link><Link className="button-secondary" href="/analytics"><Icon name="chart" size={16}/> Analytics</Link><Link className="button-secondary" href="/channels"><Icon name="share" size={16}/> Channels</Link><a className="button-secondary" href="#brands"><Icon name="plus" size={16}/> Add a brand</a></div></div>
-        {params.error && <p className="notice error">{errorMessages[params.error] ?? 'The requested operation could not be completed.'}</p>}
-        {params.saved && <p className="notice success">{params.saved === 'brand' ? 'Brand created.' : 'Brand name updated.'}</p>}
-        <article className="hero-banner"><div className="hero-copy"><span className="hero-kicker"><i/> THE SOCIAL OPERATIONS PLATFORM</span><h2>Every brand.<br/><em>One clear picture.</em></h2><p>Plan, publish and manage conversations across your client portfolio from one secure workspace.</p><a href="#publishing" className="hero-link">Explore your workspace <Icon name="arrow" size={15}/></a></div><div className="hero-art" aria-hidden="true"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit-core"><img src="/brand/ruffneck-symbol.svg" alt=""/></div><span className="orbit-node node-a"><Icon name="calendar"/></span><span className="orbit-node node-b"><Icon name="inbox"/></span><span className="orbit-node node-c"><Icon name="chart"/></span><span className="orbit-node node-d"><Icon name="spark"/></span></div></article>
-        <div className="section-title"><div><h2>Workspace snapshot</h2><p>Workspace-level counts from Supabase. Queue records are not proof of provider delivery.</p></div><span className="date-label">LIVE WORKSPACE DATA</span></div>
-        <div className="metric-grid"><article className="metric-card"><div className="metric-top"><span>Connected channels</span><span className="metric-icon cyan"><Icon name="share"/></span></div><strong>{channelCountAvailable ? connectedChannelCount : '—'}</strong><small><i className="status-neutral"/> {channelCountAvailable ? (connectedChannelCount ? 'Verified connected accounts' : 'No verified connections') : 'Channel data unavailable'}</small></article><article className="metric-card"><div className="metric-top"><span>Scheduled content</span><span className="metric-icon violet"><Icon name="calendar"/></span></div><strong>{publishingCountAvailable ? queuedPublishingCount : '—'}</strong><small><i className="status-neutral"/> {publishingCountAvailable ? (queuedPublishingCount ? 'Queue records waiting' : 'No publishing jobs') : 'Queue data unavailable'}</small></article><article className="metric-card"><div className="metric-top"><span>Open conversations</span><span className="metric-icon amber"><Icon name="inbox"/></span></div><strong>0</strong><small><i className="status-neutral"/> Inbox not connected</small></article><article className="metric-card"><div className="metric-top"><span>AI workflows</span><span className="metric-icon green"><Icon name="spark"/></span></div><strong>0</strong><small><i className="status-neutral"/> Approval-first setup</small></article></div>
-        <div className="content-columns"><div className="main-column">
-          <div className="section-title" id="brands"><div><h2>Workspaces & brands</h2><p>Keep every client operation organised and separated.</p></div><span className="count-pill">{workspaces.length} WORKSPACE{workspaces.length === 1 ? '' : 'S'}</span></div>
-          <div className="workspace-grid">{workspaces.map((workspace) => <Link className={`workspace-card ${workspace.id === activeWorkspace?.id ? 'selected' : ''}`} href={`/?workspace=${workspace.id}`} key={workspace.id}><div className="workspace-card-icon">{workspace.name.slice(0,1).toUpperCase()}</div><div className="workspace-card-copy"><small>{workspace.id === activeWorkspace?.id ? 'CURRENT WORKSPACE' : 'SWITCH WORKSPACE'}</small><strong>{workspace.name}</strong><span>{workspace.id === activeWorkspace?.id ? 'Active now' : 'Open workspace'}</span></div><Icon name="arrow" size={16}/></Link>)}<form className="create-card" action={createWorkspace}><div className="create-card-head"><span><Icon name="plus"/></span><strong>Create workspace</strong></div><input id="workspace-name" name="name" minLength={2} maxLength={120} placeholder="e.g. Client Operations" required aria-label="New workspace name"/><button type="submit">Create workspace <Icon name="arrow" size={14}/></button><small>Creates an isolated workspace with you as owner.</small></form></div>
-          <div className="section-title brand-title"><div><h2>Brands in this workspace</h2><p>{activeWorkspace ? `Brand accounts belonging to ${activeWorkspace.name}.` : 'Create a workspace to add brands.'}</p></div><span className="count-pill">{brands.length} BRAND{brands.length === 1 ? '' : 'S'}</span></div>
-          {activeWorkspace ? <><div className="brand-list">{brands.map((brand, index) => <article className="brand-row" key={brand.id}><div className={`brand-mark brand-mark-${index % 4}`}>{brand.name.slice(0,1).toUpperCase()}</div><div className="brand-details"><strong>{brand.name}</strong><span>Brand workspace · {brand.timezone}</span></div><span className="brand-state"><i/> Active</span>{canManage && <form action={renameBrand} className="rename-form"><input type="hidden" name="brand_id" value={brand.id}/><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><input name="name" aria-label={`New name for ${brand.name}`} minLength={2} maxLength={80} placeholder="Rename brand" required/><button type="submit">Save</button></form>}</article>)}</div>{canManage && <form action={createBrand} className="inline-create"><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><label htmlFor="brand-name">Add a brand</label><input id="brand-name" name="name" minLength={2} maxLength={80} placeholder="Brand or client name" required/><button type="submit"><Icon name="plus" size={15}/> Add brand</button></form>}{!canManage && <p className="muted-note">Your {role} role has read-only brand access.</p>}</> : <p className="empty-state">No workspace is available for this account. Complete signup or contact the workspace administrator.</p>}
-          <div className="section-title" id="team"><div><h2>Team access</h2><p>Workspace membership, invitations and role changes are checked by database functions and tenant policies.</p></div><Link href="/team" className="status-pill">MANAGE TEAM →</Link></div><div className="team-summary"><div><strong>{role}</strong><span>Your role in this workspace</span></div><div><strong>{workspaces.length}</strong><span>Workspaces you can access</span></div><div><strong>RLS</strong><span>Database-enforced tenant boundary</span></div></div>
-        </div><aside className="right-column"><article className="side-panel"><div className="panel-heading"><div><span className="panel-icon"><Icon name="spark"/></span><h3>AI command assistant</h3></div><span className="beta-pill">IN DEVELOPMENT</span></div><div className="assistant-visual"><div className="assistant-glow"><img src="/brand/ruffneck-symbol.svg" alt=""/></div></div><h4>Your next move, made clearer.</h4><p>AI tools will help prepare content, organise conversations and surface useful actions. Human approval remains in control.</p><a href="#automation" className="text-link">Explore AI governance <Icon name="arrow" size={14}/></a></article>
-          <article className="side-panel activity-panel"><div className="panel-heading"><div><span className="panel-icon pale"><Icon name="chart"/></span><h3>Platform readiness</h3></div><span className="readiness-label">FOUNDATION</span></div><div className="readiness-row"><span>Workspace security</span><strong className="ready">Configured</strong></div><div className="readiness-row"><span>Brand management</span><strong className="ready">Available</strong></div><div className="readiness-row"><span>Social connections</span><strong>Not connected</strong></div><div className="readiness-row"><span>Publishing engine</span><strong>In development</strong></div><div className="readiness-row"><span>Unified inbox</span><strong>In development</strong></div></article>
-          <article className="side-panel quick-links"><h3>Quick access</h3><Link href="/content"><span><Icon name="calendar"/> Content Studio</span><Icon name="arrow" size={14}/></Link><Link href="/team"><span><Icon name="users"/> Team & access</span><Icon name="arrow" size={14}/></Link><Link href="/analytics"><span><Icon name="chart"/> Publishing analytics</span><Icon name="arrow" size={14}/></Link><Link href={`/campaigns?workspace=${activeWorkspace?.id ?? ''}`}><span><Icon name="chart"/> Campaign intelligence</span><Icon name="arrow" size={14}/></Link><Link href="/inbox"><span><Icon name="inbox"/> Unified inbox</span><Icon name="arrow" size={14}/></Link><a href="#channels"><span><Icon name="share"/> Connect a channel</span><Icon name="arrow" size={14}/></a></article>
-        </aside></div>
-        <div className="section-title operational-title" id="analytics"><div><h2>Operational modules</h2><p>Module availability is shown accurately as integrations are built and verified.</p></div></div><div className="module-grid"><article id="publishing"><span className="module-icon"><Icon name="calendar"/></span><div><strong>Publishing queue</strong><small>Scheduling and provider dispatch enabled for supported accounts</small></div></article><article id="automation"><span className="module-icon"><Icon name="spark"/></span><div><strong>AI automation</strong><small>Approval-first · Model execution not enabled</small></div></article><article id="inbox"><span className="module-icon"><Icon name="inbox"/></span><div><strong>Unified inbox</strong><small>Not connected · Official messaging APIs required</small></div></article><article id="channels"><span className="module-icon"><Icon name="share"/></span><div><strong>Connected channels</strong><small>Not connected · Provider authorisation required</small></div></article><Link href="/analytics" className="module-card-link"><span className="module-icon"><Icon name="chart"/></span><div><strong>Publishing analytics</strong><small>Queue analytics available · Meta post insights are in Campaigns; other provider analytics remain pending</small></div></Link><Link href={`/campaigns?workspace=${activeWorkspace?.id ?? ''}`} className="module-card-link"><span className="module-icon"><Icon name="chart"/></span><div><strong>Campaign intelligence</strong><small>Campaign planning, UTM links, manual snapshots and official Meta post insights</small></div></Link></div>
-        <footer className="page-footer"><img src="/brand/ruffneck-symbol.svg" alt=""/><span>RUFFNECK SOCIAL HUB</span><i/> OFFICIAL APIS · TENANT ISOLATION · CONTROLLED AI · VERIFIED METRICS</footer>
-      </div>
-    </section>
-  </main>;
+  return (
+    <main className={styles.shell}>
+      <aside className={styles.sidebar}>
+        <Link href="/" className={styles.brand}><span className={styles.brandMark}>R</span><span>RUFFNECK<br/>SOCIAL HUB</span></Link>
+        <div>
+          <span className={styles.sideLabel}>WORKSPACE</span>
+          <nav className={styles.sideNav} aria-label="Workspace navigation">
+            <Link href="/" aria-current="page">Overview</Link>
+            <Link href="#brands">Brands</Link>
+            <Link href="/team">Team access</Link>
+          </nav>
+        </div>
+        <div>
+          <span className={styles.sideLabel}>PUBLISH AND ENGAGE</span>
+          <nav className={styles.sideNav} aria-label="Publishing and engagement">
+            <Link href="/content">Content Studio</Link>
+            <Link href="/publishing">Publishing queue</Link>
+            <Link href="/inbox">Unified inbox</Link>
+            <Link href={`/inbox/customers?workspace=${activeWorkspace?.id ?? ''}`}>Customer CRM</Link>
+            <Link href="/inbox/automation">Inbox automation</Link>
+            <Link href={`/campaigns?workspace=${activeWorkspace?.id ?? ''}`}>Campaigns</Link>
+          </nav>
+        </div>
+        <div>
+          <span className={styles.sideLabel}>INSIGHTS AND CONNECTIONS</span>
+          <nav className={styles.sideNav} aria-label="Insights and integrations">
+            <Link href="/analytics">Publishing analytics</Link>
+            <Link href="/channels">Connected channels</Link>
+          </nav>
+        </div>
+        <div className={styles.sideBottom}>
+          <Link href="/organizations">Organization overview</Link>
+          <div className={styles.userBox}><div><strong>{user.email}</strong><small>{role.toUpperCase()} · Workspace member</small></div><form action={signOut}><button type="submit">Sign out</button></form></div>
+        </div>
+      </aside>
+
+      <section className={styles.main}>
+        <header className={styles.topbar}>
+          <div className={styles.crumb}>Workspace <b>/</b> Overview <b>/</b> {activeWorkspace?.name ?? 'No workspace'}</div>
+          <div className={styles.topLinks}><span className={styles.secure}>ROLE-GATED WORKSPACE</span><Link href="/organizations">Organization view</Link></div>
+        </header>
+        <div className={styles.content}>
+          <div className={styles.heading}>
+            <div><span className={styles.eyebrow}>WORKSPACE CONTROL ROOM</span><h1>Welcome, {displayName}.</h1><p>Manage brands, publishing operations and supported customer conversations from one workspace.</p></div>
+            <div className={styles.headingActions}><Link className={styles.button} href="/content">Create content</Link><Link className={styles.buttonAlt} href="/publishing">Open publishing queue</Link></div>
+          </div>
+
+          {params.error && <p className={`${styles.notice} ${styles.error}`} role="alert">{errorMessages[params.error] ?? 'The requested operation could not be completed.'}</p>}
+          {params.saved && <p className={`${styles.notice} ${styles.success}`} role="status">{params.saved === 'brand' ? 'Brand created.' : 'Brand name updated.'}</p>}
+          {workspaceError && <p className={`${styles.notice} ${styles.error}`} role="alert">Workspace information could not be loaded. Refresh the page or contact the workspace administrator.</p>}
+
+          <article className={styles.banner}>
+            <div><h2>Every brand. One clear picture.</h2><p>Plan content, coordinate people, manage supported conversations and review performance. Provider publishing and analytics depend on account permissions and the capability available for each integration.</p></div>
+            <Link href="/organizations">View platform capabilities</Link>
+          </article>
+
+          <div className={styles.sectionHead}><div><h2>Workspace snapshot</h2><p>Live counts where a verified workspace query is available. Queue records are not proof of provider delivery.</p></div><span className={styles.pill}>LIVE WORKSPACE DATA</span></div>
+          <div className={styles.metricGrid}>
+            <article className={styles.metric}><span>Connected social accounts</span><strong>{channelCountAvailable ? connectedChannelCount : '—'}</strong><small>{channelCountAvailable ? (connectedChannelCount ? 'Accounts marked connected' : 'No connected accounts yet') : 'Connection data unavailable'}</small></article>
+            <article className={styles.metric}><span>Publishing queue records</span><strong>{publishingCountAvailable ? queuedPublishingCount : '—'}</strong><small>{publishingCountAvailable ? 'Queued, retryable or awaiting review; not delivery confirmation' : 'Queue data unavailable'}</small></article>
+            <article className={styles.metric}><span>Conversation operations</span><strong>Available</strong><small>Open the inbox for currently connected and supported providers.</small></article>
+            <article className={styles.metric}><span>AI governance</span><strong>Human-led</strong><small>Configured AI assistance remains subject to safety checks and human decisions.</small></article>
+          </div>
+
+          <div className={styles.columns}>
+            <section className={styles.panel} id="workspaces">
+              <div className={styles.sectionHead}><div><h2>Workspaces</h2><p>Only workspaces available to your signed-in account are shown.</p></div><span className={styles.pill}>{workspaces.length} ACCESSIBLE</span></div>
+              {workspaces.length ? <div className={styles.workspaceList}>{workspaces.map((workspace) => <Link key={workspace.id} href={`/?workspace=${workspace.id}`} className={`${styles.workspaceRow} ${workspace.id === activeWorkspace?.id ? styles.selected : ''}`}><div><b>{workspace.name}</b><small>{workspace.id === activeWorkspace?.id ? 'Current workspace' : 'Switch workspace'}</small></div><em>{workspace.id === activeWorkspace?.id ? role.toUpperCase() : 'OPEN →'}</em></Link>)}</div> : <p className={styles.empty}>No workspace is available for this account. Complete signup or contact the workspace administrator.</p>}
+              <form className={styles.createForm} action={createWorkspace}><label htmlFor="workspace-name">Create a workspace</label><input id="workspace-name" name="name" minLength={2} maxLength={120} placeholder="e.g. Client Operations" required/><button type="submit">Create workspace</button></form>
+            </section>
+
+            <section className={styles.panel} id="brands">
+              <h3>Brands in {activeWorkspace?.name ?? 'this workspace'}</h3><p className={styles.panelIntro}>Brand records belong to the selected workspace. A brand record does not mean a social account is connected.</p>
+              {brands.length ? <div className={styles.brandRows}>{brands.map((brand) => <div className={styles.brandRow} key={brand.id}><div><strong>{brand.name}</strong><small>Timezone: {brand.timezone}</small></div>{canManage && <form action={renameBrand} className={styles.renameForm}><input type="hidden" name="brand_id" value={brand.id}/><input type="hidden" name="workspace_id" value={activeWorkspace?.id ?? ''}/><input name="name" aria-label={`New name for ${brand.name}`} minLength={2} maxLength={80} placeholder="Rename" required/><button type="submit">Save</button></form>}</div>)}</div> : <p className={styles.empty}>No brands have been added to this workspace yet.</p>}
+              {activeWorkspace && canManage && <form className={styles.createForm} action={createBrand}><input type="hidden" name="workspace_id" value={activeWorkspace.id}/><label htmlFor="brand-name">Add a brand</label><input id="brand-name" name="name" minLength={2} maxLength={80} placeholder="Brand or client name" required/><button type="submit">Add brand</button></form>}
+              {activeWorkspace && !canManage && <p className={styles.panelIntro}>Your {role} role has read-only brand administration access.</p>}
+            </section>
+          </div>
+
+          <div className={styles.sectionHead}><div><h2>Operational modules</h2><p>Open a module to inspect connected-account data and available actions.</p></div></div>
+          <div className={styles.moduleGrid}>
+            <Link href="/content" className={styles.module}><b>Content Studio</b><span>Create, adapt and save reviewable platform-specific content drafts.</span><em>OPEN STUDIO →</em></Link>
+            <Link href="/publishing" className={styles.module}><b>Publishing queue</b><span>Manage scheduled work and provider-specific dispatch states.</span><em>OPEN QUEUE →</em></Link>
+            <Link href="/inbox" className={styles.module}><b>Unified inbox</b><span>Work supported Instagram, Facebook Messenger and WhatsApp conversations.</span><em>OPEN INBOX →</em></Link>
+            <Link href="/inbox/automation" className={styles.module}><b>Inbox automation</b><span>Preview and apply controlled routing rules; workflow rules do not send replies.</span><em>OPEN AUTOMATION →</em></Link>
+            <Link href={`/inbox/customers?workspace=${activeWorkspace?.id ?? ''}`} className={styles.module}><b>Customer CRM</b><span>Maintain provider-specific customer stages, tags, notes and interaction context.</span><em>OPEN CRM →</em></Link>
+            <Link href={`/campaigns?workspace=${activeWorkspace?.id ?? ''}`} className={styles.module}><b>Campaign planning</b><span>Organise campaigns, tagged links and supported performance snapshots.</span><em>OPEN CAMPAIGNS →</em></Link>
+            <Link href="/analytics" className={styles.module}><b>Analytics and reporting</b><span>View supported provider insights and operational reporting with source labels.</span><em>OPEN ANALYTICS →</em></Link>
+            <Link href="/team" className={styles.module}><b>Team and access</b><span>Manage workspace membership, invitations and role-governed access.</span><em>OPEN TEAM →</em></Link>
+            <Link href="/channels" className={styles.module}><b>Connected channels</b><span>Connect eligible provider accounts and review granted capabilities.</span><em>OPEN CHANNELS →</em></Link>
+          </div>
+
+          <footer className={styles.footer}><span>RUFFNECK SOCIAL HUB · OFFICIAL PROVIDER PATHWAYS · TENANT CONTROLS · HUMAN-GOVERNED AI</span><Link href="/organizations">Organization capability overview</Link></footer>
+        </div>
+      </section>
+    </main>
+  );
 }
