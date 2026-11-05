@@ -1,0 +1,19 @@
+RUFFNECK SOCIAL HUB v6.4.0 — AUDIT HOTFIX
+
+ROOT CAUSE
+The v6.4.0 combined package correctly sets package.json version to 6.4.0, but two carried-forward integration audits still assert the older v6.3.0 package version. This causes the deployment to stop before Next.js compilation. The two checks are stale release-version contracts, not a Flutterwave payment or database failure.
+
+REPLACE THESE COMPLETE FILES IN GITHUB MAIN
+1. scripts/audit-flutterwave-operations.mjs
+2. scripts/audit-missing-webhook-reconciliation.mjs
+
+Use the two files in this ZIP at exactly those paths. Do not change package.json, payment logic, webhook logic, SQL migrations, environment variables, or existing payment records for this fix.
+
+WHY BOTH FILES ARE INCLUDED
+The first stale assertion is the exact failure shown in the Vercel log. The second audit contains the same stale 6.3.0 expectation and would fail immediately after the first check is corrected. Both are updated to assert the combined release version 6.4.0.
+
+THEN
+Commit the two replacements to GitHub main and inspect the next Vercel build from the start. This hotfix addresses the two known stale version assertions only; it does not claim the rest of the full production build has passed.
+
+DATABASE
+No SQL migration is included or required. Do not rerun migration 0048 for this build-audit repair.

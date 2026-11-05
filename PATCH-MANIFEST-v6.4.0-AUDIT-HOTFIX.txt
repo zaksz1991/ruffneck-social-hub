@@ -1,0 +1,10 @@
+RUFFNECK SOCIAL HUB v6.4.0 — AUDIT HOTFIX MANIFEST
+
+REPLACE
+- scripts/audit-flutterwave-operations.mjs
+- scripts/audit-missing-webhook-reconciliation.mjs
+
+NO OTHER FILES REQUIRED
+- Do not replace package.json.
+- Do not modify SQL migrations.
+- Do not change Flutterwave credentials or Vercel environment variables.
