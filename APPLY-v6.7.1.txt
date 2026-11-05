@@ -1,0 +1,36 @@
+RUFFNECK SOCIAL HUB v6.7.1 — INTERNAL IMPORT AUDIT HOTFIX
+
+ROOT CAUSE
+The v6.7.0 public organisation page imports `src/app/home.module.css` as a default CSS-module import. The internal-import audit correctly resolves the CSS path, but its default-import check incorrectly calls the TypeScript parser on the CSS file before reaching the asset-module guard. TypeScript then reports hundreds of false syntax errors from valid CSS.
+
+GITHUB CHANGE
+Replace the complete file:
+- scripts/audit-internal-imports.mjs
+
+Optional regression test included:
+- scripts/test-internal-imports-assets.mjs
+
+The replacement preserves source syntax checking, relative/alias path validation, and named-export validation for JavaScript/TypeScript modules. CSS, JSON and other non-code assets are still checked for path existence but are not parsed as TypeScript or treated as JavaScript named-export modules.
+
+NO OTHER CHANGES
+- Do not replace package.json.
+- Do not change the lockfile or dependencies for this repair.
+- No Supabase migration is required.
+- No Vercel environment variables are required.
+- No Flutterwave credentials or billing logic are changed.
+
+BRANCH CONTEXT
+The supplied Vercel log is for branch:
+dependabot/npm_and_yarn/supabase/ssr-0.12.7
+Commit: f9c014b
+
+This is a Dependabot branch preview, not a build from main. Apply the replacement to the active branch/PR that produced this log, or merge the correction to main and refresh the Dependabot branch before expecting its preview to pass. Do not close or merge the dependency PR solely on the basis of this fix.
+
+VALIDATION INCLUDED
+The accompanying regression test creates a clean temporary fixture and verifies:
+1. A CSS-module default import passes without parsing CSS as TypeScript.
+2. A JSON default import passes as an asset import.
+3. An unresolved local import still fails.
+4. An invalid named JavaScript/TypeScript export still fails.
+
+After applying, the normal `audit:imports` build step will scan the repository. Continue reviewing the Vercel log because this fix addresses the precise failure shown, not unobserved later build stages.

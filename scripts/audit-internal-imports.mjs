@@ -7,10 +7,10 @@ import { createRequire } from 'node:module';
 // so this guard runs with the exact compiler version selected by the lockfile.
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
-
 const root = process.cwd();
 const srcRoot = path.join(root, 'src');
 const extensions = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs', '.json', '.css'];
+const codeExtensions = /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const ignored = new Set(['node_modules', '.next', '.git', '.vercel', 'dist', 'coverage']);
 const failures = [];
 const sourceCache = new Map();
@@ -52,7 +52,6 @@ function resolveLocal(fromFile, specifier) {
   if (specifier.startsWith('@/')) base = path.join(srcRoot, specifier.slice(2));
   else if (specifier.startsWith('.')) base = path.resolve(path.dirname(fromFile), specifier);
   else return null;
-
   const candidates = [
     base,
     ...extensions.map((extension) => base + extension),
@@ -99,10 +98,10 @@ function getModuleExports(file, visiting = new Set()) {
   if (exportCache.has(absolute)) return exportCache.get(absolute);
   if (visiting.has(absolute)) return new Set();
   visiting.add(absolute);
-
   const parsed = source(absolute);
   const exported = new Set();
   const localBindings = new Set();
+
   for (const statement of parsed.statements) {
     if (
       ts.isFunctionDeclaration(statement) ||
@@ -130,7 +129,6 @@ function getModuleExports(file, visiting = new Set()) {
     if (isExported(statement)) addDeclarationNames(statement, exported);
     if (statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)) exported.add('default');
     if (ts.isExportAssignment(statement)) exported.add('default');
-
     if (ts.isExportDeclaration(statement)) {
       const reExportTarget = statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
         ? resolveLocal(absolute, statement.moduleSpecifier.text)
@@ -165,7 +163,6 @@ function getModuleExports(file, visiting = new Set()) {
       }
     }
   }
-
   visiting.delete(absolute);
   exportCache.set(absolute, exported);
   return exported;
@@ -179,10 +176,9 @@ function validateLocalModule(importer, specifier, importedNames) {
     }
     return;
   }
-
-  // Stylesheets and other asset modules are path-checked but do not expose
-  // JavaScript named exports.
-  if (!/\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/.test(target)) return;
+  // Stylesheets, JSON and other asset modules are path-checked but do not
+  // expose JavaScript named exports or contain TypeScript source to parse.
+  if (!codeExtensions.test(target)) return;
   const exports = getModuleExports(target);
   for (const importedName of importedNames) {
     if (!exports.has(importedName)) {
@@ -198,7 +194,12 @@ for (const file of sourceFiles) {
       const clause = node.importClause;
       const importedNames = [];
       const target = resolveLocal(file, node.moduleSpecifier.text);
-      if (clause?.name && target && !getModuleExports(target).has('default')) importedNames.push('default');
+      // IMPORTANT: only parse actual JS/TS modules for export inspection.
+      // CSS modules (for example `import styles from './home.module.css'`)
+      // and JSON assets are validated for path existence below, not parsed as TS.
+      if (clause?.name && target && codeExtensions.test(target) && !getModuleExports(target).has('default')) {
+        importedNames.push('default');
+      }
       if (clause?.namedBindings && ts.isNamedImports(clause.namedBindings)) {
         for (const element of clause.namedBindings.elements) {
           importedNames.push((element.propertyName ?? element.name).text);
