@@ -1,0 +1,53 @@
+RUFFNECK SOCIAL HUB v6.8.0 — CLIENT APPROVAL WORKSPACE
+
+BASELINE
+- Prepared against the Vercel source commit 04bb0fb (package version 6.7.0).
+- This is an overlay release, not a full repository export.
+- It includes the previous campaign-intelligence and Meta provider-analytics homepage audit wording fixes. Apply this release's homepage replacement rather than separately applying older homepage repair files.
+
+WHAT THIS RELEASE ADDS
+- A dedicated authenticated /approvals page for submitted content awaiting review.
+- Access limited in the page and server action to owner, admin, manager and the existing client_approver workspace role.
+- Approve and request-changes decisions through the existing protected review_content_item database RPC.
+- A review note is mandatory when requesting changes and is capped at 1,000 characters.
+- Only content whose current status is in_review is loaded into this queue.
+- HTTPS-only, credential-free attachment links.
+- A prominent control clarifies that approval does not publish content.
+- New source audit and regression tests are wired into npm run build and npm test.
+- Public organisation capability catalogue now documents the role-bound approval route and its limits.
+
+FILES TO ADD
+- src/app/approvals/page.tsx
+- src/app/approvals/approvals.module.css
+- src/app/actions/client-approvals.ts
+- src/lib/content/client-approval.ts
+- scripts/audit-client-approval-portal.mjs
+- scripts/test-client-approval-portal.mjs
+
+FILES TO REPLACE
+- src/app/page.tsx
+- src/lib/product/organization-capabilities.mjs
+- package.json
+
+DATABASE
+- No new Supabase migration is included.
+- The route reuses the existing content_items/content_reviews workflow and protected review_content_item RPC.
+- The existing workspace role client_approver must already be present. It is defined in the established workspace-team invitation schema.
+- Do not run a SQL migration for this release.
+
+INSTALLATION
+1. Open the repository on GitHub and select the main branch.
+2. Add the six new files at the exact paths above.
+3. Replace the three existing files with the complete versions supplied in this ZIP.
+4. Commit the changes to main.
+5. Review the Vercel deployment log. The release is not considered verified until all audits and the Next.js production build pass.
+
+IMPORTANT SCOPE LIMITS
+- This is a role-gated approval view inside the existing workspace. It is not a separate client tenant, custom-domain portal, white-label experience or automated email invitation system.
+- A client approver must first be invited to the workspace using the existing client_approver role.
+- Approval records the content decision only. Publishing remains a separate step and requires the existing publishing permission and provider capability.
+- No provider access, production availability, compliance certification or external security review is implied.
+
+ROLLBACK
+- Remove the six added files and restore the three replaced files from the immediately preceding repository commit if the deployment fails.
+- No database rollback is required because this release adds no migration.

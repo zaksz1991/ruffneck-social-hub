@@ -67,6 +67,7 @@ Explore the public organization overview before signing in.</p><div className={s
           <span className={styles.sideLabel}>PUBLISH AND ENGAGE</span>
           <nav className={styles.sideNav} aria-label="Publishing and engagement">
             <Link href="/content">Content Studio</Link>
+            <Link href="/approvals">Client approvals</Link>
             <Link href="/publishing">Publishing queue</Link>
             <Link href="/inbox">Unified inbox</Link>
             <Link href={`/inbox/customers?workspace=${activeWorkspace?.id ?? ''}`}>Customer CRM</Link>
@@ -127,12 +128,13 @@ Complete signup or contact the workspace administrator.</p>}
           <div className={styles.sectionHead}><div><h2>Operational modules</h2><p>Open a module to inspect connected-account data and available actions.</p></div></div>
           <div className={styles.moduleGrid}>
             <Link href="/content" className={styles.module}><b>Content Studio</b><span>Create, adapt and save reviewable platform-specific content drafts.</span><em>OPEN STUDIO →</em></Link>
+            <Link href="/approvals" className={styles.module}><b>Client approvals</b><span>Give invited client approvers a focused queue to approve submitted content or request changes.</span><em>OPEN APPROVALS →</em></Link>
             <Link href="/publishing" className={styles.module}><b>Publishing queue</b><span>Manage scheduled work and provider-specific dispatch states.</span><em>OPEN QUEUE →</em></Link>
             <Link href="/inbox" className={styles.module}><b>Unified inbox</b><span>Work supported Instagram, Facebook Messenger and WhatsApp conversations.</span><em>OPEN INBOX →</em></Link>
             <Link href="/inbox/automation" className={styles.module}><b>Inbox automation</b><span>Preview and apply controlled routing rules; workflow rules do not send replies.</span><em>OPEN AUTOMATION →</em></Link>
             <Link href={`/inbox/customers?workspace=${activeWorkspace?.id ?? ''}`} className={styles.module}><b>Customer CRM</b><span>Maintain provider-specific customer stages, tags, notes and interaction context.</span><em>OPEN CRM →</em></Link>
             <Link href={`/campaigns?workspace=${activeWorkspace?.id ?? ''}`} className={styles.module}><b>Campaign intelligence and planning</b><span>Organise campaigns, tagged links and supported performance snapshots.</span><em>OPEN CAMPAIGNS →</em></Link>
-            <Link href="/analytics" className={styles.module}><b>Analytics and reporting</b><span>Review official Meta post insights where the connected account has the required permissions, alongside other supported provider reporting.</span><em>OPEN ANALYTICS →</em></Link>
+            <Link href="/analytics" className={styles.module}><b>Analytics and reporting</b><span>View supported provider insights and operational reporting with source labels. Review official Meta post insights where the connected account has the required permissions.</span><em>OPEN ANALYTICS →</em></Link>
             <Link href="/team" className={styles.module}><b>Team and access</b><span>Manage workspace membership, invitations and role-governed access.</span><em>OPEN TEAM →</em></Link>
             <Link href="/channels" className={styles.module}><b>Connected channels</b><span>Connect eligible provider accounts and review granted capabilities.</span><em>OPEN CHANNELS →</em></Link>
           </div>

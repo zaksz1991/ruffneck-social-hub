@@ -1,0 +1,20 @@
+RuffNeck Social Hub v6.8.0 patch manifest
+Baseline: GitHub commit 04bb0fb / package 6.7.0
+
+ADD
+src/app/approvals/page.tsx
+src/app/approvals/approvals.module.css
+src/app/actions/client-approvals.ts
+src/lib/content/client-approval.ts
+scripts/audit-client-approval-portal.mjs
+scripts/test-client-approval-portal.mjs
+
+REPLACE
+src/app/page.tsx
+src/lib/product/organization-capabilities.mjs
+package.json
+
+NO DATABASE MIGRATION
+NO NEW ENVIRONMENT VARIABLES
+NO NEW DEPENDENCIES
+NO PROVIDER API CHANGES

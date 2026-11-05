@@ -36,6 +36,11 @@ export const organizationCapabilityGroups = [
         detail: 'Prepare platform-specific copy for Facebook, Instagram, LinkedIn, TikTok and YouTube. Generated text remains editable and subject to human review.',
       },
       {
+        title: 'Client approval portal',
+        status: 'available',
+        detail: 'Invited client_approver members receive a focused, authenticated queue for submitted content. They can approve or request changes; approval does not publish content.',
+      },
+      {
         title: 'Calendar and publishing queue',
         status: 'setup',
         detail: 'Plan and queue content. Actual dispatch depends on the provider, account connection, granted scopes, media requirements and the integration-specific publishing path.',
@@ -90,7 +95,6 @@ export const organizationCapabilityGroups = [
     ],
   },
 ];
-
 export const providerCapabilityMatrix = [
   {
     provider: 'Instagram',
@@ -123,15 +127,14 @@ export const providerCapabilityMatrix = [
     detail: 'Embedded signup, webhook-backed conversations, consent controls and reviewed media/reply operations, subject to Meta approval and media-scanner configuration.',
   },
 ];
-
 export const organizationReadinessNotes = [
   'Provider account access, app review, scopes and rate limits are controlled by each platform, not by RuffNeck.',
   'AI execution requires a reachable OpenAI-compatible endpoint. A self-hosted/local model can avoid a separate hosted-AI subscription, but still needs compute and operations.',
   'Publishing queues are not proof that a provider has delivered a post. Dispatch availability is provider-specific.',
   'The current Flutterwave public-key setup uses administrator payment review; it is not automated transaction verification.',
+  'The client approval route is an authenticated workspace role, not a separate white-label client tenant or custom-domain portal.',
   'No SOC 2, ISO 27001, NDPA/GDPR certification, formal SLA or independent penetration-test result is claimed by this release.',
 ];
-
 export function getOrganizationCapabilitySummary() {
   const counts = { available: 0, setup: 0, manual: 0 };
   for (const group of organizationCapabilityGroups) {
