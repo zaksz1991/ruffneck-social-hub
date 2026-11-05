@@ -1,0 +1,25 @@
+RUFFNECK SOCIAL HUB v6.6.0 — PATCH MANIFEST
+Daily subscription lifecycle automation, based on v6.5.0.
+
+ADD
+- src/app/api/cron/subscription-lifecycle/route.ts
+- src/lib/billing/lifecycle-cron.mjs
+- src/lib/billing/lifecycle-cron.d.mts
+- scripts/test-subscription-lifecycle-cron.mjs
+- scripts/audit-subscription-lifecycle-cron.mjs
+- supabase/migrations/0050_daily_subscription_lifecycle_processor.sql
+- SQL-0050-daily-subscription-lifecycle-processor.txt
+- vercel.json (daily cron schedule)
+
+REPLACE
+- package.json
+- src/app/platform/billing-lifecycle/page.tsx
+
+CARRY FORWARD THE COMPLETE v6.5.0 OVERLAY
+All files from the v6.5.0 package remain included in this ZIP, including migration 0049 and its tests/audits. Files in the repository not listed above are preserved.
+
+DATABASE
+Apply migration 0050 once, after confirming 0049 succeeded. Do not re-run 0048 or 0049.
+
+ENVIRONMENT
+Add CRON_SECRET to Vercel Preview and Production. Use a random secret of at least 32 characters, different from FLW_SECRET_HASH. Do not put it in NEXT_PUBLIC_* or GitHub.

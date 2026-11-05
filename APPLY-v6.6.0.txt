@@ -1,0 +1,34 @@
+RUFFNECK SOCIAL HUB v6.6.0 — INSTALLATION
+Daily subscription lifecycle processor
+
+BASELINE
+This is an overlay for RuffNeck Social Hub v6.5.0 on GitHub main. Apply only after v6.5.0 and migration 0049 are present. This ZIP includes the full v6.5.0 billing overlay plus the v6.6.0 additions, but it is not a full export of the entire application repository.
+
+1. GITHUB FILES
+Extract the ZIP. Add the new files and replace the two listed files at their exact repository paths, as shown in PATCH-MANIFEST-v6.6.0.txt. Commit to main.
+
+The package includes vercel.json with one daily cron entry: /api/cron/subscription-lifecycle at 03:00 UTC. The repository's currently documented prior overlays did not include a vercel.json. If GitHub main already contains one, preserve its existing settings and merge this single crons entry into its crons array; do not overwrite unrelated Vercel configuration.
+
+2. SUPABASE MIGRATION
+Confirm migrations 0048 and 0049 have completed. Then open supabase/migrations/0050_daily_subscription_lifecycle_processor.sql (also supplied as SQL-0050-daily-subscription-lifecycle-processor.txt), copy its entire contents into a new Supabase SQL Editor query, and run it once. Confirm success. Do not repeat migrations 0048 or 0049.
+
+3. VERCEL ENVIRONMENT
+Add CRON_SECRET separately to Preview and Production. Use a random secret of at least 32 characters. Keep it different from FLW_SECRET_HASH. It must be server-only: never use a NEXT_PUBLIC_ prefix, put it in GitHub, or share it in chat. Redeploy after saving. Keep the existing Supabase service-role key server-side. No Flutterwave secret key is introduced.
+
+4. SCHEDULE
+The included schedule is once daily at 03:00 UTC (04:00–04:59 Nigeria time on Vercel Hobby, because Hobby invocation is distributed within the configured hour). Vercel Hobby supports at most one cron execution per day. The job is protected by the CRON_SECRET bearer header and a service-role-only database function.
+
+5. WHAT RUNS AUTOMATICALLY
+- Active subscriptions whose paid period has ended, with no cancellation request and no newer approved renewal recorded, are moved to past_due and receive the existing five-day grace period.
+- Cancellations are finalized only when a platform administrator has already confirmed provider cancellation and the paid period has ended.
+- Processing is bounded to six batches of 500 per invocation, uses row locks and a transaction-scoped advisory lock, and records run summaries. The response reports if more backlog remains.
+
+6. WHAT DOES NOT RUN AUTOMATICALLY
+- No call is made to Flutterwave.
+- A payment is never verified from a cron result, webhook, or redirect.
+- A pending/manual-review payment does not renew access automatically. A later approved renewal clears past-due/grace metadata through the existing protected renewal function.
+- A grace-ended past-due subscription is NOT automatically expired. It stays visible for a platform billing administrator to inspect and expire through the existing guarded action.
+- The provider's recurring payment plan is never cancelled by RuffNeck.
+
+7. VALIDATION
+The included helper test and static integration audit validate bearer authentication, bounded processing, lock/backlog handling, schedule wiring, service-role SQL permissions, and no-auto-expiry/no-provider-call safeguards. Full repository npm test, Next.js production build, live Supabase migration, and a real Vercel Cron invocation are not run here. Verify the Vercel deployment and check Vercel → Project → Settings → Cron Jobs after committing.

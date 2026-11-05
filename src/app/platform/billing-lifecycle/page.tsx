@@ -80,14 +80,19 @@ export default async function SubscriptionLifecyclePage({ searchParams }: {
   let subscriptions: ReturnType<typeof normalizeSubscriptionLifecycleRows>['rows'] = [];
   let invalidCount = 0;
   let events: Array<Record<string, any>> = [];
+  let schedulerRuns: Array<Record<string, any>> = [];
+  let schedulerLoadError = '';
   try {
     const admin = createSupabaseAdminClient();
-    const [subscriptionResult, eventResult] = await Promise.all([
+    const [subscriptionResult, eventResult, schedulerResult] = await Promise.all([
       admin.from('workspace_subscriptions').select(SUBSCRIPTION_COLUMNS)
         .order('current_period_ends_at', { ascending: true }).limit(500),
       admin.from('workspace_subscription_lifecycle_events')
         .select('id,subscription_id,workspace_id,event_type,actor_type,event_note,event_at')
         .order('event_at', { ascending: false }).limit(40),
+      admin.from('workspace_subscription_lifecycle_runs')
+        .select('id,started_at,completed_at,batch_size,marked_past_due,finalized_cancellations,backlog_remaining,outcome')
+        .order('started_at', { ascending: false }).limit(10),
     ]);
     if (subscriptionResult.error) loadError = String(subscriptionResult.error.message ?? 'Subscription query failed');
     else {
@@ -98,6 +103,9 @@ export default async function SubscriptionLifecyclePage({ searchParams }: {
     if (eventResult.error) {
       loadError ||= 'Lifecycle history is unavailable. Confirm migration 0049 has been applied.';
     } else events = Array.isArray(eventResult.data) ? eventResult.data : [];
+    if (schedulerResult.error) {
+      schedulerLoadError = 'Daily scheduler history is unavailable. Confirm migration 0050 and CRON_SECRET configuration.';
+    } else schedulerRuns = Array.isArray(schedulerResult.data) ? schedulerResult.data : [];
   } catch {
     loadError = 'Lifecycle data could not be loaded. Confirm migration 0049 and the server-side Supabase service-role configuration.';
   }
@@ -124,11 +132,26 @@ export default async function SubscriptionLifecyclePage({ searchParams }: {
 
       <span style={{ color: '#1479a8', fontSize: 12, fontWeight: 800, letterSpacing: 1.6 }}>SUBSCRIPTIONS · LIFECYCLE CONTROL</span>
       <h1 style={{ fontSize: 'clamp(30px, 5vw, 44px)', margin: '8px 0 10px' }}>Subscription lifecycle</h1>
-      <p style={{ maxWidth: 880, lineHeight: 1.65, color: '#52647b' }}>Monitor active periods, cancellation requests, overdue renewals, grace windows and expiry. Lifecycle transitions require an authorised platform administrator and a transaction-specific audit note. No background expiry job or provider cancellation is assumed.</p>
+      <p style={{ maxWidth: 880, lineHeight: 1.65, color: '#52647b' }}>Monitor active periods, cancellation requests, overdue renewals, grace windows and expiry. A once-daily processor moves elapsed active terms into the five-day grace state and finalizes cancellations only after provider cancellation has already been confirmed. Grace-ended subscriptions still require administrator review; no payment verification or provider cancellation is automated.</p>
 
       {result && <div role="status" style={{ margin: '18px 0', padding: 14, borderRadius: 10, background: result.good ? '#e5f7ed' : '#fff0ec', color: result.good ? '#17623a' : '#9b3427' }}>{result.text}</div>}
       {loadError && <div role="alert" style={{ margin: '18px 0', padding: 14, borderRadius: 10, background: '#fff0ec', color: '#9b3427' }}><strong>Lifecycle console unavailable</strong><div>{loadError}</div></div>}
       {!loadError && invalidCount > 0 && <div role="status" style={{ margin: '18px 0', padding: 14, borderRadius: 10, background: '#fff6df' }}>{invalidCount} malformed or duplicate subscription record(s) were excluded.</div>}
+
+
+      <section aria-label="Daily lifecycle automation" style={{ margin: '22px 0', background: '#fff', border: '1px solid #dce5ee', borderRadius: 14, padding: 18 }}>
+        <div style={{ fontSize: 11, letterSpacing: 1.3, fontWeight: 800, color: '#1479a8' }}>DAILY PROCESSOR · 03:00 UTC</div>
+        <h2 style={{ fontSize: 20, margin: '6px 0 8px' }}>Daily lifecycle automation</h2>
+        <p style={{ color: '#52647b', lineHeight: 1.6, margin: '0 0 12px' }}>Runs once daily through Vercel Cron. On the Vercel Hobby plan, invocation may occur at any point within the scheduled hour. It never checks Flutterwave or activates a subscription. Grace-period expiry remains a manual administrator decision.</p>
+        {schedulerLoadError ? <div role="status" style={{ color: '#9b3427' }}>{schedulerLoadError}</div> : schedulerRuns.length === 0 ? <div style={{ color: '#64758a' }}>No scheduler runs recorded yet. Apply migration 0050 and configure CRON_SECRET.</div> : <div style={{ display: 'grid', gap: 8 }}>
+          {schedulerRuns.map((run) => <div key={String(run.id)} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 8, borderTop: '1px solid #e8edf3', paddingTop: 10 }}>
+            <span><strong>Started</strong><br />{date(String(run.started_at ?? ''))}</span>
+            <span><strong>Past due</strong><br />{Number(run.marked_past_due ?? 0).toLocaleString('en-NG')}</span>
+            <span><strong>Cancelled</strong><br />{Number(run.finalized_cancellations ?? 0).toLocaleString('en-NG')}</span>
+            <span><strong>Outcome</strong><br />{label(String(run.outcome ?? 'unknown'))}{run.backlog_remaining ? ' · backlog remains' : ''}</span>
+          </div>)}
+        </div>}
+      </section>
 
       <section aria-label="Subscription health counts" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12, margin: '24px 0' }}>
         {[
