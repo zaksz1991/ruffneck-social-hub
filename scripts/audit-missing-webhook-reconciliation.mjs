@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { isCompatibleRelease } from './lib/release-compat.mjs';
 
 const [pkgText, migration, action, page, helper, reviewPage] = await Promise.all([
   readFile(new URL('../package.json', import.meta.url), 'utf8'),
@@ -10,7 +11,7 @@ const [pkgText, migration, action, page, helper, reviewPage] = await Promise.all
   readFile(new URL('../src/app/platform/billing-review/page.tsx', import.meta.url), 'utf8'),
 ]);
 const pkg = JSON.parse(pkgText);
-assert.equal(pkg.version, '6.4.0', 'reconciliation audit must run against the combined 6.4.0 release');
+assert.ok(isCompatibleRelease(pkg.version, '6.4.0'), 'reconciliation audit requires release 6.4.0 or newer');
 assert.match(migration, /add column if not exists review_source/);
 assert.match(migration, /review_source in \('webhook', 'manual_reconciliation'\)/);
 assert.match(migration, /security definer\s+set search_path = ''/i);

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { isCompatibleRelease } from './lib/release-compat.mjs';
 
 const [setupPage, reviewPage, action, webhook, foundation, manualReviewMigration, pkgText] = await Promise.all([
   readFile('src/app/platform/billing-setup/page.tsx', 'utf8'),
@@ -12,7 +13,7 @@ const [setupPage, reviewPage, action, webhook, foundation, manualReviewMigration
 ]);
 const pkg = JSON.parse(pkgText);
 
-assert.equal(pkg.version, '6.4.0', 'release package version must be 6.4.0');
+assert.ok(isCompatibleRelease(pkg.version, '6.4.0'), 'Flutterwave operations audit requires release 6.4.0 or newer');
 assert.match(setupPage, /billing_webhook_events/);
 assert.match(setupPage, /received_at/);
 assert.match(setupPage, /outcome/);

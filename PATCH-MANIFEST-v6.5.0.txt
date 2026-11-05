@@ -1,0 +1,54 @@
+RUFFNECK SOCIAL HUB v6.5.0 — PATCH MANIFEST
+Combined billing lifecycle overlay based on v6.4.0.
+
+REPLACE
+- package.json
+- scripts/audit-flutterwave-operations.mjs
+- scripts/audit-missing-webhook-reconciliation.mjs
+- scripts/audit-billing-collections-analytics.mjs
+- src/app/platform/billing-analytics/page.tsx
+
+ADD
+- scripts/audit-subscription-lifecycle.mjs
+- scripts/test-subscription-lifecycle.mjs
+- src/lib/billing/subscription-lifecycle.mjs
+- src/lib/billing/subscription-lifecycle.d.mts
+- src/app/actions/subscription-lifecycle.ts
+- src/app/platform/billing-lifecycle/page.tsx
+- src/app/billing/subscription/page.tsx
+- supabase/migrations/0049_subscription_lifecycle_management.sql
+- SQL-0049-subscription-lifecycle-management.txt
+
+CARRIED FORWARD FROM THE v6.4.0 OVERLAY (KEEP COMPATIBLE)
+- scripts/test-flutterwave-operations.mjs
+- scripts/test-missing-webhook-reconciliation.mjs
+- scripts/test-billing-collections-analytics.mjs
+- scripts/audit-billing-subscriptions.mjs
+- src/app/platform/billing-review/page.tsx
+- src/app/platform/billing-reconcile/page.tsx
+- src/app/platform/billing-setup/page.tsx
+- src/app/platform/billing-analytics/page.tsx (replacement above)
+- src/app/actions/flutterwave-public.ts
+- src/app/actions/flutterwave-reconciliation.ts
+- src/lib/billing/flutterwave-public-key.mjs
+- src/lib/billing/manual-approval.mjs
+- src/lib/billing/manual-approval.d.mts
+- src/lib/billing/missing-webhook-reconciliation.mjs
+- src/lib/billing/missing-webhook-reconciliation.d.mts
+- src/lib/billing/collections-analytics.mjs
+- src/lib/billing/collections-analytics.d.mts
+- src/lib/billing/collections-server.ts
+- supabase/migrations/0048_flutterwave_missing_webhook_reconciliation.sql
+
+PRESERVE EXISTING REPOSITORY FILES NOT REPLACED BY THIS OVERLAY
+- scripts/lib/release-compat.mjs
+- supabase/migrations/0043_billing_subscription_foundation.sql
+- supabase/migrations/0046_flutterwave_environment_plan_ids.sql
+- supabase/migrations/0047_flutterwave_public_key_manual_review.sql
+- src/app/api/webhooks/flutterwave/route.ts
+- src/app/api/billing/flutterwave/callback/route.ts
+- existing Supabase server/admin clients and other non-billing platform modules
+
+DATABASE
+- Apply 0049 after 0048, but only after checking whether 0048 has already been applied.
+- No environment-variable change.

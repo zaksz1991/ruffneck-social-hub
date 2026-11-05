@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { isCompatibleRelease } from './lib/release-compat.mjs';
 
 const files = {
   package: JSON.parse(await readFile('package.json', 'utf8')),
@@ -11,7 +12,7 @@ const files = {
   setup: await readFile('src/app/platform/billing-setup/page.tsx', 'utf8'),
 };
 
-assert.equal(files.package.version, '6.4.0');
+assert.ok(isCompatibleRelease(files.package.version, '6.4.0'), 'collections analytics requires release 6.4.0 or newer');
 assert.match(files.package.scripts.build, /audit:billing-collections-analytics/);
 assert.match(files.package.scripts.test, /npm run test:billing-collections-analytics/);
 assert.match(files.package.scripts.test, /audit:billing-collections-analytics/);

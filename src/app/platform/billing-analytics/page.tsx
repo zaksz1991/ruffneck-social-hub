@@ -86,6 +86,7 @@ export default async function BillingCollectionsAnalyticsPage({ searchParams }: 
           <Link href="/platform/billing-setup">Setup</Link>
           <Link href="/platform/billing-review">Review queue</Link>
           <Link href="/platform/billing-reconcile">Reconciliation</Link>
+          <Link href="/platform/billing-lifecycle">Subscription lifecycle</Link>
         </nav>
       </header>
 

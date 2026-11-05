@@ -1,0 +1,61 @@
+RUFFNECK SOCIAL HUB v6.5.0 — INSTALLATION
+Subscription lifecycle management + v6.4.0 build-audit compatibility repair
+
+PACKAGE TYPE
+This is a combined upgrade overlay for the existing RuffNeck Social Hub repository. It is not a standalone application and must not replace the repository itself.
+
+BASELINE
+Target the current v6.4.0 main-branch implementation (the deployment log supplied for commit b4dc17f reports package version 6.4.0). This release carries forward the v6.4 billing analytics/reconciliation overlay and updates the version-sensitive release audits so later minor releases do not fail because an older audit is hard-coded to 6.3.0 or 6.4.0.
+
+GITHUB FILES
+1. Extract the ZIP.
+2. In GitHub, open zaksz1991/ruffneck-social-hub, branch main.
+3. Add/replace every application file at the exact path listed in PATCH-MANIFEST-v6.5.0.txt. The included package.json is a complete replacement for the v6.4.0 package script set and includes the new lifecycle test/audit hooks. Preserve any custom npm scripts added outside the supplied v6.4 baseline by merging them into package.json.
+4. Commit the changes to main and inspect the Vercel build log.
+
+SUPABASE MIGRATION ORDER
+The migration prerequisites are:
+- 0043_billing_subscription_foundation.sql
+- 0046_flutterwave_environment_plan_ids.sql
+- 0047_flutterwave_public_key_manual_review.sql
+- 0048_flutterwave_missing_webhook_reconciliation.sql
+
+Check the Supabase migration history before running SQL. The 0048 migration was part of the v6.3/v6.4 upgrade. If it has already succeeded, do not run it again. If it has not been applied, apply 0048 first, then apply the new file:
+- 0049_subscription_lifecycle_management.sql
+
+Apply 0049 once, after 0048. The standalone text copy is included beside the .sql file for easier opening/copying. Do not manually create the columns, table, triggers or functions if the migration succeeds.
+
+WHAT v6.5.0 ADDS
+- Platform administrator lifecycle console at /platform/billing-lifecycle.
+- Workspace owner/admin subscription page at /billing/subscription.
+- End-of-period cancellation request and withdrawal.
+- Separate provider-cancellation confirmation after an administrator cancels the recurring plan in Flutterwave Dashboard.
+- Manual past-due transition after the paid period ends; starts a five-day grace period.
+- Administrator-controlled grace extension from 1 to 30 additional days.
+- Expiry only after the grace deadline and a fresh provider-dashboard check.
+- Scheduled cancellation finalization only after provider cancellation is confirmed and the paid period has ended.
+- Append-only lifecycle event history available to platform administrators.
+- A confirmed renewal clears stale cancellation and grace-period flags.
+- Health classifications for healthy, renewal due, renewal review, cancellation, grace, past due, expiry and cancelled states.
+- The v6.4 Flutterwave operations, missing-webhook and collections audits now accept compatible later versions instead of asserting a stale exact package version.
+
+IMPORTANT PROVIDER LIMITATION
+This is still the Public-Key-only/manual-review Flutterwave mode. A workspace cancellation request records the request in RuffNeck; it does not call Flutterwave and does not stop provider billing. A platform administrator must cancel the recurring plan in Flutterwave Dashboard, then record the provider cancellation confirmation in RuffNeck. RuffNeck keeps access through the paid period and only finalizes cancellation after the period ends.
+
+There is no cron job or automatic background expiry processor in this release. Platform administrators must review the lifecycle console and inspect Flutterwave before marking past due, granting grace, expiring a subscription or finalizing cancellation. Successful charges and renewals still require the existing manual payment approval flow. No browser redirect or webhook alone activates a subscription.
+
+VERCEL / ENVIRONMENT
+- No new environment variables are required.
+- Do not change NEXT_PUBLIC_FLW_PUBLIC_KEY or FLW_SECRET_HASH for this release.
+- Keep the Supabase service-role key server-side only.
+- Do not invent or add a Flutterwave Secret Key. Automated provider cancellation and transaction verification remain unavailable without the correct merchant Secret Key.
+
+AFTER DEPLOYMENT
+- Workspace owners/admins: open /billing/subscription.
+- Platform billing administrators: open /platform/billing-lifecycle.
+- Payment review remains at /platform/billing-review.
+- Collections analytics remains at /platform/billing-analytics.
+
+VALIDATION STATUS
+Focused subscription lifecycle tests, lifecycle integration audit, Flutterwave operations tests, missing-webhook tests/audit, billing collections tests/audit, JavaScript syntax checks and TypeScript/TSX transpilation passed in package preparation.
+The complete repository npm test, full Next.js production build, live Supabase migration, live Flutterwave provider cancellation and live renewal have not been executed in this environment. Verify the deployment and migration results before using the lifecycle controls in production.
