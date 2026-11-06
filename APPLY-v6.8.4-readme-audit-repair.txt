@@ -1,0 +1,25 @@
+RUFFNECK SOCIAL HUB — README / ORGANISATION-READINESS AUDIT REPAIR
+
+Cause
+The v6.8.4 publishing-capability package replaced the repository root README.md with a short package note. The existing organization-readiness audit still checks that README.md contains the dependency reproducibility disclosure about the missing package-lock.json. All preceding audits in the supplied Vercel log passed; the final organization-readiness audit stopped on that missing README contract.
+
+Repair
+Replace only the repository-root README.md with the complete README.md supplied in this package. The replacement restores the organisation capability documentation and the exact package-lock disclosure required by the existing audit. It also documents the v6.8.4 publishing guard without claiming that external provider publication is guaranteed.
+
+GitHub web installation
+1. Open the ruffneck-social-hub repository and select the branch/commit used by the failing Vercel deployment.
+2. Open the repository-root README.md.
+3. Choose Edit this file.
+4. Replace its full contents with the supplied README.md.
+5. Commit the change to the same branch that triggered the deployment.
+6. Review the next Vercel build log.
+
+Scope
+- One file replacement: README.md at repository root.
+- No SQL migration.
+- No package.json or dependency change.
+- No environment-variable change.
+- The audit script is intentionally not weakened or bypassed.
+
+Validation status
+The required README wording and all referenced README content were checked locally in the replacement. This package does not include the full repository, so the full npm test suite and Vercel build have not been run here. A successful production build remains unverified until Vercel completes it.
