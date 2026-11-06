@@ -1,29 +1,57 @@
-name: Publishing worker
+name: RuffNeck scheduled publishing worker
+
 on:
-  workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
+  workflow_dispatch:
+
 permissions:
   contents: read
+
 concurrency:
-  group: ruffneck-publishing-worker
+  group: ruffneck-social-publishing-worker
   cancel-in-progress: false
+
 jobs:
-  dispatch:
+  dispatch-due-posts:
     runs-on: ubuntu-24.04
-    timeout-minutes: 2
+    timeout-minutes: 5
+    env:
+      SOCIAL_PUBLISH_CRON_SECRET: ${{ secrets.SOCIAL_PUBLISH_CRON_SECRET }}
     steps:
-      - name: Trigger secure publishing worker
-        env:
-          WORKER_URL: ${{ secrets.RSH_WORKER_URL }}
-          WORKER_SECRET: ${{ secrets.SOCIAL_PUBLISH_CRON_SECRET }}
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Verify worker secret is configured
+        shell: bash
         run: |
-          set -eu
-          test -n "$WORKER_URL"
-          test -n "$WORKER_SECRET"
-          curl --fail-with-body --silent --show-error \
-            --max-time 75 \
+          if [ -z "${SOCIAL_PUBLISH_CRON_SECRET}" ]; then
+            echo '::error::The SOCIAL_PUBLISH_CRON_SECRET GitHub Actions secret is missing.'
+            exit 1
+          fi
+
+      - name: Invoke publishing worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="${RUNNER_TEMP}/ruffneck-publishing-worker-response.json"
+          trap 'rm -f "${response_file}"' EXIT
+          status="$(curl \
+            --silent \
+            --show-error \
+            --output "${response_file}" \
+            --write-out '%{http_code}' \
+            --connect-timeout 10 \
+            --max-time 240 \
             --request POST \
-            --header "Authorization: Bearer $WORKER_SECRET" \
-            --header "Content-Type: application/json" \
-            "$WORKER_URL/api/cron/publishing"
+            --header "Authorization: Bearer ${SOCIAL_PUBLISH_CRON_SECRET}" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            'https://ruffneck-social-hub.vercel.app/api/cron/publishing')"
+
+          if [ "${status}" != '200' ]; then
+            echo "::error::Publishing worker returned HTTP ${status}. Response body was withheld from the log."
+            exit 1
+          fi
+
+          node scripts/report-publishing-worker-response.mjs "${response_file}"

@@ -16,12 +16,15 @@ export async function POST(request: NextRequest) {
   const secret = process.env.SOCIAL_PUBLISH_CRON_SECRET;
   const supplied = request.headers.get('authorization');
   if (!secret || supplied !== `Bearer ${secret}`) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   let db;
   try { db = serviceClient(); }
   catch { return NextResponse.json({ error: 'Worker configuration is incomplete.' }, { status: 503 }); }
 
   const workerId = `rsh-${crypto.randomUUID()}`;
-  const { data: jobs, error } = await db.rpc('claim_due_publishing_jobs', { target_worker_id: workerId, target_limit: 5 });
+  // Keep the sequential batch bounded so a slow provider does not turn one
+  // scheduled invocation into an unbounded serverless request.
+  const { data: jobs, error } = await db.rpc('claim_due_publishing_jobs', { target_worker_id: workerId, target_limit: 3 });
   if (error) {
     console.error('[publishing.worker] Claim failed:', { code: error.code });
     return NextResponse.json({ error: 'Queue claim failed.' }, { status: 503 });
@@ -34,16 +37,21 @@ export async function POST(request: NextRequest) {
       : raw.provider === 'linkedin'
         ? await dispatchLinkedInText(raw, process.env.LINKEDIN_API_VERSION || '202610')
         : await dispatchInstagramImage(raw, process.env.META_GRAPH_API_VERSION || 'v25.0');
+
     let state: 'succeeded' | 'retryable' | 'failed' | 'needs_review';
     let retryAt: string | null = null;
     if (result.kind === 'published') state = 'succeeded';
-    else if (result.kind === 'retry') { state = raw.attempts < raw.max_attempts ? 'retryable' : 'failed'; retryAt = new Date(Date.now() + result.retryAfterMs).toISOString(); }
-    else state = 'needs_review';
+    else if (result.kind === 'retry') {
+      state = raw.attempts < raw.max_attempts ? 'retryable' : 'failed';
+      retryAt = new Date(Date.now() + result.retryAfterMs).toISOString();
+    } else state = 'needs_review';
 
     if (result.refreshed && result.refreshedExpiresAt) {
       const { error: tokenError } = await db.from('social_account_token_vault').update({
-        ciphertext: result.refreshed.ciphertext, iv: result.refreshed.iv,
-        auth_tag: result.refreshed.authTag, token_expires_at: result.refreshedExpiresAt,
+        ciphertext: result.refreshed.ciphertext,
+        iv: result.refreshed.iv,
+        auth_tag: result.refreshed.authTag,
+        token_expires_at: result.refreshedExpiresAt,
         updated_at: new Date().toISOString(),
       }).eq('social_account_id', raw.social_account_id);
       if (tokenError) console.error('[publishing.worker] Token refresh persistence failed:', { code: tokenError.code });

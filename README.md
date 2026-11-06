@@ -120,3 +120,7 @@ For the v6.8.4 publishing capability guard specifically, review `RELEASE-NOTES-v
 7. Complete legal, privacy, security, retention, backup and incident-response reviews before a production rollout.
 
 See `docs/ORGANIZATION-CAPABILITY-MATRIX-v6.7.0.md`, `docs/ORGANIZATION-DEMO-GUIDE-v6.7.0.md` and `docs/ORGANIZATION-READINESS-AUDIT-v6.7.0.md`.
+
+## Scheduled publishing worker
+
+The v6.8.5 release adds a GitHub Actions trigger for the existing authenticated publishing worker. It invokes `/api/cron/publishing` every five minutes and can also be run manually from the GitHub Actions tab. Activation requires the same strong `SOCIAL_PUBLISH_CRON_SECRET` value in Vercel Production and GitHub Actions repository secrets. GitHub scheduled events may be delayed, so this is an operational trigger rather than a guaranteed publication-time SLA. See `docs/PUBLISHING-WORKER-SCHEDULER-v6.8.5.md` for setup and live acceptance instructions.

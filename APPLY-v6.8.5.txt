@@ -1,0 +1,58 @@
+RUFFNECK SOCIAL HUB v6.8.5 — PUBLISHING WORKER ACTIVATION
+
+TARGET
+Repository: https://github.com/zaksz1991/ruffneck-social-hub
+Branch: main
+Baseline inspected: package version 6.8.4
+
+WHAT THIS FIXES
+The scheduled publishing worker route already exists, but vercel.json currently schedules only the daily subscription lifecycle processor. This package adds a GitHub Actions trigger every five minutes and a manual trigger. It also restores the full README and repairs two release-version audit contracts that would otherwise stop later releases.
+
+FILES TO ADD
+- .github/workflows/publishing-worker.yml
+- docs/PUBLISHING-WORKER-SCHEDULER-v6.8.5.md
+- scripts/audit-publishing-worker-trigger.mjs
+- scripts/lib/publishing-worker-response.mjs
+- scripts/report-publishing-worker-response.mjs
+- scripts/test-publishing-worker-trigger.mjs
+- src/app/api/cron/publishing/route.ts
+
+FILES TO REPLACE COMPLETELY
+- README.md
+- package.json
+- scripts/audit-client-approval-portal.mjs
+- scripts/audit-publishing-capability-guard.mjs
+- scripts/test-publishing-capability-guard.mjs
+- src/app/actions/publishing.ts
+- src/lib/publishing/capability-guard.ts
+
+GITHUB WEB INSTALLATION
+1. Open the repository and confirm the target branch is main.
+2. Add each listed new file at the exact path shown, creating any missing folders.
+3. Open each replacement file in GitHub, choose Edit, replace its complete contents with the supplied file, then save.
+4. Review the changed-file list carefully. Do not delete unrelated files or replace the rest of the repository.
+5. Commit the files to main.
+
+REQUIRED SECRET CONFIGURATION
+Use one strong random value of at least 32 characters and enter the same value in both places:
+A. Vercel → RuffNeck project → Settings → Environment Variables → SOCIAL_PUBLISH_CRON_SECRET → Production. Save and redeploy Production.
+B. GitHub → repository Settings → Secrets and variables → Actions → New repository secret → name SOCIAL_PUBLISH_CRON_SECRET → same value.
+Do not put the secret in code or commit it. Keep the existing server-only SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL configured in Vercel.
+
+ACTIVATION TEST
+1. Open GitHub → Actions.
+2. Select “RuffNeck scheduled publishing worker”.
+3. Choose “Run workflow” on main.
+4. A successful idle run may report claimed=0. This means the endpoint responded and no due work was found.
+5. Confirm the schedule creates later runs. GitHub may delay scheduled events under load; this is not a guaranteed exact-time SLA.
+6. For the actual provider test, use an approved, non-customer test post and organisation-owned Instagram, Facebook Page or LinkedIn account. Verify the queue's final state and the post in the provider's native account.
+
+IMPORTANT LIMITS
+- Existing queue worker claims at most three jobs per invocation.
+- Only current Instagram single-image, Facebook Page single-image and LinkedIn organisation text-only adapters are dispatched by this queue worker.
+- TikTok creator-inbox and YouTube private-upload workflows remain separate; WhatsApp is not a feed publisher.
+- Do not blindly retry needs_review or completion_unconfirmed items. Check the native provider first to avoid duplicates.
+- No SQL migration is included or required.
+
+VALIDATION STATUS
+The focused response-parser tests and package/audit JSON syntax are checked in this package. The audit is designed to run against the complete repository. The full repository npm test, full Vercel build, secret configuration, Actions schedule, and live provider posts have not been run or verified here.

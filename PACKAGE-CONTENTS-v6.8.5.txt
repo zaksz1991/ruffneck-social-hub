@@ -1,0 +1,23 @@
+RUFFNECK SOCIAL HUB v6.8.5 — PACKAGE CONTENTS
+
+ADD
+.github/workflows/publishing-worker.yml
+docs/PUBLISHING-WORKER-SCHEDULER-v6.8.5.md
+scripts/audit-publishing-worker-trigger.mjs
+scripts/lib/publishing-worker-response.mjs
+scripts/report-publishing-worker-response.mjs
+scripts/test-publishing-worker-trigger.mjs
+src/app/api/cron/publishing/route.ts
+
+REPLACE COMPLETELY
+README.md
+package.json
+scripts/audit-client-approval-portal.mjs
+scripts/audit-publishing-capability-guard.mjs
+scripts/test-publishing-capability-guard.mjs
+src/app/actions/publishing.ts
+src/lib/publishing/capability-guard.ts
+
+RELEASE DOCUMENTS
+APPLY-v6.8.5.txt
+RELEASE-NOTES-v6.8.5.md
