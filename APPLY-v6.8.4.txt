@@ -1,0 +1,49 @@
+RUFFNECK SOCIAL HUB v6.8.4 — PUBLISHING CAPABILITY GUARD
+
+TARGET BASELINE
+- GitHub repository: zaksz1991/ruffneck-social-hub
+- Target branch: main
+- Public main baseline inspected for this overlay: package.json v6.8.0, Next.js ^15.5.0.
+- This package does not include or validate the separate Dependabot Next.js 16 branch repair.
+
+FILES
+Add:
+  src/lib/publishing/capability-guard.ts
+  scripts/test-publishing-capability-guard.mjs
+  scripts/audit-publishing-capability-guard.mjs
+  docs/PUBLISHING-VERIFICATION-PLAN-v6.8.4.md
+
+Replace completely:
+  src/app/actions/publishing.ts
+  scripts/audit-client-approval-portal.mjs
+  package.json
+
+WHAT CHANGES
+Before any scheduled queue row is created, the server now preflights the selected content and every selected destination against the actual dispatch worker formats:
+- Instagram: exactly one media reference containing an HTTPS URL without embedded credentials.
+- Facebook Pages: exactly one media reference containing an HTTPS URL without embedded credentials.
+- LinkedIn organisations: text-only content (no media references).
+- TikTok and YouTube: rejected from scheduled public-post dispatch. Their existing creator-inbox/private-upload workflows remain separate and unchanged.
+- Any destination must still be connected and have capabilities.content_publish === true.
+
+The batch is rejected before any queue rows are written if one selected destination is incompatible. This avoids creating a mixed batch that contains destinations the current worker cannot publish. Existing protected Supabase RPCs remain authoritative for workspace membership, role, brand ownership, timezone, scheduling window, duplicate prevention and queue cancellation.
+
+NO DATABASE MIGRATION OR NEW ENVIRONMENT VARIABLE
+No schema change, provider permission change, external package or new secret is included.
+
+GITHUB WEB INSTALLATION
+1. Open the main branch in GitHub.
+2. Add the three new files at the exact paths above.
+3. Open each replacement path, choose Edit, replace the complete file with the supplied file, and save.
+4. For package.json, use the complete replacement. It preserves the existing scripts/dependencies from the inspected main package, adds the new capability audit/test to the build and test pipelines, and updates the release version to 6.8.4.
+5. Commit the changes to main.
+
+IMPORTANT
+- This release does not add new social-platform publishing adapters.
+- It does not make TikTok public auto-publishing or YouTube public/scheduled publishing available.
+- The existing Instagram/Facebook worker still supports a single HTTPS media reference; LinkedIn supports text-only scheduled dispatch.
+- Media reachability, actual MIME type, provider app review and live provider permissions still need live validation.
+- The UI already explains the existing format limits. Incompatible selections are rejected using the Publishing Queue's existing invalid-destination message.
+
+VALIDATION EXPECTATION
+After installation, the configured build runs the new static audit before Next.js production compilation. npm test runs the new focused capability tests. A green focused test/audit is not a substitute for the full repository test suite, Vercel build, a live controlled post, and verification on each connected provider account.

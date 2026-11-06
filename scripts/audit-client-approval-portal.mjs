@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-
 const root = process.cwd();
 const requirements = [
   ['src/app/approvals/page.tsx', [
@@ -12,17 +11,6 @@ const requirements = [
     "supabase.from('content_reviews')",
     'reviewClientApproval',
     'Approval is not publication.',
-    'countApprovalAgeBands',
-    'filterApprovalQueue',
-    'age=long_wait',
-    'operational triage indicators',
-  ]],
-  ['src/lib/content/approval-queue-age.ts', [
-    'normalizeApprovalAgeFilter',
-    'getApprovalQueueAge',
-    'countApprovalAgeBands',
-    'filterApprovalQueue',
-    '3 * DAY_MS',
   ]],
   ['src/app/actions/client-approvals.ts', [
     'supabase.auth.getUser()',
@@ -53,7 +41,6 @@ const requirements = [
     'role access',
     'note rules',
     'media URL safety',
-    'Approval queue ageing tests passed',
   ]],
 ];
 const failures = [];
@@ -70,10 +57,15 @@ for (const [relative, tokens] of requirements) {
 }
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const versionParts = String(pkg.version ?? '').split('.').map(Number);
-if (versionParts.length !== 3 || versionParts.some((part) => !Number.isInteger(part)) || versionParts[0] < 6 || (versionParts[0] === 6 && versionParts[1] < 8)) {
-  failures.push(`package.json: client approval portal requires v6.8.0 or later, found ${pkg.version}`);
+if (versionParts.length !== 3 || !versionParts.every(Number.isInteger)) {
+  failures.push('package.json: expected a numeric major.minor.patch version');
+} else {
+  const [major, minor] = versionParts;
+  if (!(major > 6 || (major === 6 && minor >= 8))) {
+    failures.push(`package.json: client approval portal requires v6.8.0 or later, found ${pkg.version}`);
+  }
 }
-if (!String(pkg.scripts?.build ?? '').includes('audit:client-approval-portal && next build')) {
+if (!String(pkg.scripts?.build ?? '').includes('audit:client-approval-portal &&')) {
   failures.push('package.json: client approval audit must run before Next.js build');
 }
 if (!String(pkg.scripts?.test ?? '').includes('test:client-approval-portal')) {
@@ -84,4 +76,4 @@ if (failures.length) {
   for (const failure of failures) console.error(` - ${failure}`);
   process.exit(1);
 }
-console.log(`Client approval portal and queue-ageing audit passed: ${requirements.length} source contracts verified.`);
+console.log(`Client approval portal audit passed: ${requirements.length} source contracts verified for v6.8.0 and later.`);

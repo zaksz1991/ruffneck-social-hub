@@ -4,12 +4,12 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isScheduleUuid, validateScheduleInput } from '@/lib/publishing/validation';
+import { assessScheduledDestinationBatch, type PublishingDestinationCandidate } from '@/lib/publishing/capability-guard';
 
 function field(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
 }
-
 function returnToQueue(workspaceId: string, query: string): never {
   redirect(`/publishing?workspace=${encodeURIComponent(workspaceId)}&${query}`);
 }
@@ -26,7 +26,9 @@ export async function scheduleApprovedContent(formData: FormData) {
   const contentId = field(formData, 'content_id');
   const scheduledLocal = field(formData, 'scheduled_local');
   const rawAccountIds = formData.getAll('social_account_ids');
-  const accountIds = [...new Set(rawAccountIds.filter((value): value is string => typeof value === 'string').map((value) => value.trim()))];
+  const accountIds = [...new Set(rawAccountIds
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim()))];
 
   if (!isScheduleUuid(workspaceId)) redirect('/publishing?error=input');
   if (!isScheduleUuid(contentId)) returnToQueue(workspaceId, 'error=content');
@@ -37,14 +39,48 @@ export async function scheduleApprovedContent(formData: FormData) {
   if (!parsed.ok) returnToQueue(workspaceId, `error=${parsed.reason}`);
 
   const supabase = await authenticatedClient();
+
+  // Read only the approved content and selected account metadata needed for
+  // capability preflight. The protected database RPC remains authoritative for
+  // membership, role, workspace, brand, date-window and duplicate checks.
+  const [contentResult, accountsResult] = await Promise.all([
+    supabase.from('content_items')
+      .select('id,brand_id,status,media_refs')
+      .eq('id', parsed.value.contentId)
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'approved')
+      .maybeSingle(),
+    supabase.from('social_accounts')
+      .select('id,provider,connection_state,capabilities')
+      .eq('workspace_id', workspaceId)
+      .in('id', accountIds),
+  ]);
+
+  if (contentResult.error || !contentResult.data) {
+    console.error('[publishing.preflight] Approved content could not be read:', { code: contentResult.error?.code ?? 'not_found' });
+    returnToQueue(workspaceId, 'error=content');
+  }
+  const selectedAccounts = (accountsResult.data ?? []) as PublishingDestinationCandidate[];
+  if (accountsResult.error || selectedAccounts.length !== accountIds.length) {
+    console.error('[publishing.preflight] Selected destinations could not be resolved:', { code: accountsResult.error?.code ?? 'account_count_mismatch' });
+    returnToQueue(workspaceId, 'error=accounts');
+  }
+
+  const preflight = assessScheduledDestinationBatch(selectedAccounts, contentResult.data.media_refs, accountIds);
+  if (!preflight.ok) {
+    console.warn('[publishing.preflight] Batch rejected before queue creation:', {
+      rejected: preflight.failures.map(({ provider, reason }) => ({ provider, reason })),
+    });
+    returnToQueue(workspaceId, 'error=accounts');
+  }
+
   let created = 0;
   let failed = 0;
   let duplicate = 0;
   let denied = false;
-
-  // Each destination is an independent, database-validated queue operation.
-  // A failure for one network/account does not discard successful schedules.
-  for (const accountId of accountIds) {
+  // Every destination is still independently validated by PostgreSQL. A
+  // database failure for one network/account does not discard successful rows.
+  for (const accountId of preflight.compatibleAccountIds) {
     const { error } = await supabase.rpc('schedule_approved_content', {
       target_content_id: parsed.value.contentId,
       target_social_account_id: accountId,
@@ -59,7 +95,6 @@ export async function scheduleApprovedContent(formData: FormData) {
     if (error.code === '42501') denied = true;
     console.error('[publishing.schedule-batch] Destination rejected:', { code: error.code });
   }
-
   revalidatePath('/publishing');
   revalidatePath('/');
   returnToQueue(workspaceId, `saved=bulk&created=${created}&failed=${failed}&duplicates=${duplicate}${denied ? '&denied=1' : ''}`);
@@ -69,7 +104,6 @@ export async function cancelScheduledJob(formData: FormData) {
   const workspaceId = field(formData, 'workspace_id');
   const jobId = field(formData, 'job_id');
   if (!isScheduleUuid(workspaceId) || !isScheduleUuid(jobId)) redirect('/publishing?error=input');
-
   const supabase = await authenticatedClient();
   const { error } = await supabase.rpc('cancel_scheduled_job', { target_job_id: jobId });
   if (error) {
@@ -78,7 +112,6 @@ export async function cancelScheduledJob(formData: FormData) {
     if (error.code === 'PGRST202' || error.code === '42883') returnToQueue(workspaceId, 'error=migration');
     returnToQueue(workspaceId, 'error=cancel');
   }
-
   revalidatePath('/publishing');
   revalidatePath('/');
   returnToQueue(workspaceId, 'saved=cancelled');
