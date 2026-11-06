@@ -5,75 +5,122 @@ import {
   type AiProviderVariantBrief,
 } from './provider-variants';
 
+const requestedPlatforms: AiProviderVariantBrief['platforms'] = [
+  'instagram',
+  'facebook',
+  'linkedin',
+];
+
 const sample: AiProviderVariantBrief = {
-  brandName: 'Northstar Foods',
-  title: 'Weekend menu announcement',
-  masterBody: 'Our new weekend menu is available this Saturday and Sunday. Message our team for details.',
-  brandVoice: {
-    tone: 'Warm and direct',
-    approved_facts: ['Open on weekends'],
-    forbidden_claims: ['Best in the city'],
-    private_notes: 'Do not disclose this internal note',
-  },
+  objective: 'awareness',
   tone: 'friendly',
+  language: 'English',
+  audience: 'Existing and prospective customers',
+  brief: 'Announce the weekend menu and explain how customers can contact the team.',
+  platforms: requestedPlatforms,
+};
+
+const brandVoice = {
+  tone: 'Warm and direct',
+  approved_facts: ['The menu is available this weekend'],
+  forbidden_claims: ['Best in the city'],
 };
 
 const validResponse = JSON.stringify({
-  instagram: 'A fresh weekend menu is here this Saturday and Sunday. Message our team for details.',
-  facebook: 'We are sharing our new weekend menu, available this Saturday and Sunday. Send our team a message for more details.',
-  linkedin: 'Northstar Foods is announcing its new weekend menu, available this Saturday and Sunday. Contact the team for further details.',
+  variants: [
+    {
+      platform: 'instagram',
+      title: 'Weekend menu is here',
+      body: 'Explore our weekend menu. Message our team for details.',
+    },
+    {
+      platform: 'facebook',
+      title: 'Discover the weekend menu',
+      body: 'Our weekend menu is available now. Contact our team for details.',
+    },
+    {
+      platform: 'linkedin',
+      title: 'Weekend menu announcement',
+      body: 'We are sharing our weekend menu. Contact the team for further details.',
+    },
+  ],
 });
 
 describe('AI provider-specific copy adaptation', () => {
-  it('builds a platform-aware prompt that protects approved facts', () => {
-    const messages = buildAiProviderVariantMessages(sample);
-    expect(messages[0].content).toContain('already-approved master post');
-    expect(messages[0].content).toContain('Do not add any new claim');
-    expect(messages[0].content).toContain('same primary language');
-    expect(messages[0].content).toContain('Instagram:');
-    expect(messages[0].content).toContain('Facebook:');
-    expect(messages[0].content).toContain('LinkedIn:');
-    expect(messages[1].content).toContain('Weekend menu announcement');
-    expect(messages[1].content).not.toContain('private_notes');
-    expect(messages[1].content).not.toContain('Do not disclose this internal note');
+  it('builds a platform-aware prompt from the current brief contract', () => {
+    const messages = buildAiProviderVariantMessages(sample, brandVoice);
+
+    expect(messages).toHaveLength(2);
+    expect(messages[0].content).toContain('Return only one valid JSON object');
+    expect(messages[0].content).toContain('exactly one object for every requested platform');
+    expect(messages[0].content).toContain('Do not invent prices');
+    expect(messages[0].content).toContain('instagram:');
+    expect(messages[0].content).toContain('facebook:');
+    expect(messages[0].content).toContain('linkedin:');
+    expect(messages[0].content).toContain('Objective: awareness.');
+    expect(messages[0].content).toContain('Tone: friendly.');
+    expect(messages[1].content).toContain(sample.brief);
   });
 
-  it('parses all three provider copies', () => {
-    expect(parseAiProviderVariantsResponse(validResponse)).toEqual(JSON.parse(validResponse));
+  it('parses all requested provider copies in the requested order', () => {
+    const drafts = parseAiProviderVariantsResponse(validResponse, requestedPlatforms);
+
+    expect(drafts.map((draft) => draft.platform)).toEqual(requestedPlatforms);
+    expect(drafts.every((draft) => draft.title.length > 0 && draft.body.length > 0)).toBe(true);
   });
 
   it('accepts a fenced JSON response from compatible local models', () => {
-    expect(parseAiProviderVariantsResponse(`\`\`\`json\n${validResponse}\n\`\`\``).facebook).toContain('weekend menu');
+    const drafts = parseAiProviderVariantsResponse(
+      `\`\`\`json\n${validResponse}\n\`\`\``,
+      requestedPlatforms,
+    );
+
+    expect(drafts.find((draft) => draft.platform === 'facebook')?.body).toContain('weekend menu');
   });
 
   it('rejects non-JSON output', () => {
-    expect(() => parseAiProviderVariantsResponse('Here are the adaptations')).toThrow(/required provider-variant JSON/);
+    expect(() => parseAiProviderVariantsResponse('Here are the adaptations', requestedPlatforms))
+      .toThrow(/valid JSON variant set/i);
   });
 
   it('rejects an array or other invalid top-level structure', () => {
-    expect(() => parseAiProviderVariantsResponse('[]')).toThrow(/invalid provider-variant structure/);
+    expect(() => parseAiProviderVariantsResponse('[]', requestedPlatforms))
+      .toThrow(/valid JSON variant set/i);
   });
 
-  it('requires all three platform copies', () => {
-    expect(() => parseAiProviderVariantsResponse('{"instagram":"one","facebook":"two"}')).toThrow(/missing usable linkedin/);
+  it('rejects a response that omits one of the requested platforms', () => {
+    const incomplete = JSON.stringify({
+      variants: JSON.parse(validResponse).variants.slice(0, 2),
+    });
+
+    expect(() => parseAiProviderVariantsResponse(incomplete, requestedPlatforms))
+      .toThrow(/incomplete set of platform variants/i);
   });
 
   it('rejects empty copy', () => {
-    expect(() => parseAiProviderVariantsResponse('{"instagram":"","facebook":"two","linkedin":"three"}')).toThrow(/missing usable instagram/);
-  });
-
-  it('bounds generated copy to 5,000 characters and strips controls', () => {
-    const input = JSON.stringify({
-      instagram: `Caption\u0000${'i'.repeat(5200)}`,
-      facebook: 'Facebook copy',
-      linkedin: 'LinkedIn copy',
+    const emptyBody = JSON.stringify({
+      variants: JSON.parse(validResponse).variants.map((variant: { platform: string; title: string; body: string }) =>
+        variant.platform === 'instagram' ? { ...variant, body: '' } : variant,
+      ),
     });
-    const result = parseAiProviderVariantsResponse(input);
-    expect(result.instagram.length).toBe(5000);
-    expect(result.instagram).not.toContain('\u0000');
+
+    expect(() => parseAiProviderVariantsResponse(emptyBody, requestedPlatforms))
+      .toThrow(/title or character requirements/i);
   });
 
-  it('rejects oversized model output', () => {
-    expect(() => parseAiProviderVariantsResponse('x'.repeat(48_001))).toThrow(/oversized/);
+  it('removes control characters from otherwise valid copy', () => {
+    const controlled = JSON.stringify({
+      variants: JSON.parse(validResponse).variants.map((variant: { platform: string; title: string; body: string }) =>
+        variant.platform === 'instagram' ? { ...variant, body: 'Caption\u0000 text' } : variant,
+      ),
+    });
+    const drafts = parseAiProviderVariantsResponse(controlled, requestedPlatforms);
+
+    expect(drafts.find((draft) => draft.platform === 'instagram')?.body).toBe('Caption text');
+  });
+
+  it('rejects output that exceeds the parser size limit', () => {
+    expect(() => parseAiProviderVariantsResponse('x'.repeat(96_001), requestedPlatforms))
+      .toThrow(/oversized/i);
   });
 });
