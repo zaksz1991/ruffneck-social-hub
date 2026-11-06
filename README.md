@@ -36,7 +36,7 @@ The v6.8.5 worker dispatches only these scheduled public-feed formats:
 | Provider | Scheduled worker format | Not included in this path |
 |---|---|---|
 | Instagram Professional | One image with caption | Carousel, Reel, Story and video publication |
-| Facebook Pages | One image with caption | Multi-photo, Reels, Stories and video publication |
+| Facebook Pages | One photo/image with caption | Text-only, multi-photo/carousel, Reels, Stories and video publication |
 | LinkedIn Organisations | Text-only post | Image, document and video publication |
 | TikTok | No scheduled public-feed dispatch | Creator-inbox transfer is a separate consent-driven workflow |
 | YouTube | No scheduled public-feed dispatch | Private video upload is a separate workflow; public release scheduling is not claimed |
@@ -48,7 +48,7 @@ The workflow calls `https://ruffneck-social-hub.vercel.app/api/cron/publishing` 
 
 ## Conversations and customer operations
 
-- Work supported Instagram, Facebook Messenger and WhatsApp Business conversations through workspace-scoped inbox workflows.
+- Manage supported Instagram, Facebook Messenger and WhatsApp Business conversations through workspace-scoped inbox workflows.
 - Assign conversations, set priority and status, record internal handoff notes, configure first-response targets and use saved replies.
 - Maintain provider-specific CRM stages, tags, notes and a bounded interaction timeline.
 - Use AI-assisted triage, routing and reply drafts where configured, with human review and safety guards.
@@ -64,7 +64,7 @@ The workflow calls `https://ruffneck-social-hub.vercel.app/api/cron/publishing` 
 | Provider | Current documented path | Important limitation |
 |---|---|---|
 | Instagram | Professional-account connection, supported publishing, conversations/comments and reviewed reply workflows | Meta scopes and app permissions must be granted; some actions are permission-gated and publishing formats are limited by the active provider adapter |
-| Facebook Pages | Page connection, Messenger workflows, supported comment/insight features | Do not assume general Page publishing dispatch without verifying the enabled account path |
+| Facebook Pages | Page connection, one-image scheduled feed publishing, Messenger workflows and supported comment/insight features | The scheduled worker is limited to one-image Page posts; do not assume text-only, multi-photo, Reels, Stories or video publishing |
 | LinkedIn | Organization connection, supported organic publishing and post insights | LinkedIn product access and organization scopes are required; publishing format support depends on the active adapter |
 | TikTok | OAuth, manually triggered video metrics and explicit-consent creator-inbox transfer | Direct public/scheduled publishing is not claimed |
 | YouTube | Channel analytics and optional explicit-consent private upload | Public/scheduled publishing and monetisation reporting are not claimed |

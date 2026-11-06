@@ -1,20 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-function compareVersions(a, b) {
-  const parse = (value) => {
-    const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(value));
-    assert.ok(match, `invalid semantic version: ${value}`);
-    return match.slice(1).map(Number);
-  };
-  const left = parse(a);
-  const right = parse(b);
-  for (let i = 0; i < 3; i += 1) {
-    if (left[i] !== right[i]) return left[i] - right[i];
-  }
-  return 0;
-}
-
 const [pkg, workflow, route, responseHelper, test, reporter] = await Promise.all([
   readFile('package.json', 'utf8').then(JSON.parse),
   readFile('.github/workflows/publishing-worker.yml', 'utf8'),
@@ -23,7 +9,13 @@ const [pkg, workflow, route, responseHelper, test, reporter] = await Promise.all
   readFile('scripts/test-publishing-worker-trigger.mjs', 'utf8'),
   readFile('scripts/report-publishing-worker-response.mjs', 'utf8'),
 ]);
-assert.ok(compareVersions(pkg.version, '6.8.5') >= 0, 'publishing worker trigger requires release 6.8.5 or later');
+const versionText = String(pkg.version ?? '');
+assert.match(versionText, /^\d+\.\d+\.\d+$/, 'package.json must contain a numeric major.minor.patch version');
+const [major, minor, patch] = versionText.split('.').map(Number);
+assert.ok(
+  major > 6 || (major === 6 && (minor > 8 || (minor === 8 && patch >= 5))),
+  `publishing worker trigger requires v6.8.5 or later, found ${versionText}`,
+);
 assert.match(workflow, /cron:\s*['"]\*\/5 \* \* \* \*['"]/);
 assert.match(workflow, /workflow_dispatch:/);
 assert.match(workflow, /group: ruffneck-social-publishing-worker/);
@@ -44,7 +36,8 @@ assert.match(route, /target_limit: 3/);
 assert.match(route, /finish_publishing_job/);
 assert.match(responseHelper, /completion_unconfirmed/);
 assert.match(responseHelper, /does not match its results/);
-assert.match(pkg.scripts.build, /audit:publishing-worker-trigger/);
+assert.match(pkg.scripts.build, /audit:publishing-worker-trigger && next build/);
 assert.match(pkg.scripts.test, /test-publishing-worker-trigger\.mjs/);
 assert.match(test, /count mismatch/);
-console.log('Publishing worker trigger audit passed: five-minute schedule, manual dispatch, bearer secret, bounded request, safe result reporting and forward-compatible release version verified.');
+
+console.log('Publishing worker trigger audit passed: five-minute schedule, manual dispatch, bearer secret, bounded request, safe result reporting and v6.8.5+ release compatibility verified.');

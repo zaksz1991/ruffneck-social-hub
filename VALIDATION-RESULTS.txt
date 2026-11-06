@@ -1,6 +1,18 @@
-PASS README preserves exact organization-readiness package-lock disclosure.
-PASS publishing-worker-trigger audit executed against the v6.8.5 release fixture.
-PASS publishing-worker response-summary test executed against the v6.8.5 release fixture.
-PASS workflow contains required cron, manual trigger, concurrency, bearer secret, fixed endpoint, bounded timeout and safe result reporter contracts.
-NOT RUN full repository npm test, full Vercel production build, live GitHub Actions invocation or live provider publication.
-Note: audit/test results are for the supplied v6.8.5 package fixture plus the replacement workflow; they do not constitute a full build of the live GitHub repository.
+RUFFNECK v6.8.5 RELEASE STABILITY — VALIDATION RESULTS
+
+PASS  README contains the exact package-lock disclosure expected by the live organisation-readiness audit.
+PASS  README contains provider publishing boundaries and worker secret documentation.
+PASS  README distinguishes Facebook one-image scheduled publishing from unsupported formats.
+PASS  publishing capability audit JavaScript syntax.
+PASS  publishing worker trigger audit JavaScript syntax.
+PASS  publishing capability audit accepts v6.8.5 and rejects older-than-v6.8.4 baseline in focused fixture.
+PASS  worker trigger audit accepts v6.8.5 and rejects older-than-v6.8.5 baseline in focused fixture.
+PASS  both audits retain their source, workflow and package-script contracts in focused fixture.
+PASS  ZIP integrity.
+
+NOT RUN  full repository npm test.
+NOT RUN  full Vercel production build.
+NOT RUN  live GitHub Actions scheduled workflow.
+NOT RUN  live OAuth, account connection or provider publication.
+
+This is a focused release-consistency repair, not proof of complete production readiness.

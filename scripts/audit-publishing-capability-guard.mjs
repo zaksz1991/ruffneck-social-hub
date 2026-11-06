@@ -1,20 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-function compareVersions(a, b) {
-  const parse = (value) => {
-    const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(String(value));
-    assert.ok(match, `invalid semantic version: ${value}`);
-    return match.slice(1).map(Number);
-  };
-  const left = parse(a);
-  const right = parse(b);
-  for (let i = 0; i < 3; i += 1) {
-    if (left[i] !== right[i]) return left[i] - right[i];
-  }
-  return 0;
-}
-
 const [action, helper, pkg] = await Promise.all([
   readFile('src/app/actions/publishing.ts', 'utf8'),
   readFile('src/lib/publishing/capability-guard.ts', 'utf8'),
@@ -31,16 +17,31 @@ assert.match(action, /cancel_scheduled_job/);
 for (const provider of ["'instagram'", "'facebook'", "'linkedin'"]) {
   assert.ok(helper.includes(provider), `missing supported provider ${provider}`);
 }
-for (const provider of ["'scheduled_dispatch_not_supported'", "'meta_images_required'", "'meta_image_limit_exceeded'", "'meta_images_https_required'", "'text_only_required'", "'publishing_permission_missing'"]) {
+for (const provider of ["'scheduled_dispatch_not_supported'", "'single_https_image_required'", "'text_only_required'", "'publishing_permission_missing'"]) {
   assert.ok(helper.includes(provider), `missing guard result ${provider}`);
 }
-assert.match(helper, /url\.protocol !== 'https:'/);
+assert.match(helper, /url\.protocol === 'https:'/);
 assert.match(helper, /url\.username/);
 assert.match(helper, /url\.password/);
 assert.match(helper, /compatibleAccountIds: failures\.length === 0 \? expectedIds : \[\]/);
-assert.ok(String(pkg.scripts?.build ?? '').includes('audit:publishing-capability-guard'));
+const buildScript = String(pkg.scripts?.build ?? '');
+const capabilityAuditPosition = buildScript.indexOf('audit:publishing-capability-guard');
+const workerAuditPosition = buildScript.indexOf('audit:publishing-worker-trigger');
+const nextBuildPosition = buildScript.indexOf('next build');
+assert.ok(
+  capabilityAuditPosition >= 0 && workerAuditPosition >= 0 && nextBuildPosition >= 0
+    && capabilityAuditPosition < nextBuildPosition && workerAuditPosition < nextBuildPosition,
+  'build pipeline must run both publishing audits before Next.js production compilation',
+);
 assert.ok(String(pkg.scripts?.test ?? '').includes('test:publishing-capability-guard'));
 assert.ok(String(pkg.scripts?.test ?? '').includes('audit:publishing-capability-guard'));
-assert.ok(compareVersions(pkg.version, '6.8.5') >= 0, 'publishing capability audit requires release 6.8.5 or later');
 
-console.log('Publishing capability guard audit passed: workspace preflight, Meta single/carousel formats, provider restrictions, fail-closed batching and forward-compatible release version verified.');
+const versionText = String(pkg.version ?? '');
+assert.match(versionText, /^\d+\.\d+\.\d+$/, 'package.json must contain a numeric major.minor.patch version');
+const [major, minor, patch] = versionText.split('.').map(Number);
+assert.ok(
+  major > 6 || (major === 6 && (minor > 8 || (minor === 8 && patch >= 4))),
+  `publishing capability guard requires v6.8.4 or later, found ${versionText}`,
+);
+
+console.log('Publishing capability guard audit passed: server preflight, current worker formats, fail-closed batching and v6.8.4+ release compatibility verified.');

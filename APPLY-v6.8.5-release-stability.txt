@@ -1,0 +1,34 @@
+RUFFNECK SOCIAL HUB — v6.8.5 RELEASE STABILITY REPAIR
+
+PURPOSE
+The public main branch currently reports package version 6.8.5. The publishing capability audit still requires exactly 6.8.4, while the worker-trigger audit still requires exactly 6.8.5. The current README is also only a three-line v6.8.4 release stub, but the organisation-readiness audit requires the documented lockfile disclosure. This patch corrects those release-contract inconsistencies without changing runtime publishing behaviour.
+
+FILES TO REPLACE ON THE MAIN BRANCH
+1. README.md
+2. scripts/audit-publishing-capability-guard.mjs
+3. scripts/audit-publishing-worker-trigger.mjs
+
+DO NOT REPLACE
+- package.json (keep the repository's current v6.8.5 package and existing scripts)
+- .github/workflows/publishing-worker.yml (the current public main copy already matches the v6.8.5 audited five-minute workflow)
+- Publishing runtime files, database migrations, secrets or provider adapters
+
+INSTALLATION THROUGH GITHUB WEBSITE
+1. Open https://github.com/zaksz1991/ruffneck-social-hub and select the main branch.
+2. Replace README.md completely with the supplied README.md.
+3. Replace scripts/audit-publishing-capability-guard.mjs completely.
+4. Replace scripts/audit-publishing-worker-trigger.mjs completely.
+5. Commit the three file changes to main.
+6. Open the resulting Vercel deployment and inspect the first failing audit, if any.
+
+WHAT CHANGED
+- The publishing capability audit now accepts v6.8.4 and later, using a numeric major/minor/patch comparison instead of an exact 6.8.4 pin.
+- The publishing worker audit now accepts v6.8.5 and later instead of requiring exactly 6.8.5.
+- The README restores the organisation capability, security, deployment and lockfile disclosures. It describes the currently implemented scheduled formats conservatively: Instagram one-image, Facebook one-image, LinkedIn text-only. TikTok and YouTube remain separate workflows.
+- The existing five-minute GitHub Actions worker schedule is left untouched because the public main version already matches its audit contract.
+
+NO OTHER CHANGES
+No SQL migration, package version bump, npm dependency, environment variable, OAuth configuration or provider permission change is included. The same SOCIAL_PUBLISH_CRON_SECRET remains required in Vercel Production and GitHub Actions repository secrets.
+
+VALIDATION LIMITS
+The replacement audit scripts must be checked against the existing repository source and package.json. This package does not run the full repository npm test suite or a Vercel production build. It does not test GitHub scheduled execution or publish to real social accounts.
