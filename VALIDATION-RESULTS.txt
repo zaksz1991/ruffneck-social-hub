@@ -1,18 +1,23 @@
-RUFFNECK v6.8.5 RELEASE STABILITY — VALIDATION RESULTS
+RuffNeck v6.8.6 publishing audit repair — validation record
 
-PASS  README contains the exact package-lock disclosure expected by the live organisation-readiness audit.
-PASS  README contains provider publishing boundaries and worker secret documentation.
-PASS  README distinguishes Facebook one-image scheduled publishing from unsupported formats.
-PASS  publishing capability audit JavaScript syntax.
-PASS  publishing worker trigger audit JavaScript syntax.
-PASS  publishing capability audit accepts v6.8.5 and rejects older-than-v6.8.4 baseline in focused fixture.
-PASS  worker trigger audit accepts v6.8.5 and rejects older-than-v6.8.5 baseline in focused fixture.
-PASS  both audits retain their source, workflow and package-script contracts in focused fixture.
-PASS  ZIP integrity.
+Source baseline: GitHub main commit bd6968f (from supplied Vercel log)
 
-NOT RUN  full repository npm test.
-NOT RUN  full Vercel production build.
-NOT RUN  live GitHub Actions scheduled workflow.
-NOT RUN  live OAuth, account connection or provider publication.
+Verified from published source:
+- package.json version is 6.8.6.
+- capability guard contains the Meta carousel outcome names.
+- capability guard enforces HTTPS and rejects URL username/password credentials.
+- regression test covers single image, 2-image carousel, 10-image maximum, 11-image rejection, invalid HTTP URL, URL credentials, duplicates, unsupported providers and mixed-batch rejection.
+- build/test scripts include publishing capability and Meta carousel audits/tests.
 
-This is a focused release-consistency repair, not proof of complete production readiness.
+Repair package:
+- Complete replacement audit script included.
+- Installation guide included.
+- Release notes included.
+
+Not performed:
+- Full repository npm test.
+- Full repository npm run build / Next.js compilation.
+- Live provider publication test.
+- Direct deployment verification.
+
+The repair is scoped to the observed failing audit and does not claim a successful production build.

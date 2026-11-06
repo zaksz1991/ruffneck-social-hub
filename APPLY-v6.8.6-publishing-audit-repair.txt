@@ -1,0 +1,39 @@
+RUFFNECK SOCIAL HUB — v6.8.6 PUBLISHING CAPABILITY AUDIT REPAIR
+
+TARGET BASELINE
+- Repository: github.com/zaksz1991/ruffneck-social-hub
+- Branch: main
+- Vercel commit shown in the supplied log: bd6968f
+- Package version shown in the supplied log: 6.8.6
+
+ROOT CAUSE
+The publishing capability helper was extended for Meta carousel support. Its old single-image failure result `single_https_image_required` was replaced by the current, more precise results:
+- meta_images_required
+- meta_images_https_required
+- meta_images_must_be_unique
+- meta_image_limit_exceeded
+
+The current audit still requires the removed result name, so it fails before `next build`. The focused capability test already exercises the current results and carousel cases.
+
+INSTALLATION
+Replace only this file on GitHub main:
+
+scripts/audit-publishing-capability-guard.mjs
+
+Use the complete replacement file supplied in this package. Do not replace package.json, the capability guard, publishing actions, carousel dispatcher, database migrations or worker workflow for this error.
+
+WHAT THE REPAIR DOES
+- Replaces the obsolete single-image guard-result assertion with the current Meta single-image/carousel failure contract.
+- Explicitly checks image count, uniqueness, HTTPS, URL credential rejection, destination permission and fail-closed batch behaviour.
+- Preserves the server-action preflight-before-write check.
+- Preserves the existing release-version and build/test wiring checks.
+- Also checks that the carousel audit/test remain registered in the package test pipeline.
+
+NO ADDITIONAL SETUP
+- No SQL migration.
+- No environment variable.
+- No dependency or package.json update.
+- No change to live publishing logic.
+
+AFTER INSTALLATION
+Commit the replacement file to main and allow Vercel to run the full build. The supplied log shows that all earlier audits passed; this is the first failing audit in that run. This repair does not establish that later audits, TypeScript checking or Next.js production compilation will pass. Review the next complete deployment log before treating v6.8.6 as released.
