@@ -1,23 +1,32 @@
-RuffNeck v6.8.6 publishing audit repair — validation record
+RuffNeck v6.8.6 publishing audit regex repair — validation record
 
-Source baseline: GitHub main commit bd6968f (from supplied Vercel log)
+Observed deployment:
+- Commit: 3074b58
+- Package: 6.8.6
+- All preceding audits through client-approval portal passed.
+- Failure: audit-publishing-capability-guard expected /url\.protocol === 'https:'/.
 
-Verified from published source:
-- package.json version is 6.8.6.
-- capability guard contains the Meta carousel outcome names.
-- capability guard enforces HTTPS and rejects URL username/password credentials.
-- regression test covers single image, 2-image carousel, 10-image maximum, 11-image rejection, invalid HTTP URL, URL credentials, duplicates, unsupported providers and mixed-batch rejection.
-- build/test scripts include publishing capability and Meta carousel audits/tests.
+Current implementation, confirmed from the commit source:
+- Parses candidate with new URL(candidate).
+- Rejects when url.protocol !== 'https:'.
+- Rejects URL username or password credentials.
+- Rejects missing hostname.
+- Returns null for rejected references.
 
-Repair package:
-- Complete replacement audit script included.
-- Installation guide included.
-- Release notes included.
+Repair:
+- Complete replacement of scripts/audit-publishing-capability-guard.mjs.
+- The HTTPS audit now checks the actual negative rejection condition.
+- All other audit contracts are retained.
+
+Validation performed:
+- JavaScript syntax (`node --check`): PASS.
+- HTTPS assertion updated to match the current implementation: PASS.
+- Complete audit run against a reconstructed focused source fixture: PASS.
+- ZIP integrity: PASS.
 
 Not performed:
 - Full repository npm test.
-- Full repository npm run build / Next.js compilation.
-- Live provider publication test.
-- Direct deployment verification.
+- Full Vercel production build.
+- Live Instagram/Facebook publication.
 
-The repair is scoped to the observed failing audit and does not claim a successful production build.
+The repair addresses the exact failure in the supplied log only. A later build result is needed to confirm subsequent pipeline stages.

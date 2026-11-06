@@ -1,0 +1,36 @@
+RUFFNECK SOCIAL HUB — v6.8.6 PUBLISHING CAPABILITY AUDIT REGEX REPAIR
+
+TARGET
+- Repository: github.com/zaksz1991/ruffneck-social-hub
+- Branch: main
+- Vercel commit in supplied log: 3074b58
+- Package version: 6.8.6
+
+ROOT CAUSE
+The publishing capability guard correctly rejects insecure image URLs with this condition:
+
+  if (url.protocol !== 'https:' || url.username || url.password || !url.hostname) return null;
+
+The audit incorrectly searched for `url.protocol === 'https:'`. That is the opposite operator from the real fail-closed guard. The implementation rejects any non-HTTPS URL, while also rejecting URLs containing username/password credentials or a missing hostname.
+
+REPAIR
+Replace only this file on GitHub main:
+
+  scripts/audit-publishing-capability-guard.mjs
+
+Use the complete replacement file supplied in this package.
+
+The replacement audit now explicitly checks for the negative HTTPS rejection condition (`url.protocol !== 'https:'`) and retains the username/password checks. It does not weaken the audit or change application behaviour.
+
+DO NOT replace:
+- src/lib/publishing/capability-guard.ts
+- src/app/actions/publishing.ts
+- package.json
+- any database migration
+- publishing worker files
+
+NO ADDITIONAL SETUP
+No SQL migration, environment variable, package change or dependency update is required.
+
+AFTER INSTALLATION
+Commit the replacement audit script to GitHub main and allow Vercel to rebuild. This addresses only the latest reported audit failure. It does not establish that subsequent audits, Next.js compilation, or production publishing will pass.

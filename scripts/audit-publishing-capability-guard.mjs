@@ -40,7 +40,8 @@ for (const result of [
 }
 assert.match(helper, /META_MAX_CAROUSEL_IMAGES = 10/);
 assert.match(helper, /validateMetaImageReferences/);
-assert.match(helper, /url\.protocol === 'https:'/);
+// The helper rejects every non-HTTPS URL; do not require a positive equality check.
+assert.match(helper, /url\.protocol\s*!==\s*['"]https:['"]/);
 assert.match(helper, /url\.username/);
 assert.match(helper, /url\.password/);
 assert.match(helper, /compatibleAccountIds: failures\.length === 0 \? expectedIds : \[\]/);
