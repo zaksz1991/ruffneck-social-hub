@@ -1,0 +1,18 @@
+RUFFNECK SOCIAL HUB v6.8.2 PATCH MANIFEST
+Baseline: commit 394d513 / package v6.8.0, with v6.8.1 audit-compatibility fix consolidated.
+
+ADD
+- src/lib/content/approval-queue-age.ts
+
+REPLACE
+- package.json
+- scripts/audit-organization-readiness.mjs
+- scripts/audit-client-approval-portal.mjs
+- scripts/test-client-approval-portal.mjs
+- src/app/approvals/page.tsx
+- src/app/approvals/approvals.module.css
+
+NO DATABASE MIGRATION
+NO NEW ENVIRONMENT VARIABLES
+NO NEW DEPENDENCIES
+NO PROVIDER API CHANGES

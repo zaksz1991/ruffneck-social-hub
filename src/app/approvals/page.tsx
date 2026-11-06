@@ -6,6 +6,12 @@ import {
   canUseClientApprovalPortal,
   safeClientApprovalMediaUrl,
 } from '@/lib/content/client-approval';
+import {
+  countApprovalAgeBands,
+  filterApprovalQueue,
+  getApprovalQueueAge,
+  normalizeApprovalAgeFilter,
+} from '@/lib/content/approval-queue-age';
 import styles from './approvals.module.css';
 
 type Workspace = { id: string; name: string };
@@ -54,9 +60,11 @@ function roleLabel(role: string) {
 export default async function ClientApprovalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ workspace?: string; error?: string; saved?: string }>;
+  searchParams: Promise<{ workspace?: string; error?: string; saved?: string; age?: string }>;
 }) {
   const params = await searchParams;
+  const ageFilter = normalizeApprovalAgeFilter(params.age);
+  const now = Date.now();
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -116,6 +124,8 @@ export default async function ClientApprovalsPage({
   }
 
   const brandNames = new Map(brands.map((brand) => [brand.id, brand.name]));
+  const ageCounts = countApprovalAgeBands(pendingItems, now);
+  const visibleItems = filterApprovalQueue(pendingItems, ageFilter, now);
   const latestReviewByContent = new Map<string, PriorReview>();
   for (const review of priorReviews) {
     if (!latestReviewByContent.has(review.content_id)) latestReviewByContent.set(review.content_id, review);
@@ -177,7 +187,10 @@ export default async function ClientApprovalsPage({
         ) : (
           <>
             <section className={styles.summary} aria-label="Approval queue summary">
-              <article><span>Awaiting decision</span><strong>{queueError ? '—' : pendingItems.length}</strong><small>Submitted content only</small></article>
+              <article><span>Awaiting decision</span><strong>{queueError ? '—' : pendingItems.length}</strong><small>Current queue · maximum 100 records</small></article>
+              <article><span>Fresh · under 24 hours</span><strong>{queueError ? '—' : ageCounts.fresh}</strong><small>Recently submitted</small></article>
+              <article><span>Waiting · 1–3 days</span><strong>{queueError ? '—' : ageCounts.waiting}</strong><small>Needs attention</small></article>
+              <article><span>Long wait · 3+ days</span><strong>{queueError ? '—' : ageCounts.longWait}</strong><small>Oldest items first</small></article>
               <article><span>Brands in workspace</span><strong>{queueError ? '—' : brands.length}</strong><small>Brand scope for this workspace</small></article>
               <article><span>Your approval role</span><strong>Active</strong><small>{roleLabel(role)}</small></article>
             </section>
@@ -189,24 +202,39 @@ export default async function ClientApprovalsPage({
 
             <section className={styles.queue}>
               <div className={styles.queueHeading}>
-                <div><span className={styles.eyebrow}>REVIEW QUEUE</span><h2>Content awaiting your decision</h2><p>Oldest submissions appear first. The queue is limited to content marked as awaiting review.</p></div>
-                <span className={styles.queueCount}>{queueError ? 'DATA UNAVAILABLE' : `${pendingItems.length} PENDING`}</span>
+                <div><span className={styles.eyebrow}>REVIEW QUEUE</span><h2>Content awaiting your decision</h2><p>Age is measured from the content item's last update. These age bands are operational triage indicators, not contractual response deadlines.</p></div>
+                <span className={styles.queueCount}>{queueError ? 'DATA UNAVAILABLE' : `${visibleItems.length} OF ${pendingItems.length} SHOWN`}</span>
               </div>
+              {!queueError && (
+                <nav className={styles.ageFilters} aria-label="Filter approval queue by age">
+                  <Link href={`/approvals?workspace=${activeWorkspace.id}`} aria-current={ageFilter === 'all' ? 'page' : undefined} className={ageFilter === 'all' ? styles.filterActive : ''}>All <b>{pendingItems.length}</b></Link>
+                  <Link href={`/approvals?workspace=${activeWorkspace.id}&age=fresh`} aria-current={ageFilter === 'fresh' ? 'page' : undefined} className={ageFilter === 'fresh' ? styles.filterActive : ''}>Under 24h <b>{ageCounts.fresh}</b></Link>
+                  <Link href={`/approvals?workspace=${activeWorkspace.id}&age=waiting`} aria-current={ageFilter === 'waiting' ? 'page' : undefined} className={ageFilter === 'waiting' ? styles.filterActive : ''}>1–3 days <b>{ageCounts.waiting}</b></Link>
+                  <Link href={`/approvals?workspace=${activeWorkspace.id}&age=long_wait`} aria-current={ageFilter === 'long_wait' ? 'page' : undefined} className={ageFilter === 'long_wait' ? styles.filterActive : ''}>3+ days <b>{ageCounts.longWait}</b></Link>
+                </nav>
+              )}
 
               {queueError ? (
                 <div className={styles.emptyState}><h3>Approval data could not be loaded</h3><p>Refresh the page. If the problem continues, confirm the workspace content and review migrations are applied.</p></div>
               ) : pendingItems.length === 0 ? (
                 <div className={styles.emptyState}><h3>The approval queue is clear</h3><p>New submissions will appear here after the content team selects Submit for review.</p><Link href="/content">Open Content Studio</Link></div>
+              ) : visibleItems.length === 0 ? (
+                <div className={styles.emptyState}><h3>No items in this age group</h3><p>There are no pending items in the selected queue-age range.</p><Link href={`/approvals?workspace=${activeWorkspace.id}`}>Show all pending items</Link></div>
               ) : (
                 <div className={styles.cards}>
-                  {pendingItems.map((item) => {
+                  {visibleItems.map((item) => {
                     const mediaUrl = safeClientApprovalMediaUrl(item.media_refs);
                     const priorReview = latestReviewByContent.get(item.id);
+                    const age = getApprovalQueueAge(item.updated_at, now);
+                    const ageClass = age.band === 'fresh' ? styles.ageFresh : age.band === 'waiting' ? styles.ageWaiting : age.band === 'long_wait' ? styles.ageLongWait : styles.ageUnknown;
                     return (
                       <article className={styles.card} key={item.id}>
                         <div className={styles.cardMeta}>
                           <span>{brandNames.get(item.brand_id) ?? 'Workspace brand'}</span>
-                          <time dateTime={item.updated_at}>Submitted {formatDate(item.updated_at)}</time>
+                          <div className={styles.cardMetaRight}>
+                            <span className={`${styles.ageBadge} ${ageClass}`}>{age.label}</span>
+                            <time dateTime={item.updated_at}>Waiting since {formatDate(item.updated_at)}</time>
+                          </div>
                         </div>
                         <h3>{item.title}</h3>
                         <p className={styles.copy}>{item.body}</p>

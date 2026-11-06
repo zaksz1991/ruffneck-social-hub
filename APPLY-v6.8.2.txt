@@ -1,0 +1,63 @@
+RUFFNECK SOCIAL HUB — v6.8.2 APPROVAL QUEUE AGEING & RELEASE AUDIT COMPATIBILITY
+
+BASELINE
+Prepared against the v6.8.0 source commit 394d513. This overlay consolidates the
+v6.8.1 organization-readiness audit version fix so it can be installed together
+with the next approval workflow improvement.
+
+WHAT THIS RELEASE ADDS
+- Age-band summaries for pending client approvals: under 24 hours, 1–3 days,
+  and 3+ days.
+- Server-rendered filters for each age band, with counts and accessible state.
+- Per-item waiting age badges and a waiting-since timestamp.
+- Deterministic handling for invalid or implausibly future timestamps.
+- Explicitly labels age bands as operational triage indicators, not contractual
+  SLA deadlines.
+
+AUDIT FIXES
+- Organization-readiness audit accepts v6.7.0 and later app releases while
+  preserving its existing organization-readiness assertions.
+- Client-approval audit accepts v6.8.0 and later app releases rather than
+  pinning the application forever to v6.8.0.
+- Existing approval route, role checks, protected review RPC and publishing
+  separation remain intact.
+
+FILES
+Add:
+- src/lib/content/approval-queue-age.ts
+
+Replace:
+- package.json
+- scripts/audit-organization-readiness.mjs
+- scripts/audit-client-approval-portal.mjs
+- scripts/test-client-approval-portal.mjs
+- src/app/approvals/page.tsx
+- src/app/approvals/approvals.module.css
+
+INSTALLATION — GITHUB WEB INTERFACE
+1. Open the repository on GitHub and select the main branch.
+2. Add the new helper file at the exact path shown above.
+3. Replace each of the six listed files with the complete replacement in this ZIP.
+4. Commit the changes to main.
+
+DATABASE AND CONFIGURATION
+- No Supabase migration is included or required.
+- No environment variable changes.
+- No new package or service dependency.
+- Do not run a SQL migration for this release.
+
+BEHAVIOUR AND LIMITS
+- Age is measured from content_items.updated_at because that is the timestamp
+  available to the existing approval queue.
+- Queue counts reflect the current bounded query (up to 100 pending items).
+- Age bands are triage guidance only. They do not represent configured or
+  contractually committed response targets.
+- Review decisions still use the existing role-checked review_content_item RPC.
+- Approval still does not publish content.
+
+VALIDATION STATUS
+- Helper boundary and invalid-date tests: run locally as part of package checks.
+- Static audit syntax and package JSON validation: run during package creation.
+- Full repository npm test, full Next.js production build and Vercel deployment:
+  not run in this preparation environment. Do not mark the release verified
+  until those checks pass in the connected repository and Vercel deployment.
