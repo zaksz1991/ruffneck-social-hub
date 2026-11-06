@@ -17,7 +17,20 @@ const files = {
   middleware: await readFile('middleware.ts', 'utf8'),
 };
 
-assert.equal(pkg.version, '6.7.0', 'organization-readiness overlay must target v6.6.0 and release as v6.7.0');
+// The organization-readiness material was introduced against the v6.6.0
+// application baseline and first released in v6.7.0. Later releases must
+// continue to run this audit; do not pin the entire application to v6.7.0.
+const versionParts = String(pkg.version ?? '').split('.').map(Number);
+assert.ok(
+  versionParts.length === 3 && versionParts.every(Number.isInteger),
+  'package.json must contain a valid numeric major.minor.patch release version',
+);
+const [major, minor] = versionParts;
+assert.ok(
+  major > 6 || (major === 6 && minor >= 7),
+  'organization-readiness audit requires v6.7.0 or a later application release',
+);
+
 assert.ok(pkg.scripts.build.includes('audit:organization-readiness'));
 assert.ok(pkg.scripts.test.includes('test:organization-readiness'));
 assert.match(files.page, /robots:\s*\{\s*index:\s*true,\s*follow:\s*true\s*\}/);
