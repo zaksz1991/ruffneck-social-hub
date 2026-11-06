@@ -1,0 +1,26 @@
+RUFFNECK SOCIAL HUB v6.8.5 — RELEASE CONSISTENCY REPAIR
+
+WHY THIS REPAIR IS REQUIRED
+The public main branch currently reports package version 6.8.5, but its README is still a short v6.8.4 package stub and its publishing-worker workflow is an older variant. The existing organisation-readiness audit requires the full README dependency-lockfile disclosure. The existing publishing-worker audit expects the safer, bounded workflow shipped in the v6.8.5 activation package. Repair both files together before adding further publishing formats.
+
+FILES INCLUDED — COMPLETE REPLACEMENTS
+1. README.md
+2. .github/workflows/publishing-worker.yml
+
+INSTALL THROUGH THE GITHUB WEBSITE
+1. Open github.com/zaksz1991/ruffneck-social-hub and select the main branch.
+2. Open README.md, choose Edit, replace its entire contents with this package's README.md, then commit.
+3. Open .github/workflows/publishing-worker.yml, choose Edit, replace its entire contents with this package's workflow file, then commit.
+4. In Vercel, open Project Settings → Environment Variables. Verify that SOCIAL_PUBLISH_CRON_SECRET exists for Production. It must be a strong value of at least 32 characters.
+5. In GitHub, open Settings → Secrets and variables → Actions. Create or update the repository secret named SOCIAL_PUBLISH_CRON_SECRET with exactly the same value. Do not paste the secret into this chat, a source file, or a workflow log.
+6. The workflow uses the fixed production endpoint https://ruffneck-social-hub.vercel.app/api/cron/publishing. RSH_WORKER_URL is not used by this replacement workflow.
+7. After the Vercel deployment is ready, open Actions → RuffNeck scheduled publishing worker and use Run workflow once. Review the action result. A response with claimed=0 means the endpoint responded but no posts were due.
+
+IMPORTANT
+- This is a reconciliation/repair of the v6.8.5 release, not a new application feature release. package.json remains at 6.8.5.
+- Do not apply the separate v6.8.6 Meta carousel package until v6.8.5 builds and the scheduled worker invocation is confirmed. The carousel package has not been reconciled with the current public main branch.
+- This does not expand provider formats. Scheduled worker scope remains Instagram one-image, Facebook one-image and LinkedIn text-only. TikTok and YouTube remain separate workflows.
+- No SQL migration, npm dependency or package.json replacement is included.
+
+VALIDATION STATUS
+The replacement README preserves the exact organization-readiness lockfile disclosure. The replacement workflow is taken from the v6.8.5 worker activation package and is checked against the current publishing-worker audit contracts. The full repository npm test suite, Vercel production build, GitHub scheduled execution and live provider publication are not run or verified by this package.

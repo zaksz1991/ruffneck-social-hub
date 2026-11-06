@@ -1,0 +1,6 @@
+PASS README preserves exact organization-readiness package-lock disclosure.
+PASS publishing-worker-trigger audit executed against the v6.8.5 release fixture.
+PASS publishing-worker response-summary test executed against the v6.8.5 release fixture.
+PASS workflow contains required cron, manual trigger, concurrency, bearer secret, fixed endpoint, bounded timeout and safe result reporter contracts.
+NOT RUN full repository npm test, full Vercel production build, live GitHub Actions invocation or live provider publication.
+Note: audit/test results are for the supplied v6.8.5 package fixture plus the replacement workflow; they do not constitute a full build of the live GitHub repository.

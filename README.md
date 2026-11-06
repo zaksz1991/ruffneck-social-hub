@@ -1,4 +1,4 @@
-# RuffNeck Social Hub
+# RuffNeck Social Hub v6.8.5
 
 **Multi-brand social operations for organisations, agencies and teams.**
 
@@ -29,7 +29,24 @@ RuffNeck Social Hub brings workspace and brand governance, content planning, sup
 
 The publishing capability guard is a preflight control. It does not expand provider API permissions or turn unsupported provider paths into supported publishing. Actual publication still depends on the provider adapter, account eligibility, granted scopes, media requirements, configured publishing worker and successful provider response.
 
-### Conversations and customer operations
+#### Current scheduled publishing formats
+
+The v6.8.5 worker dispatches only these scheduled public-feed formats:
+
+| Provider | Scheduled worker format | Not included in this path |
+|---|---|---|
+| Instagram Professional | One image with caption | Carousel, Reel, Story and video publication |
+| Facebook Pages | One image with caption | Multi-photo, Reels, Stories and video publication |
+| LinkedIn Organisations | Text-only post | Image, document and video publication |
+| TikTok | No scheduled public-feed dispatch | Creator-inbox transfer is a separate consent-driven workflow |
+| YouTube | No scheduled public-feed dispatch | Private video upload is a separate workflow; public release scheduling is not claimed |
+| WhatsApp Business | No social-feed publishing | Supported conversation operations only |
+
+The scheduled publishing worker is triggered by the repository's GitHub Actions workflow every five minutes. GitHub's schedule is best-effort and may be delayed; it is not an exact-time guarantee. Each worker invocation claims at most three due jobs. Provider acceptance, account permissions, media reachability, rate limits and token validity still determine the outcome.
+
+The workflow calls `https://ruffneck-social-hub.vercel.app/api/cron/publishing` with a bearer secret. The same `SOCIAL_PUBLISH_CRON_SECRET` value must be configured as a server-only Vercel Production environment variable and as a GitHub Actions repository secret. The worker also requires the existing Supabase service-role configuration. Never place these values in source files or browser-visible variables.
+
+## Conversations and customer operations
 
 - Work supported Instagram, Facebook Messenger and WhatsApp Business conversations through workspace-scoped inbox workflows.
 - Assign conversations, set priority and status, record internal handoff notes, configure first-response targets and use saved replies.
@@ -107,7 +124,7 @@ Never commit real secrets or prefix server-only credentials with `NEXT_PUBLIC_`.
 
 The build pipeline runs module-specific source audits and tests for provider variants, campaigns, inbox workflows, AI safety, WhatsApp, billing, subscriptions and lifecycle processing. A green source audit is not the same as live provider verification. Before launch, also verify the deployed release, Supabase migrations, provider app review, account permissions, webhook delivery, backups and the organisation's own privacy/security obligations.
 
-For the v6.8.4 publishing capability guard specifically, review `RELEASE-NOTES-v6.8.4.md` and `docs/PUBLISHING-VERIFICATION-PLAN-v6.8.4.md` in the release package. The guard validates eligible destination/content combinations before scheduling; it does not guarantee that an external provider will accept or publish the post.
+For the v6.8.5 publishing capability guard and scheduled worker, review the release notes and publishing verification plan shipped with their release packages. The guard validates eligible destination/content combinations before scheduling; the worker only invokes provider adapters that are implemented and enabled for the connected account. It does not guarantee that an external provider will accept or publish the post.
 
 ## Organisation onboarding
 
@@ -120,7 +137,3 @@ For the v6.8.4 publishing capability guard specifically, review `RELEASE-NOTES-v
 7. Complete legal, privacy, security, retention, backup and incident-response reviews before a production rollout.
 
 See `docs/ORGANIZATION-CAPABILITY-MATRIX-v6.7.0.md`, `docs/ORGANIZATION-DEMO-GUIDE-v6.7.0.md` and `docs/ORGANIZATION-READINESS-AUDIT-v6.7.0.md`.
-
-## Scheduled publishing worker
-
-The v6.8.5 release adds a GitHub Actions trigger for the existing authenticated publishing worker. It invokes `/api/cron/publishing` every five minutes and can also be run manually from the GitHub Actions tab. Activation requires the same strong `SOCIAL_PUBLISH_CRON_SECRET` value in Vercel Production and GitHub Actions repository secrets. GitHub scheduled events may be delayed, so this is an operational trigger rather than a guaranteed publication-time SLA. See `docs/PUBLISHING-WORKER-SCHEDULER-v6.8.5.md` for setup and live acceptance instructions.
