@@ -1,0 +1,20 @@
+RuffNeck Social Hub v6.8.6 Meta Carousel Publishing overlay
+
+REPLACEMENTS
+- package.json
+- src/lib/publishing/instagram-dispatch.ts
+- src/lib/publishing/capability-guard.ts
+- scripts/test-publishing-capability-guard.mjs
+- scripts/audit-publishing-capability-guard.mjs
+- scripts/audit-publishing-worker-trigger.mjs
+
+NEW FILES
+- scripts/test-meta-carousel-publishing.mjs
+- scripts/audit-meta-carousel-publishing.mjs
+- docs/PUBLISHING-FORMATS-v6.8.6.md
+- APPLY-v6.8.6.txt
+- RELEASE-NOTES-v6.8.6.md
+
+Base package version inspected: 6.8.5
+Target package version: 6.8.6
+No SQL migration and no environment variable additions.

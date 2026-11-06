@@ -1,0 +1,38 @@
+RUFFNECK SOCIAL HUB v6.8.6 — INSTALLATION
+
+BASELINE
+Apply this overlay to the current GitHub main branch at v6.8.5. The current main package baseline was inspected before preparing the files. Do not apply this to the separate Next.js 16 Dependabot branch.
+
+REPLACE THESE COMPLETE FILES
+1. package.json
+2. src/lib/publishing/instagram-dispatch.ts
+3. src/lib/publishing/capability-guard.ts
+4. scripts/test-publishing-capability-guard.mjs
+5. scripts/audit-publishing-capability-guard.mjs
+6. scripts/audit-publishing-worker-trigger.mjs
+
+ADD THESE NEW FILES
+7. scripts/test-meta-carousel-publishing.mjs
+8. scripts/audit-meta-carousel-publishing.mjs
+9. docs/PUBLISHING-FORMATS-v6.8.6.md
+
+GUI INSTALLATION
+1. Open the GitHub repository and confirm that the main branch package.json identifies version 6.8.5.
+2. For each replacement path above, open the file in GitHub, choose Edit, replace the entire file with the matching ZIP file, and commit the changes to main.
+3. For each new file, use Add file → Create new file, enter the exact path, paste the complete file content, and commit it.
+4. Keep the files in their exact listed paths. Do not create a second scripts, src, or docs folder.
+5. Ensure the final main commit contains all eight code/package files and the new documentation file.
+
+WHAT THIS ENABLES
+- Instagram scheduled feed posts: one image or a 2–10 image carousel.
+- Facebook Page scheduled feed posts: one image or a 2–10 photo post.
+- Existing LinkedIn scheduled text-only publishing remains unchanged.
+- TikTok, YouTube and WhatsApp are not added to general scheduled public-post dispatch by this release.
+
+PREREQUISITE FOR AUTOMATIC SCHEDULING
+The v6.8.5 publishing-worker workflow and matching Vercel/GitHub SOCIAL_PUBLISH_CRON_SECRET must already be installed and configured. This v6.8.6 overlay does not recreate that workflow or set secrets. Never paste the secret into source files or commit it.
+
+VALIDATION
+The package adds a focused capability test and build audit. The GitHub/Vercel pipeline must complete all integration audits, the full npm test command and the Next.js production build. Then use an organisation-owned authorised test account to publish one Instagram carousel and one Facebook multi-photo post. Check that each appears as one post with all expected media in the native platform.
+
+No SQL migration or dependency install is required for this overlay. Existing Vercel deployment environment variables are unchanged.

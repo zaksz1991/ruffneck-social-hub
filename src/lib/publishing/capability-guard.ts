@@ -12,7 +12,10 @@ export type PublishingCapabilityFailure = {
     | 'account_not_connected'
     | 'publishing_permission_missing'
     | 'invalid_media_references'
-    | 'single_https_image_required'
+    | 'meta_images_required'
+    | 'meta_image_limit_exceeded'
+    | 'meta_images_https_required'
+    | 'meta_images_must_be_unique'
     | 'text_only_required'
     | 'scheduled_dispatch_not_supported';
 };
@@ -23,21 +26,43 @@ export type PublishingCapabilityBatchResult = {
   failures: PublishingCapabilityFailure[];
 };
 
-function isSinglePublicHttpsReference(mediaRefs: unknown): boolean {
-  if (!Array.isArray(mediaRefs) || mediaRefs.length !== 1) return false;
-  const item = mediaRefs[0];
-  const candidate = typeof item === 'string'
-    ? item
-    : item && typeof item === 'object'
-      ? (item as Record<string, unknown>).url
+export const META_MAX_CAROUSEL_IMAGES = 10;
+
+function publicHttpsImageUrl(reference: unknown): string | null {
+  const candidate = typeof reference === 'string'
+    ? reference
+    : reference && typeof reference === 'object'
+      ? (reference as Record<string, unknown>).url
       : null;
-  if (typeof candidate !== 'string') return false;
+  if (typeof candidate !== 'string') return null;
   try {
     const url = new URL(candidate);
-    return url.protocol === 'https:' && !url.username && !url.password;
+    if (url.protocol !== 'https:' || url.username || url.password || !url.hostname) return null;
+    return url.toString();
   } catch {
-    return false;
+    return null;
   }
+}
+
+/**
+ * Meta scheduled feed publishing accepts one image or a 2–10 image carousel.
+ * The provider still validates the actual media bytes, MIME type and reachability.
+ */
+export function validateMetaImageReferences(mediaRefs: unknown):
+  | { ok: true; urls: string[] }
+  | { ok: false; reason: PublishingCapabilityFailure['reason'] } {
+  if (!Array.isArray(mediaRefs)) return { ok: false, reason: 'invalid_media_references' };
+  if (mediaRefs.length === 0) return { ok: false, reason: 'meta_images_required' };
+  if (mediaRefs.length > META_MAX_CAROUSEL_IMAGES) return { ok: false, reason: 'meta_image_limit_exceeded' };
+
+  const urls: string[] = [];
+  for (const reference of mediaRefs) {
+    const url = publicHttpsImageUrl(reference);
+    if (!url) return { ok: false, reason: 'meta_images_https_required' };
+    urls.push(url);
+  }
+  if (new Set(urls).size !== urls.length) return { ok: false, reason: 'meta_images_must_be_unique' };
+  return { ok: true, urls };
 }
 
 /**
@@ -54,15 +79,15 @@ export function assessScheduledDestination(
   if (destination.capabilities?.content_publish !== true) {
     return { accountId: destination.id, provider: destination.provider, reason: 'publishing_permission_missing' };
   }
-
   if (mediaRefs !== null && mediaRefs !== undefined && !Array.isArray(mediaRefs)) {
     return { accountId: destination.id, provider: destination.provider, reason: 'invalid_media_references' };
   }
-  const refs = Array.isArray(mediaRefs) ? mediaRefs : [];
 
+  const refs = Array.isArray(mediaRefs) ? mediaRefs : [];
   if (destination.provider === 'instagram' || destination.provider === 'facebook') {
-    if (!isSinglePublicHttpsReference(refs)) {
-      return { accountId: destination.id, provider: destination.provider, reason: 'single_https_image_required' };
+    const validation = validateMetaImageReferences(refs);
+    if (!validation.ok) {
+      return { accountId: destination.id, provider: destination.provider, reason: validation.reason };
     }
     return null;
   }
@@ -96,7 +121,6 @@ export function assessScheduledDestinationBatch(
     provider: 'unknown',
     reason: 'account_not_connected',
   }));
-
   for (const destination of destinations) {
     const failure = assessScheduledDestination(destination, mediaRefs);
     if (failure) failures.push(failure);
